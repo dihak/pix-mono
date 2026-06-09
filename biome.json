@@ -27,6 +27,9 @@
 			},
 			"complexity": {
 				"noBannedTypes": "off"
+			},
+			"correctness": {
+				"noUnusedPrivateClassMembers": "off"
 			}
 		}
 	},

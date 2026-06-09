@@ -246,8 +246,11 @@ class AskQuestionnaire extends Container {
 	private selectedOptionIndex = 0;
 	private multiChecked = new Set<number>();
 	private inputMode = false; // typing freeform text
+	private freeformText = "";
 	private editor?: Editor;
 	private mdTheme = safeMarkdownTheme();
+	// Resolve panel width once
+	private _splitWidth: number | null = null;
 
 	constructor(
 		params: Params,
