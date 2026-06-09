@@ -18,7 +18,6 @@ const skill = (
 		disableModelInvocation,
 		filePath: "",
 		baseDir: "",
-		// biome-ignore lint: test fixture
 		sourceInfo: {} as never,
 	}) as never;
 
@@ -29,7 +28,6 @@ const tool = (name: string, source: string) =>
 		description: `${name} desc.`,
 		parameters: {},
 		sourceInfo: { source, path: "", scope: "user", origin: "package" },
-		// biome-ignore lint: test fixture
 	}) as never;
 
 describe("CAPABILITY_REMINDER", () => {
@@ -176,18 +174,17 @@ describe("buildOrientation", () => {
 	test("lists invocable skill names, sorted, excluding user-only", () => {
 		const out = buildOrientation(
 			[],
-			[
-				skill("zebra", "z."),
-				skill("alpha", "a."),
-				skill("hidden", "h.", true),
-			],
+			[skill("zebra", "z."), skill("alpha", "a."), skill("hidden", "h.", true)],
 		);
 		expect(out).toContain("Skills: alpha, zebra.");
 		expect(out).not.toContain("hidden");
 	});
 
 	test("omits the skills line when no invocable skills", () => {
-		const out = buildOrientation([tool("read", "builtin")], [skill("x", ".", true)]);
+		const out = buildOrientation(
+			[tool("read", "builtin")],
+			[skill("x", ".", true)],
+		);
 		expect(out).not.toContain("Skills:");
 	});
 

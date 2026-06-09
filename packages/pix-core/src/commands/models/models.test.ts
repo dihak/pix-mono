@@ -1,5 +1,5 @@
-import { describe, it, expect } from "bun:test";
-import { fmtCtx, fmtCost, benchStars, sortModels } from "./models.ts";
+import { describe, expect, it } from "bun:test";
+import { benchStars, fmtCost, fmtCtx, sortModels } from "./models.ts";
 
 describe("fmtCtx", () => {
 	it("formats 0 as 0", () => expect(fmtCtx(0)).toBe("0"));

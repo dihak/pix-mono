@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
+	type BenchmarkEntry,
+	benchmark,
 	buildModelsDevIndex,
+	lookupBenchmark,
 	lookupInIndex,
 	lookupModelsDev,
-	lookupBenchmark,
-	modelsDev,
-	benchmark,
 	type ModelsDevApi,
 	type ModelsDevModel,
-	type BenchmarkEntry,
+	modelsDev,
 } from "./data.ts";
 
 // ── buildModelsDevIndex ──────────────────────────────────────────────────────
@@ -17,13 +17,24 @@ describe("buildModelsDevIndex", () => {
 	const api: ModelsDevApi = {
 		anthropic: {
 			models: {
-				"claude-sonnet-4-5": { id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
-				"claude-opus-4": { id: "claude-opus-4", name: "Claude Opus 4", reasoning: true },
+				"claude-sonnet-4-5": {
+					id: "claude-sonnet-4-5",
+					name: "Claude Sonnet 4.5",
+				},
+				"claude-opus-4": {
+					id: "claude-opus-4",
+					name: "Claude Opus 4",
+					reasoning: true,
+				},
 			},
 		},
 		openai: {
 			models: {
-				"gpt-4o": { id: "gpt-4o", name: "GPT-4o", modalities: { input: ["text", "image"] } },
+				"gpt-4o": {
+					id: "gpt-4o",
+					name: "GPT-4o",
+					modalities: { input: ["text", "image"] },
+				},
 			},
 		},
 	};
@@ -39,7 +50,10 @@ describe("buildModelsDevIndex", () => {
 		const a: ModelsDevApi = {
 			anthropic: {
 				models: {
-					"claude-sonnet-4-5-20250514": { id: "claude-sonnet-4-5-20250514", name: "Claude Sonnet 4.5" },
+					"claude-sonnet-4-5-20250514": {
+						id: "claude-sonnet-4-5-20250514",
+						name: "Claude Sonnet 4.5",
+					},
 				},
 			},
 		};
@@ -73,7 +87,10 @@ describe("lookupInIndex", () => {
 		index = buildModelsDevIndex({
 			anthropic: {
 				models: {
-					"claude-sonnet-4-5": { id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
+					"claude-sonnet-4-5": {
+						id: "claude-sonnet-4-5",
+						name: "Claude Sonnet 4.5",
+					},
 					"claude-opus-4": { id: "claude-opus-4", name: "Claude Opus 4" },
 				},
 			},
@@ -87,23 +104,33 @@ describe("lookupInIndex", () => {
 	});
 
 	it("finds exact match", () => {
-		expect(lookupInIndex("claude-sonnet-4-5", index)?.name).toBe("Claude Sonnet 4.5");
+		expect(lookupInIndex("claude-sonnet-4-5", index)?.name).toBe(
+			"Claude Sonnet 4.5",
+		);
 	});
 
 	it("strips provider prefix (provider/model)", () => {
-		expect(lookupInIndex("anthropic/claude-opus-4", index)?.name).toBe("Claude Opus 4");
+		expect(lookupInIndex("anthropic/claude-opus-4", index)?.name).toBe(
+			"Claude Opus 4",
+		);
 	});
 
 	it("strips deep prefix (cc/model)", () => {
-		expect(lookupInIndex("cc/claude-opus-4", index)?.name).toBe("Claude Opus 4");
+		expect(lookupInIndex("cc/claude-opus-4", index)?.name).toBe(
+			"Claude Opus 4",
+		);
 	});
 
 	it("strips date suffix", () => {
-		expect(lookupInIndex("claude-sonnet-4-5-20250514", index)?.name).toBe("Claude Sonnet 4.5");
+		expect(lookupInIndex("claude-sonnet-4-5-20250514", index)?.name).toBe(
+			"Claude Sonnet 4.5",
+		);
 	});
 
 	it("strips provider prefix + date suffix", () => {
-		expect(lookupInIndex("anthropic/claude-sonnet-4-5-20250514", index)?.name).toBe("Claude Sonnet 4.5");
+		expect(
+			lookupInIndex("anthropic/claude-sonnet-4-5-20250514", index)?.name,
+		).toBe("Claude Sonnet 4.5");
 	});
 
 	it("returns undefined for unknown model", () => {
@@ -123,7 +150,10 @@ describe("lookupModelsDev", () => {
 		(modelsDev as any)._mem = {
 			anthropic: {
 				models: {
-					"claude-sonnet-4-5": { id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" },
+					"claude-sonnet-4-5": {
+						id: "claude-sonnet-4-5",
+						name: "Claude Sonnet 4.5",
+					},
 				},
 			},
 			openai: {
@@ -139,7 +169,9 @@ describe("lookupModelsDev", () => {
 	});
 
 	it("finds by exact provider + id", () => {
-		expect(lookupModelsDev("anthropic", "claude-sonnet-4-5")?.name).toBe("Claude Sonnet 4.5");
+		expect(lookupModelsDev("anthropic", "claude-sonnet-4-5")?.name).toBe(
+			"Claude Sonnet 4.5",
+		);
 	});
 
 	it("falls back across providers when provider miss", () => {
@@ -147,9 +179,9 @@ describe("lookupModelsDev", () => {
 	});
 
 	it("strips path prefix from id", () => {
-		expect(lookupModelsDev("anthropic", "anthropic/claude-sonnet-4-5")?.name).toBe(
-			"Claude Sonnet 4.5",
-		);
+		expect(
+			lookupModelsDev("anthropic", "anthropic/claude-sonnet-4-5")?.name,
+		).toBe("Claude Sonnet 4.5");
 	});
 
 	it("returns undefined for unknown model", () => {
@@ -161,9 +193,30 @@ describe("lookupModelsDev", () => {
 
 describe("lookupBenchmark", () => {
 	const entries: BenchmarkEntry[] = [
-		{ rank: 1, model: "Claude Sonnet 4.5", creator: "Anthropic", overallScore: 95, inputPrice: 3, outputPrice: 15 },
-		{ rank: 2, model: "GPT-4o", creator: "OpenAI", overallScore: 90, inputPrice: 5, outputPrice: 15 },
-		{ rank: 3, model: "Gemini 1.5 Pro", creator: "Google", overallScore: 88, inputPrice: 3.5, outputPrice: 10.5 },
+		{
+			rank: 1,
+			model: "Claude Sonnet 4.5",
+			creator: "Anthropic",
+			overallScore: 95,
+			inputPrice: 3,
+			outputPrice: 15,
+		},
+		{
+			rank: 2,
+			model: "GPT-4o",
+			creator: "OpenAI",
+			overallScore: 90,
+			inputPrice: 5,
+			outputPrice: 15,
+		},
+		{
+			rank: 3,
+			model: "Gemini 1.5 Pro",
+			creator: "Google",
+			overallScore: 88,
+			inputPrice: 3.5,
+			outputPrice: 10.5,
+		},
 	];
 
 	beforeEach(() => {

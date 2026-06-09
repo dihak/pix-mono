@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type { ModelsDevModel, RouterModel } from "./data.ts";
 
 // ── Re-export internal helpers for testing via module augmentation ────────────

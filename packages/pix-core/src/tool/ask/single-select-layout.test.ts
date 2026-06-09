@@ -34,7 +34,11 @@ describe("renderSingleSelectRows", () => {
 			allowFreeform: false,
 		});
 
-		const rendered = rows.map((r) => r.line).join(" ").replace(/\s+/g, " ").trim();
+		const rendered = rows
+			.map((r) => r.line)
+			.join(" ")
+			.replace(/\s+/g, " ")
+			.trim();
 		expect(rendered).toContain("want a plan first");
 		expect(rendered).toContain("before touching code");
 		expect(rows.length).toBeGreaterThan(2);
@@ -63,7 +67,12 @@ describe("renderSingleSelectRows", () => {
 		});
 
 		expect(rows.length).toBeLessThanOrEqual(6);
-		expect(rows.map((r) => r.line).join(" ").replace(/\s+/g, " ")).toContain("troubleshooting");
+		expect(
+			rows
+				.map((r) => r.line)
+				.join(" ")
+				.replace(/\s+/g, " "),
+		).toContain("troubleshooting");
 	});
 
 	test("does not duplicate a short word after wrapping an exact-width long word", () => {
@@ -79,15 +88,22 @@ describe("renderSingleSelectRows", () => {
 			allowFreeform: false,
 		});
 
-		expect(rows.map((r) => r.line).filter((line) => line.trim() === "hi")).toHaveLength(1);
-		expect(rows.map((r) => r.line).filter((line) => line.trim() === "aaaaaaaa")).toHaveLength(2);
+		expect(
+			rows.map((r) => r.line).filter((line) => line.trim() === "hi"),
+		).toHaveLength(1);
+		expect(
+			rows.map((r) => r.line).filter((line) => line.trim() === "aaaaaaaa"),
+		).toHaveLength(2);
 	});
 
 	test("marks selected item rows as selected in annotated output", () => {
 		const rows = renderSingleSelectRows({
 			options: [
 				{ title: "Alpha" },
-				{ title: "Beta with a very long title that should wrap to multiple lines when rendered" },
+				{
+					title:
+						"Beta with a very long title that should wrap to multiple lines when rendered",
+				},
 				{ title: "Gamma" },
 			],
 			selectedIndex: 1,

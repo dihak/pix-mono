@@ -89,7 +89,11 @@ export class OptimizerStatus {
 	private states: Partial<Record<OptimizerTool, boolean>> = {};
 
 	/** Update one tool's enabled state and repaint the shared cell. */
-	set(tool: OptimizerTool, enabled: boolean, ctx: Pick<ExtensionContext, "ui">): void {
+	set(
+		tool: OptimizerTool,
+		enabled: boolean,
+		ctx: Pick<ExtensionContext, "ui">,
+	): void {
 		this.states[tool] = enabled;
 		this.paint(ctx);
 	}

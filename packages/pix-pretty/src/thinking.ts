@@ -8,10 +8,25 @@
  * interfere with the actual response.
  *
  * Approach:
- *   - Do nothing during streaming (no live mutation, no polling, no races).
+ *   - During streaming (`message_update`), re-render the event's message so
+ *     reasoning blocks appear as styled blockquotes the moment the open tag
+ *     streams in — no waiting for the close tag. The dangling-open-block
+ *     handling in renderThinking() covers the not-yet-closed case, and a
+ *     trailing half-streamed tag (e.g. "<thin") is stripped so it never
+ *     flashes as literal text.
+ *
+ *     Safety: `event.message` is a per-event shallow copy, but its content
+ *     blocks are the provider's LIVE accumulating objects (providers do
+ *     `block.text += delta`). We therefore never mutate text blocks in
+ *     place — we replace `message.content` with fresh block objects. The
+ *     TUI receives the same event object after extensions run, so the
+ *     restyled content is what gets rendered live.
+ *
  *   - On `message_end`, extract and reformat every reasoning block with
  *     visual markers, then return the styled message via the supported
- *     replacement channel.
+ *     replacement channel. (The finalized message comes from
+ *     `response.result()` — a fresh object that never saw the streaming
+ *     restyling — so this step is still required for persistence.)
  *
  * `content[].text` is MARKDOWN rendered by pi's TUI Markdown component.
  * The TUI does NOT parse HTML — <details>/<summary> would render as literal
@@ -44,6 +59,20 @@ interface Msg {
 	content?: Block[];
 }
 
+// Trailing half-streamed tag, e.g. "<", "</", "<thin", "</thinkin".
+// Only used during streaming so an incomplete tag never flashes as text.
+const PARTIAL_TAIL_RE = /<\/?([a-zA-Z]*)$/;
+
+function stripPartialTailTag(text: string): string {
+	const match = text.match(PARTIAL_TAIL_RE);
+	if (!match) return text;
+	const fragment = match[1].toLowerCase();
+	if (TAG_NAMES.some((tag) => tag.startsWith(fragment))) {
+		return text.slice(0, match.index);
+	}
+	return text;
+}
+
 // Render a reasoning body as a markdown blockquote.
 function asQuote(body: string, _label: string): string {
 	const lines = body.split("\n");
@@ -74,12 +103,43 @@ function renderThinking(text: string): string {
 }
 
 // Export for testing
-export { renderThinking };
+export { renderThinking, stripPartialTailTag };
 
 export default function thinkingExtension(pi: ExtensionAPI) {
+	// Live styling during streaming: restyle the event's message so reasoning
+	// renders as soon as the open tag appears, token by token.
+	pi.on("message_update", (event) => {
+		const ev = event as {
+			message?: Msg;
+			assistantMessageEvent?: { type?: string };
+		};
+		const msg = ev.message;
+		if (msg?.role !== "assistant" || !Array.isArray(msg.content)) return;
+
+		// Only text stream events can change text blocks; skip toolcall/thinking
+		// channel deltas to avoid pointless re-renders.
+		const streamType = ev.assistantMessageEvent?.type;
+		if (streamType && !streamType.startsWith("text_")) return;
+
+		msg.content = msg.content.map((block) => {
+			if (block.type !== "text") return block;
+			const tb = block as TextBlock;
+			if (typeof tb.text !== "string" || !tb.text.includes("<")) return block;
+			const stripped = stripPartialTailTag(tb.text);
+			const lower = stripped.toLowerCase();
+			const hasTag = TAG_NAMES.some((t) => lower.includes(`<${t}`));
+			// Nothing reasoning-related: leave unrelated "<" text alone entirely.
+			if (!hasTag && stripped === tb.text) return block;
+			const rendered = hasTag ? renderThinking(stripped) : stripped;
+			if (rendered === tb.text) return block;
+			// New object — never mutate the provider's accumulating block.
+			return { ...block, text: rendered };
+		});
+	});
+
 	pi.on("message_end", (event) => {
 		const msg = (event as { message?: Msg }).message;
-		if (!msg || msg.role !== "assistant" || !Array.isArray(msg.content)) return;
+		if (msg?.role !== "assistant" || !Array.isArray(msg.content)) return;
 
 		let changed = false;
 		for (const block of msg.content) {

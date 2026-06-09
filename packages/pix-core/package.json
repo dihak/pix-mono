@@ -1,42 +1,51 @@
 {
-  "name": "@xynogen/pix-core",
-  "version": "0.1.0",
-  "description": "Pi extension — core UI/UX bundle (welcome banner, footer, model picker, self-update)",
-  "type": "module",
-  "main": "src/index.ts",
-  "scripts": {
-    "test": "bun test"
-  },
-  "files": [
-    "src",
-    "skills",
-    "README.md",
-    "LICENSE"
-  ],
-  "pi": {
-    "extensions": ["src/index.ts"],
-    "skills": ["./skills"]
-  },
-  "keywords": ["pi", "pi-package", "pi-extension", "pix"],
-  "author": "xynogen",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xynogen/pix-mono.git",
-    "directory": "packages/pix-core"
-  },
-  "homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-core#readme",
-  "bugs": {
-    "url": "https://github.com/xynogen/pix-mono/issues"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "dependencies": {
-    "typebox": "^1.1.38"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*"
-  }
+	"name": "@xynogen/pix-core",
+	"version": "0.1.0",
+	"description": "Pi extension — core UI/UX bundle (welcome banner, footer, model picker, self-update)",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"skills",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"src/index.ts"
+		],
+		"skills": [
+			"./skills"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"pix"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-core"
+	},
+	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-core#readme",
+	"bugs": {
+		"url": "https://github.com/xynogen/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"typebox": "^1.1.38"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	}
 }

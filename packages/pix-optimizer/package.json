@@ -1,48 +1,50 @@
 {
-  "name": "@xynogen/pix-optimizer",
-  "version": "1.0.0",
-  "description": "Performance optimization suite for Pi Coding Agent - caveman mode + RTK tool rewriting + jq/TOON JSON compression",
-  "type": "module",
-  "main": "src/index.ts",
-  "scripts": {
-    "test": "bun test"
-  },
-  "files": [
-    "src",
-    "README.md",
-    "LICENSE"
-  ],
-  "pi": {
-    "extensions": ["./src/index.ts"]
-  },
-  "keywords": [
-    "pi",
-    "pi-package",
-    "pi-extension",
-    "optimizer",
-    "caveman",
-    "rtk",
-    "toon",
-    "jq",
-    "json",
-    "performance"
-  ],
-  "author": "xynogen",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xynogen/pix-mono.git",
-    "directory": "packages/pix-optimizer"
-  },
-  "homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-optimizer#readme",
-  "bugs": {
-    "url": "https://github.com/xynogen/pix-mono/issues"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*"
-  }
+	"name": "@xynogen/pix-optimizer",
+	"version": "1.0.0",
+	"description": "Performance optimization suite for Pi Coding Agent - caveman mode + RTK tool rewriting + jq/TOON JSON compression",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"optimizer",
+		"caveman",
+		"rtk",
+		"toon",
+		"jq",
+		"json",
+		"performance"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-optimizer"
+	},
+	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-optimizer#readme",
+	"bugs": {
+		"url": "https://github.com/xynogen/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	}
 }

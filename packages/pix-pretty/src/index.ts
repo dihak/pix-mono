@@ -920,7 +920,7 @@ export default function piPrettyExtension(
 	// SDK grep fallback otherwise)
 	// ===================================================================
 
-	if ((fffState.module || createGrepTool)) {
+	if (fffState.module || createGrepTool) {
 		const multiGrepFallback = createGrepTool ? createGrepTool(cwd) : null;
 
 		pi.registerTool({
@@ -1269,9 +1269,12 @@ export default function piPrettyExtension(
 			) {
 				const fp = params.path ?? params.file_path ?? "";
 				const operations = getEditOperations(params);
+				// params is the live tool input (upstream EditToolInput shape); we
+				// type it loosely as EditParams for defensive legacy-field reads, so
+				// cast back to the upstream input when delegating to the real tool.
 				const result = (await origEdit.execute(
 					tid,
-					params,
+					params as unknown as Parameters<typeof origEdit.execute>[1],
 					sig,
 					upd,
 					ctx,
@@ -1409,7 +1412,7 @@ export default function piPrettyExtension(
 
 				const result = (await origWrite.execute(
 					tid,
-					params,
+					params as unknown as Parameters<typeof origWrite.execute>[1],
 					sig,
 					upd,
 					ctx,

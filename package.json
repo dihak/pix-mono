@@ -1,28 +1,35 @@
 {
-  "name": "pix-mono",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Monorepo of Pi Coding Agent extensions (pix-*)",
-  "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
-  "scripts": {
-    "test": "bun test",
-    "typecheck": "tsc --noEmit -p tsconfig.base.json",
-    "publish:all": "for d in packages/*; do (cd $d && npm publish --access public); done",
-    "publish:dry": "for d in packages/*; do (cd $d && npm publish --access public --dry-run); done"
-  },
-  "devDependencies": {
-    "@earendil-works/pi-ai": "latest",
-    "@earendil-works/pi-coding-agent": "latest",
-    "@earendil-works/pi-tui": "latest",
-    "@types/bun": "latest",
-    "@types/node": "^22",
-    "typescript": "^5.7.0",
-    "typebox": "^1.1.38"
-  },
-  "engines": {
-    "bun": ">=1.1.0"
-  }
+	"name": "pix-mono",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Monorepo of Pi Coding Agent extensions (pix-*)",
+	"type": "module",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"test": "bun test",
+		"typecheck": "tsc --noEmit -p tsconfig.base.json",
+		"lint": "biome lint packages",
+		"format": "biome format --write packages",
+		"format:check": "biome format packages",
+		"check": "biome check packages",
+		"check:fix": "biome check --write packages",
+		"ci": "biome ci",
+		"publish:all": "bash scripts/publish-all.sh",
+		"publish:dry": "for d in packages/*; do (cd $d && npm publish --access public --dry-run); done"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.16",
+		"@earendil-works/pi-ai": "latest",
+		"@earendil-works/pi-coding-agent": "latest",
+		"@earendil-works/pi-tui": "latest",
+		"@types/bun": "latest",
+		"@types/node": "^22",
+		"typebox": "^1.1.38",
+		"typescript": "^5.7.0"
+	},
+	"engines": {
+		"bun": ">=1.1.0"
+	}
 }

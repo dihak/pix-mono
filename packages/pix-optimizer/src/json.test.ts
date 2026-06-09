@@ -1,8 +1,8 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
-	JSON_SYSTEM_PROMPT,
 	adviseToon,
 	isUniformObjectArray,
+	JSON_SYSTEM_PROMPT,
 	mentionsJson,
 	objectDepth,
 	skillDir,
@@ -72,9 +72,9 @@ describe("isUniformObjectArray", () => {
 	});
 
 	it("false for differing keys", () => {
-		expect(
-			isUniformObjectArray([{ id: 1 }, { id: 2, extra: true }]),
-		).toBe(false);
+		expect(isUniformObjectArray([{ id: 1 }, { id: 2, extra: true }])).toBe(
+			false,
+		);
 	});
 
 	it("false when a value is itself an object", () => {

@@ -1,14 +1,14 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
-	shortCwd,
-	statusIcon,
-	renderCheck,
+	type CheckResult,
+	LABEL_WIDTH,
 	LOGO_ROWS,
 	PI_IGNORE_RULES,
-	LABEL_WIDTH,
+	renderCheck,
+	shortCwd,
+	statusIcon,
 	summariseTools,
 	type Theme,
-	type CheckResult,
 } from "./welcome.ts";
 
 const theme: Theme = {

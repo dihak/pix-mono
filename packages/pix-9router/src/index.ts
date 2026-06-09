@@ -13,8 +13,8 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import registerProvider from "./provider.js";
 import registerFetch from "./fetch.js";
+import registerProvider from "./provider.js";
 import registerSearch from "./search.js";
 import registerTranscribe from "./transcribe.js";
 

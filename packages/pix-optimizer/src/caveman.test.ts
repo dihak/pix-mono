@@ -1,16 +1,16 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
-	LEVELS,
-	LEVEL_NUMBERS,
-	STOP_ALIASES,
-	STATUS_LABELS,
-	buildPrompt,
 	buildHelp,
-	resolveLevel,
-	toggleLevel,
-	parseConfig,
+	buildPrompt,
 	DEFAULT_CONFIG,
+	LEVEL_NUMBERS,
+	LEVELS,
 	type Level,
+	parseConfig,
+	resolveLevel,
+	STATUS_LABELS,
+	STOP_ALIASES,
+	toggleLevel,
 } from "./caveman.ts";
 
 // ── LEVELS ────────────────────────────────────────────────────────────────────
@@ -21,7 +21,7 @@ describe("LEVELS", () => {
 	});
 
 	it("contains all expected levels", () => {
-		const expected = ["off", "lite", "full", "ultra", "micro"];
+		const expected: Level[] = ["off", "lite", "full", "ultra", "micro"];
 		for (const l of expected) expect(LEVELS).toContain(l);
 	});
 });
@@ -52,10 +52,10 @@ describe("STATUS_LABELS", () => {
 	});
 
 	it("latin levels are uppercase", () => {
-		expect(STATUS_LABELS["lite"]).toBe("LITE");
-		expect(STATUS_LABELS["full"]).toBe("FULL");
-		expect(STATUS_LABELS["ultra"]).toBe("ULTRA");
-		expect(STATUS_LABELS["micro"]).toBe("MICRO");
+		expect(STATUS_LABELS.lite).toBe("LITE");
+		expect(STATUS_LABELS.full).toBe("FULL");
+		expect(STATUS_LABELS.ultra).toBe("ULTRA");
+		expect(STATUS_LABELS.micro).toBe("MICRO");
 	});
 });
 
@@ -202,7 +202,6 @@ describe("buildPrompt", () => {
 		expect(ultra).toContain("Abbreviate");
 		expect(lite).not.toContain("Abbreviate");
 	});
-
 });
 
 // ── parseConfig ───────────────────────────────────────────────────────────────
@@ -233,7 +232,9 @@ describe("parseConfig", () => {
 
 	it("accepts all valid levels as defaultLevel", () => {
 		for (const l of LEVELS) {
-			expect(parseConfig({ defaultLevel: l, showStatus: true }).defaultLevel).toBe(l);
+			expect(
+				parseConfig({ defaultLevel: l, showStatus: true }).defaultLevel,
+			).toBe(l);
 		}
 	});
 });

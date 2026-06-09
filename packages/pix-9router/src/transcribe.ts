@@ -11,8 +11,8 @@
  *   ROUTER_API_KEY   — bearer token for the router
  */
 
+import { type ExecFileException, execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import { execFile } from "node:child_process";
 import { basename, extname } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -91,9 +91,10 @@ function curl(args: string[]): Promise<string> {
 			{ maxBuffer: 10 * 1024 * 1024, timeout: REQUEST_TIMEOUT_MS },
 			(err, stdout, stderr) => {
 				if (err) {
-					const msg = (err as NodeJS.ErrnoException).killed
+					const e = err as ExecFileException;
+					const msg = e.killed
 						? "curl timed out"
-						: `curl exit ${(err as NodeJS.ErrnoException).code ?? "??"}: ${stderr.slice(0, 300)}`;
+						: `curl exit ${e.code ?? "??"}: ${stderr.slice(0, 300)}`;
 					reject(new Error(msg));
 					return;
 				}
@@ -149,6 +150,7 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 							text: `Transcribing: ${filePath} (model: ${model})...`,
 						},
 					],
+					details: undefined,
 				});
 
 				const raw = await apiMultipart(
@@ -185,6 +187,7 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 							text: `API failed: ${apiMsg}\nFalling back to curl...`,
 						},
 					],
+					details: undefined,
 				});
 			}
 

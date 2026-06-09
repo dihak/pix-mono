@@ -2,9 +2,9 @@
  * Basic smoke tests for pix-tokyo-night theme
  */
 
-import { describe, it, expect } from "bun:test";
-import { existsSync } from "fs";
-import { resolve } from "path";
+import { describe, expect, it } from "bun:test";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 describe("pix-tokyo-night", () => {
 	it("theme directory exists", () => {

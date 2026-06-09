@@ -10,13 +10,13 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ModelsDevModel, RouterModel } from "./data.js";
 import {
 	fetchModelsDevIndex,
 	lookupInIndex,
 	routerBaseUrl,
 	routerModels,
 } from "./data.js";
-import type { ModelsDevModel, RouterModel } from "./data.js";
 
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 16_384;
@@ -106,17 +106,21 @@ export default async function registerProvider(
 		fetchModelsDevIndex().catch(() => new Map<string, ModelsDevModel>()),
 	]);
 
+	// Upstream moved OpenAI `compat` settings from the provider level to the
+	// per-model level (ProviderModelConfig.compat). Apply the same shim to every
+	// registered model.
+	const COMPAT = {
+		supportsDeveloperRole: false,
+		supportsUsageInStreaming: false,
+		maxTokensField: "max_tokens",
+	} as const;
+
 	pi.registerProvider("9router", {
 		name: "9Router",
 		baseUrl: routerBaseUrl(),
 		apiKey: "$ROUTER_API_KEY",
 		api: "openai-completions",
 		headers: { "User-Agent": "pi-coding-agent" },
-		compat: {
-			supportsDeveloperRole: false,
-			supportsUsageInStreaming: false,
-			maxTokensField: "max_tokens",
-		},
 		models: models.map((model) => {
 			const devModel = lookupInIndex(model.id!, devIndex);
 			return {
@@ -127,6 +131,7 @@ export default async function registerProvider(
 				cost: ZERO_COST,
 				contextWindow: getContextWindow(model, devModel),
 				maxTokens: getMaxTokens(model, devModel),
+				compat: COMPAT,
 			};
 		}),
 	});

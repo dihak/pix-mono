@@ -13,8 +13,8 @@
  *   ROUTER_API_KEY   — bearer token (required)
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -38,10 +38,18 @@ export interface ModelsDevModel {
 	reasoning?: boolean;
 	modalities?: { input?: string[]; output?: string[] };
 	limit?: { context?: number; output?: number };
-	cost?: { input?: number; output?: number; cache_read?: number; cache_write?: number };
+	cost?: {
+		input?: number;
+		output?: number;
+		cache_read?: number;
+		cache_write?: number;
+	};
 }
 
-export type ModelsDevApi = Record<string, { models?: Record<string, ModelsDevModel> }>;
+export type ModelsDevApi = Record<
+	string,
+	{ models?: Record<string, ModelsDevModel> }
+>;
 
 interface RouterModelsResponse {
 	data?: RouterModel[];
@@ -79,7 +87,9 @@ class DataSource<T> {
 
 	async get(): Promise<T> {
 		if (this._inflight) return this._inflight;
-		this._inflight = this._load().finally(() => { this._inflight = null; });
+		this._inflight = this._load().finally(() => {
+			this._inflight = null;
+		});
 		return this._inflight;
 	}
 
@@ -87,7 +97,9 @@ class DataSource<T> {
 		if (this._mem) return this._mem;
 		try {
 			if (existsSync(this.opts.cachePath)) {
-				const raw = JSON.parse(readFileSync(this.opts.cachePath, "utf-8")) as { data: unknown };
+				const raw = JSON.parse(readFileSync(this.opts.cachePath, "utf-8")) as {
+					data: unknown;
+				};
 				this._mem = this.opts.parseCache(raw.data);
 				return this._mem;
 			}
@@ -98,7 +110,10 @@ class DataSource<T> {
 	}
 
 	private async _load(): Promise<T> {
-		if (this.opts.skip()) { this._mem = this.opts.empty; return this.opts.empty; }
+		if (this.opts.skip()) {
+			this._mem = this.opts.empty;
+			return this.opts.empty;
+		}
 		const cached = await this._readCache();
 		if (cached !== undefined && Date.now() - cached.ts < this.opts.ttlMs) {
 			const val = this.opts.parseCache(cached.data);
@@ -106,11 +121,16 @@ class DataSource<T> {
 			return val;
 		}
 		try {
-			const url = typeof this.opts.url === "function" ? this.opts.url() : this.opts.url;
+			const url =
+				typeof this.opts.url === "function" ? this.opts.url() : this.opts.url;
 			const controller = new AbortController();
 			const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs);
-			const response = await fetch(url, { signal: controller.signal, headers: this.opts.headers() }).finally(() => clearTimeout(timer));
-			if (!response.ok) throw new Error(`${this.opts.label} fetch failed: ${response.status}`);
+			const response = await fetch(url, {
+				signal: controller.signal,
+				headers: this.opts.headers(),
+			}).finally(() => clearTimeout(timer));
+			if (!response.ok)
+				throw new Error(`${this.opts.label} fetch failed: ${response.status}`);
 			const raw = await response.json();
 			const val = this.opts.parse(raw);
 			this._mem = val;
@@ -119,7 +139,9 @@ class DataSource<T> {
 		} catch (error) {
 			const msg = error instanceof Error ? error.message : String(error);
 			if (cached !== undefined) {
-				console.warn(`${this.opts.label} fetch failed, using stale cache: ${msg}`);
+				console.warn(
+					`${this.opts.label} fetch failed, using stale cache: ${msg}`,
+				);
 				const val = this.opts.parseCache(cached.data);
 				this._mem = val;
 				return val;
@@ -129,19 +151,26 @@ class DataSource<T> {
 		}
 	}
 
-	private async _readCache(): Promise<{ ts: number; data: unknown } | undefined> {
+	private async _readCache(): Promise<
+		{ ts: number; data: unknown } | undefined
+	> {
 		try {
 			const raw = await readFile(this.opts.cachePath, "utf8");
 			const parsed = JSON.parse(raw) as { ts: number; data: unknown };
 			if (typeof parsed.ts !== "number") return undefined;
 			return parsed;
-		} catch { return undefined; }
+		} catch {
+			return undefined;
+		}
 	}
 
 	private async _writeCache(data: unknown): Promise<void> {
 		try {
 			await mkdir(dirname(this.opts.cachePath), { recursive: true });
-			await writeFile(this.opts.cachePath, JSON.stringify({ ts: Date.now(), data }));
+			await writeFile(
+				this.opts.cachePath,
+				JSON.stringify({ ts: Date.now(), data }),
+			);
 		} catch {
 			// Write failure is non-fatal
 		}
@@ -150,12 +179,18 @@ class DataSource<T> {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const CACHE_DIR = join(process.env.XDG_CACHE_HOME || join(homedir(), ".cache"), "pi");
+const CACHE_DIR = join(
+	process.env.XDG_CACHE_HOME || join(homedir(), ".cache"),
+	"pi",
+);
 
 const ROUTER_DEFAULT_BASE = "https://9router.example.com/v1";
 
 export function routerBaseUrl(): string {
-	return (process.env.ROUTER_API_BASE || ROUTER_DEFAULT_BASE).replace(/\/$/, "");
+	return (process.env.ROUTER_API_BASE || ROUTER_DEFAULT_BASE).replace(
+		/\/$/,
+		"",
+	);
 }
 
 // ── Router models ──────────────────────────────────────────────────────────────
@@ -170,8 +205,12 @@ export const routerModels = new DataSource<RouterModel[]>({
 	skip: () => !process.env.ROUTER_API_KEY,
 	cachePath: join(CACHE_DIR, "9router.json"),
 	ttlMs: 30 * 60 * 1000, // 30 minutes
-	parse: (raw) => ((raw as RouterModelsResponse).data ?? []).filter((m) => Boolean(m.id)),
-	parseCache: (data) => ((data as RouterModelsResponse | undefined)?.data ?? []).filter((m) => Boolean(m.id)),
+	parse: (raw) =>
+		((raw as RouterModelsResponse).data ?? []).filter((m) => Boolean(m.id)),
+	parseCache: (data) =>
+		((data as RouterModelsResponse | undefined)?.data ?? []).filter((m) =>
+			Boolean(m.id),
+		),
 	empty: [],
 });
 
@@ -187,7 +226,10 @@ const modelsDevCache = new DataSource<ModelsDevApi>({
 });
 
 function normalize(id: string): string {
-	return id.toLowerCase().replace(/[:@].*$/, "").replace(/-\d{8}$/, "");
+	return id
+		.toLowerCase()
+		.replace(/[:@].*$/, "")
+		.replace(/-\d{8}$/, "");
 }
 
 function stripPrefix(id: string): string {
@@ -195,7 +237,9 @@ function stripPrefix(id: string): string {
 	return i >= 0 ? id.slice(i + 1) : id;
 }
 
-export function buildModelsDevIndex(api: ModelsDevApi): Map<string, ModelsDevModel> {
+export function buildModelsDevIndex(
+	api: ModelsDevApi,
+): Map<string, ModelsDevModel> {
 	const index = new Map<string, ModelsDevModel>();
 	for (const provider of Object.values(api)) {
 		if (!provider?.models) continue;
@@ -209,7 +253,10 @@ export function buildModelsDevIndex(api: ModelsDevApi): Map<string, ModelsDevMod
 	return index;
 }
 
-export function lookupInIndex(id: string, index: Map<string, ModelsDevModel>): ModelsDevModel | undefined {
+export function lookupInIndex(
+	id: string,
+	index: Map<string, ModelsDevModel>,
+): ModelsDevModel | undefined {
 	const stripped = stripPrefix(id);
 	const direct = index.get(stripped) ?? index.get(normalize(stripped));
 	if (direct) return direct;
@@ -220,6 +267,8 @@ export function lookupInIndex(id: string, index: Map<string, ModelsDevModel>): M
 	return undefined;
 }
 
-export async function fetchModelsDevIndex(): Promise<Map<string, ModelsDevModel>> {
+export async function fetchModelsDevIndex(): Promise<
+	Map<string, ModelsDevModel>
+> {
 	return buildModelsDevIndex(await modelsDevCache.get());
 }

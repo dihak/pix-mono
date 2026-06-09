@@ -8,7 +8,7 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { modelsDev, benchmark } from "./data.ts";
+import { benchmark, modelsDev } from "./data.ts";
 
 export default function (_pi: ExtensionAPI): void {
 	void modelsDev.get();

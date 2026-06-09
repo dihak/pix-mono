@@ -6,10 +6,10 @@
  *   ROUTER_API_KEY   — bearer token for the router
  */
 
-import { execFile } from "node:child_process";
+import { type ExecFileException, execFile } from "node:child_process";
+import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { StringEnum } from "@earendil-works/pi-ai";
 import { routerBaseUrl } from "./data.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -59,9 +59,10 @@ function curl(args: string[], stdin?: string): Promise<string> {
 			{ maxBuffer: 10 * 1024 * 1024, timeout: 30_000 },
 			(err, stdout, stderr) => {
 				if (err) {
-					const msg = (err as NodeJS.ErrnoException).killed
+					const e = err as ExecFileException;
+					const msg = e.killed
 						? "curl timed out"
-						: `curl exit ${(err as NodeJS.ErrnoException).code ?? "??"}: ${stderr.slice(0, 300)}`;
+						: `curl exit ${e.code ?? "??"}: ${stderr.slice(0, 300)}`;
 					reject(new Error(msg));
 					return;
 				}
@@ -114,6 +115,7 @@ export default function registerSearch(pi: ExtensionAPI): void {
 							text: `Searching (${searchType}): ${params.query}...`,
 						},
 					],
+					details: undefined,
 				});
 
 				const raw = await apiPost(
@@ -152,6 +154,7 @@ export default function registerSearch(pi: ExtensionAPI): void {
 							text: `API failed: ${apiMsg}\nFalling back to curl...`,
 						},
 					],
+					details: undefined,
 				});
 			}
 

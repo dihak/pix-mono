@@ -6,9 +6,9 @@ import registerToolbox, {
 	buildRows,
 	parseTargets,
 	renderList,
-	toggleTool,
-	type ToolRow,
 	type ToggleOps,
+	type ToolRow,
+	toggleTool,
 } from "./toolbox.ts";
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────

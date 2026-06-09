@@ -5,6 +5,9 @@ dist/
 .DS_Store
 package-lock.json
 
+# npm pack artifacts
+*.tgz
+
 # Pix Agent
-**/.ai/
-**/.pi-lens/
+.ai/
+.pi-lens/

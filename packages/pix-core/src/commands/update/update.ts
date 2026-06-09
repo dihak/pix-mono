@@ -127,7 +127,7 @@ async function detectInstallMethod(pi: ExtensionAPI): Promise<InstallMethod> {
 			],
 			{ timeout: 10_000 },
 		);
-		if ((hasGlobalNpm.exitCode ?? 1) === 0) return "npm";
+		if ((hasGlobalNpm.code ?? 1) === 0) return "npm";
 	}
 
 	if (await resolveCommand("vp", pi)) return "vp";
@@ -145,7 +145,7 @@ async function runWithRetry(pi: ExtensionAPI, spec: CommandSpec) {
 			.filter(Boolean)
 			.join("\n")
 			.trim();
-		if ((result.exitCode ?? 0) === 0)
+		if ((result.code ?? 0) === 0)
 			return { ok: true, output: lastOutput, attempts: attempt };
 		if (attempt === 3 || !isTransient(lastOutput))
 			return { ok: false, output: lastOutput, attempts: attempt };
@@ -200,7 +200,7 @@ async function updateExtensions(
 		.filter(Boolean)
 		.join("\n")
 		.trim();
-	if ((result.exitCode ?? 0) !== 0) {
+	if ((result.code ?? 0) !== 0) {
 		ctx.ui.notify(
 			`Pi extensions update failed. ${output || "No output."}`,
 			"error",
@@ -222,7 +222,7 @@ async function updatePackages(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 		.filter(Boolean)
 		.join("\n")
 		.trim();
-	if ((result.exitCode ?? 0) !== 0) {
+	if ((result.code ?? 0) !== 0) {
 		ctx.ui.notify(
 			`Pi package update failed. ${output || "No output."}`,
 			"error",

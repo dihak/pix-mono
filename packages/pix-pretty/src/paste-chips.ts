@@ -13,14 +13,22 @@
  * The display rewrite is purely visual (render layer); buffer is untouched.
  */
 
-import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import type {
-	EditorFactory,
 	ExtensionAPI,
 	KeybindingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import type { EditorTheme, TUI } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+
+// Upstream stopped re-exporting `EditorFactory` from the package entry point,
+// so we reconstruct its signature locally from the still-exported primitives.
+// This matches ctx.ui.setEditorComponent's expected factory shape.
+type EditorFactory = (
+	tui: TUI,
+	theme: EditorTheme,
+	keybindings: KeybindingsManager,
+) => CustomEditor;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -120,10 +128,6 @@ export function restyleMarkers(line: string, imageIds: Set<number>): string {
 
 class ChipEditor extends CustomEditor {
 	private readonly imageIds = new Set<number>();
-
-	constructor(tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) {
-		super(tui, theme, keybindings);
-	}
 
 	override insertTextAtCursor(text: string): void {
 		const internals = this as unknown as EditorInternals;

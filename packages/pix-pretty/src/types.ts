@@ -161,9 +161,35 @@ export type ReadParams = ReadToolInput;
 
 export type BashParams = BashToolInput;
 
-export type EditParams = EditToolInput;
+// The defensive renderers below accept several legacy / alternate field names
+// (snake_case + singular shapes) that upstream's strict tool-input types no
+// longer declare. We model the full accepted superset here so the runtime
+// fallbacks stay type-safe. These are intentionally standalone (not an
+// intersection with EditToolInput/WriteToolInput) because the upstream `edits`
+// element type is narrower and would conflict with the legacy item shape.
+export type EditOperationInput = {
+	oldText?: string;
+	newText?: string;
+	old_text?: string;
+	new_text?: string;
+};
 
-export type WriteParams = WriteToolInput;
+export type EditParams = {
+	path?: string;
+	file_path?: string;
+	edits?: EditOperationInput[];
+} & EditOperationInput;
+
+export type WriteParams = {
+	path?: string;
+	file_path?: string;
+	content?: string;
+};
+
+// Keep a reference to the upstream input types so the import stays meaningful
+// and future drift is visible at this seam.
+export type UpstreamEditToolInput = EditToolInput;
+export type UpstreamWriteToolInput = WriteToolInput;
 
 // A single old→new replacement extracted from an edit tool call (supports both
 // the single oldText/newText shape and the batched `edits[]` shape).

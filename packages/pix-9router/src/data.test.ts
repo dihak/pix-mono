@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
-	routerBaseUrl,
 	buildModelsDevIndex,
 	lookupInIndex,
 	type ModelsDevApi,
 	type ModelsDevModel,
+	routerBaseUrl,
 } from "./data.ts";
 
 // ── routerBaseUrl ────────────────────────────────────────────────────────────

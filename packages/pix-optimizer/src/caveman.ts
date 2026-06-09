@@ -5,7 +5,7 @@
  * called by index.ts alongside rtk(pi).
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -14,23 +14,17 @@ import type {
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 import { getSettingsListTheme } from "@earendil-works/pi-coding-agent";
-import type { OptimizerHandle, OptimizerStatus } from "./status.ts";
 import {
 	Container,
 	type SettingItem,
 	SettingsList,
 	Text,
 } from "@earendil-works/pi-tui";
+import type { OptimizerHandle, OptimizerStatus } from "./status.ts";
 
 // ── Levels ────────────────────────────────────────────────────────────────────
 
-export const LEVELS = [
-	"off",
-	"lite",
-	"full",
-	"ultra",
-	"micro",
-] as const;
+export const LEVELS = ["off", "lite", "full", "ultra", "micro"] as const;
 
 export type Level = (typeof LEVELS)[number];
 
@@ -44,26 +38,30 @@ export const LEVEL_NUMBERS: Record<string, Level> = {
 };
 
 export const CAVEMAN_COMMAND_OPTIONS = [
-	{ value: "1",             label: "1 (lite)",      description: "Professional, no fluff" },
-	{ value: "2",             label: "2 (full)",      description: "Classic caveman" },
-	{ value: "3",             label: "3 (ultra)",     description: "Maximum compression" },
-	{ value: "lite",          label: "lite",          description: "Professional, no fluff" },
-	{ value: "full",          label: "full",          description: "Classic caveman" },
-	{ value: "ultra",         label: "ultra",         description: "Maximum compression" },
-	{ value: "micro",         label: "micro",         description: "Experimental prompt-minimized mode" },
-	{ value: "off",           label: "off",           description: "Disable caveman mode" },
-	{ value: "stop",          label: "stop",          description: "Disable caveman mode" },
-	{ value: "quit",          label: "quit",          description: "Disable caveman mode" },
-	{ value: "config",        label: "config",        description: "Open settings dialog" },
+	{ value: "1", label: "1 (lite)", description: "Professional, no fluff" },
+	{ value: "2", label: "2 (full)", description: "Classic caveman" },
+	{ value: "3", label: "3 (ultra)", description: "Maximum compression" },
+	{ value: "lite", label: "lite", description: "Professional, no fluff" },
+	{ value: "full", label: "full", description: "Classic caveman" },
+	{ value: "ultra", label: "ultra", description: "Maximum compression" },
+	{
+		value: "micro",
+		label: "micro",
+		description: "Experimental prompt-minimized mode",
+	},
+	{ value: "off", label: "off", description: "Disable caveman mode" },
+	{ value: "stop", label: "stop", description: "Disable caveman mode" },
+	{ value: "quit", label: "quit", description: "Disable caveman mode" },
+	{ value: "config", label: "config", description: "Open settings dialog" },
 ] as const;
 
 // ── Status labels ─────────────────────────────────────────────────────────────
 
 export const STATUS_LABELS: Record<Exclude<Level, "off">, string> = {
-	lite:           "LITE",
-	full:           "FULL",
-	ultra:          "ULTRA",
-	micro:          "MICRO",
+	lite: "LITE",
+	full: "FULL",
+	ultra: "ULTRA",
+	micro: "MICRO",
 };
 
 // ── Prompt fragments ──────────────────────────────────────────────────────────
@@ -201,7 +199,7 @@ export async function loadConfig(): Promise<CavemanConfig> {
 }
 
 export async function saveConfig(config: CavemanConfig): Promise<void> {
-	const snapshot = JSON.stringify(config, null, 2) + "\n";
+	const snapshot = `${JSON.stringify(config, null, 2)}\n`;
 	_saveQueue = _saveQueue.then(async () => {
 		await mkdir(join(homedir(), ".pi", "agent"), { recursive: true });
 		await writeFile(CONFIG_PATH, snapshot, "utf8");
@@ -211,7 +209,10 @@ export async function saveConfig(config: CavemanConfig): Promise<void> {
 
 // ── Pi extension ────────────────────────────────────────────────────────────
 
-export function caveman(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle {
+export function caveman(
+	pi: ExtensionAPI,
+	status: OptimizerStatus,
+): OptimizerHandle {
 	let level: Level = "off";
 	let config: CavemanConfig = { ...DEFAULT_CONFIG };
 	let configLoadPromise: Promise<void> | null = null;
@@ -240,7 +241,7 @@ export function caveman(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHan
 		const prompt = buildPrompt(level);
 		if (!prompt) return undefined;
 		const existing = event.systemPrompt ?? "";
-		return { systemPrompt: prompt + "\n\n" + existing };
+		return { systemPrompt: `${prompt}\n\n${existing}` };
 	});
 
 	// -- Restore state on session load --
@@ -265,13 +266,20 @@ export function caveman(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHan
 		syncStatus(ctx);
 	});
 
-	pi.on("agent_start", async (_event, ctx) => { syncStatus(ctx); });
-	pi.on("agent_end",   async (_event, ctx) => { syncStatus(ctx); });
+	pi.on("agent_start", async (_event, ctx) => {
+		syncStatus(ctx);
+	});
+	pi.on("agent_end", async (_event, ctx) => {
+		syncStatus(ctx);
+	});
 	pi.on("session_shutdown", async () => {});
 
 	// -- Subcommand handler (dispatched by the merged /opt router) --
 
-	async function run(args: string, ctx: ExtensionCommandContext): Promise<void> {
+	async function run(
+		args: string,
+		ctx: ExtensionCommandContext,
+	): Promise<void> {
 		const arg = args.trim().toLowerCase();
 
 		// No argument → show help
@@ -336,9 +344,19 @@ export function caveman(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHan
 			];
 
 			const container = new Container();
-			container.addChild(new Text(theme.fg("accent", theme.bold(" Caveman Config")), 0, 0));
-			container.addChild(new Text(theme.fg("dim", " Saved to ~/.pi/agent/caveman.json"), 0, 0));
-			container.addChild(new Text(theme.fg("dim", " Default level applies to future sessions."), 0, 0));
+			container.addChild(
+				new Text(theme.fg("accent", theme.bold(" Caveman Config")), 0, 0),
+			);
+			container.addChild(
+				new Text(theme.fg("dim", " Saved to ~/.pi/agent/caveman.json"), 0, 0),
+			);
+			container.addChild(
+				new Text(
+					theme.fg("dim", " Default level applies to future sessions."),
+					0,
+					0,
+				),
+			);
 			container.addChild(new Text("", 0, 0));
 
 			const applySettingChange = (id: string, newValue: string) => {
@@ -360,14 +378,23 @@ export function caveman(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHan
 			);
 
 			container.addChild(settingsList);
-			container.addChild(new Text(theme.fg("dim", " ←→/hl/tab change • ↑↓/jk move • esc close"), 0, 0));
+			container.addChild(
+				new Text(
+					theme.fg("dim", " ←→/hl/tab change • ↑↓/jk move • esc close"),
+					0,
+					0,
+				),
+			);
 
 			const cycleSelectedValue = (direction: -1 | 1) => {
-				const selectedIndex = (settingsList as unknown as { selectedIndex: number }).selectedIndex;
+				const selectedIndex = (
+					settingsList as unknown as { selectedIndex: number }
+				).selectedIndex;
 				const item = items[selectedIndex];
 				if (!item?.values?.length) return;
 				const currentIndex = item.values.indexOf(item.currentValue);
-				const nextIndex = (currentIndex + direction + item.values.length) % item.values.length;
+				const nextIndex =
+					(currentIndex + direction + item.values.length) % item.values.length;
 				const newValue = item.values[nextIndex]!;
 				item.currentValue = newValue;
 				settingsList.updateValue(item.id, newValue);
@@ -380,14 +407,29 @@ export function caveman(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHan
 				handleInput: (data: string) => {
 					if (data === "j") data = "\u001b[B";
 					else if (data === "k") data = "\u001b[A";
-					else if (data === "h") { cycleSelectedValue(-1); _tui.requestRender(); return; }
-					else if (data === "l" || data === "\u001b[C" || data === "\t") { cycleSelectedValue(1); _tui.requestRender(); return; }
-					else if (data === "\u001b[D") { cycleSelectedValue(-1); _tui.requestRender(); return; }
-					else if (data === "\u001b" || data === "q") { done(undefined); return; }
+					else if (data === "h") {
+						cycleSelectedValue(-1);
+						_tui.requestRender();
+						return;
+					} else if (data === "l" || data === "\u001b[C" || data === "\t") {
+						cycleSelectedValue(1);
+						_tui.requestRender();
+						return;
+					} else if (data === "\u001b[D") {
+						cycleSelectedValue(-1);
+						_tui.requestRender();
+						return;
+					} else if (data === "\u001b" || data === "q") {
+						done(undefined);
+						return;
+					}
 
-					const result = settingsList.handleInput(data);
-					if (result === "done") done(undefined);
-					else _tui.requestRender();
+					// SettingsList.handleInput now returns void; completion/cancel is
+					// signalled through the onChange/onCancel callbacks passed to the
+					// constructor (onCancel -> done(undefined)). Just forward input and
+					// re-render.
+					settingsList.handleInput(data);
+					_tui.requestRender();
 				},
 			};
 		});

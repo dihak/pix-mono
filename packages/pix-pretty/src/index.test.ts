@@ -2,7 +2,7 @@
  * Basic smoke tests for pix-pretty extensions
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 
 describe("pix-pretty", () => {
 	it("exports are valid TypeScript modules", () => {

@@ -32,7 +32,9 @@ export const CAPABILITY_REMINDER =
 	"All tools are always callable via function definitions.";
 
 /** Count model-invocable skills (excludes user-only /skill:name entries). */
-export function countInvocableSkills(skills: LoadedSkill[] | undefined): number {
+export function countInvocableSkills(
+	skills: LoadedSkill[] | undefined,
+): number {
 	return (skills ?? []).filter((s) => !s.disableModelInvocation).length;
 }
 

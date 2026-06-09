@@ -1,9 +1,5 @@
-import { describe, it, expect } from "bun:test";
-import {
-	parseInvocation,
-	completeInvocation,
-	buildOptHelp,
-} from "./opt.ts";
+import { describe, expect, it } from "bun:test";
+import { buildOptHelp, completeInvocation, parseInvocation } from "./opt.ts";
 import type { OptimizerHandle, OptimizerTool } from "./status.ts";
 
 /** Build a handle set with spy-able run/complete. */
@@ -88,6 +84,9 @@ describe("dispatch via run", () => {
 		const { name, rest } = parseInvocation("rtk off");
 		expect(name).toBe("rtk");
 		void handles[name as OptimizerTool].run(rest, {} as never);
-		expect(received).toBe("off");
+		// `received` is mutated inside the run() callback above; TS narrows it to
+		// `null` here since it can't see the side effect, so read it through an
+		// untyped cast before asserting.
+		expect(received as string | null).toBe("off");
 	});
 });

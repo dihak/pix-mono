@@ -53,7 +53,8 @@ function wrapText(text: string, width: number): string[] {
 			current = "";
 			for (let i = 0; i < word.length; i += width) {
 				const chunk = word.slice(i, i + width);
-				if (chunk.length === width || i + width < word.length) lines.push(chunk);
+				if (chunk.length === width || i + width < word.length)
+					lines.push(chunk);
 				else current = chunk;
 			}
 		}
@@ -89,9 +90,15 @@ function buildItemBlocks(
 	const normalizedWidth = Math.max(12, width);
 	const freeformLabel = "Type something. — Enter a custom response";
 	const commentToggleLabel = `${commentEnabled ? "[✓]" : "[ ]"} Add extra context after selection`;
-	const allItems: ListItem[] = options.map((option) => ({ type: "option", option }));
+	const allItems: ListItem[] = options.map((option) => ({
+		type: "option",
+		option,
+	}));
 	if (allowComment) {
-		allItems.push({ type: "comment-toggle", option: { title: commentToggleLabel } });
+		allItems.push({
+			type: "comment-toggle",
+			option: { title: commentToggleLabel },
+		});
 	}
 	if (allowFreeform) {
 		allItems.push({ type: "freeform", option: { title: freeformLabel } });
@@ -103,18 +110,28 @@ function buildItemBlocks(
 
 		if (item.type === "comment-toggle" || item.type === "freeform") {
 			const prefix = `${pointer}   `;
-			const wrapped = wrapText(item.option.title, Math.max(8, normalizedWidth - prefix.length));
+			const wrapped = wrapText(
+				item.option.title,
+				Math.max(8, normalizedWidth - prefix.length),
+			);
 			wrapped.forEach((line, lineIndex) => {
-				lines.push(padLine(lineIndex === 0 ? prefix : " ".repeat(prefix.length), line));
+				lines.push(
+					padLine(lineIndex === 0 ? prefix : " ".repeat(prefix.length), line),
+				);
 			});
 			return { itemIndex, lines };
 		}
 
 		const numberPrefix = `${pointer} ${itemIndex + 1}. `;
 		const continuationPrefix = " ".repeat(numberPrefix.length);
-		const titleLines = wrapText(item.option.title, Math.max(8, normalizedWidth - numberPrefix.length));
+		const titleLines = wrapText(
+			item.option.title,
+			Math.max(8, normalizedWidth - numberPrefix.length),
+		);
 		titleLines.forEach((line, lineIndex) => {
-			lines.push(padLine(lineIndex === 0 ? numberPrefix : continuationPrefix, line));
+			lines.push(
+				padLine(lineIndex === 0 ? numberPrefix : continuationPrefix, line),
+			);
 		});
 
 		if (item.option.description && !hideDescriptions) {
@@ -151,11 +168,25 @@ export function renderSingleSelectRows({
 	maxRows,
 	hideDescriptions,
 }: RenderSingleSelectRowsParams): AnnotatedRow[] {
-	const itemCount = options.length + (allowComment ? 1 : 0) + (allowFreeform ? 1 : 0);
-	const blocks = buildItemBlocks(options, width, allowFreeform, allowComment, commentEnabled, selectedIndex, hideDescriptions);
+	const itemCount =
+		options.length + (allowComment ? 1 : 0) + (allowFreeform ? 1 : 0);
+	const blocks = buildItemBlocks(
+		options,
+		width,
+		allowFreeform,
+		allowComment,
+		commentEnabled,
+		selectedIndex,
+		hideDescriptions,
+	);
 	const allRows = flatten(blocks, selectedIndex);
 
-	if (!Number.isFinite(maxRows) || !maxRows || maxRows <= 0 || allRows.length <= maxRows) {
+	if (
+		!Number.isFinite(maxRows) ||
+		!maxRows ||
+		maxRows <= 0 ||
+		allRows.length <= maxRows
+	) {
 		return allRows;
 	}
 
@@ -180,17 +211,20 @@ export function renderSingleSelectRows({
 	let usedRows = selectedBlock.lines.length;
 
 	while (true) {
-		const nextCanFit = end < blocks.length && usedRows + blocks[end]!.lines.length <= availableRows;
+		const nextCanFit =
+			end < blocks.length &&
+			usedRows + blocks[end]?.lines.length <= availableRows;
 		if (nextCanFit) {
-			usedRows += blocks[end]!.lines.length;
+			usedRows += blocks[end]?.lines.length;
 			end += 1;
 			continue;
 		}
 
-		const prevCanFit = start > 0 && usedRows + blocks[start - 1]!.lines.length <= availableRows;
+		const prevCanFit =
+			start > 0 && usedRows + blocks[start - 1]?.lines.length <= availableRows;
 		if (prevCanFit) {
 			start -= 1;
-			usedRows += blocks[start]!.lines.length;
+			usedRows += blocks[start]?.lines.length;
 			continue;
 		}
 

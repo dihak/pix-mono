@@ -7,17 +7,21 @@
 
 import { describe, expect, test } from "bun:test";
 import {
-	type OptionData,
-	type QuestionData,
 	buildResponseText,
 	formatAnswerScalar,
 	hasAnyPreview,
+	type OptionData,
+	type QuestionData,
 	sentinelsFor,
 } from "./ask.ts";
 
 // ── Fixtures ──────────────────────────────────────────────────────────
 
-const opt = (label: string, description = "Test option", preview?: string): OptionData => ({
+const opt = (
+	label: string,
+	description = "Test option",
+	preview?: string,
+): OptionData => ({
 	label,
 	description,
 	...(preview ? { preview } : {}),
@@ -55,10 +59,7 @@ const qWithPreview: QuestionData = {
 const qSingleNoPreview: QuestionData = {
 	question: "Color?",
 	header: "Color",
-	options: [
-		opt("Red", "Ruby red"),
-		opt("Blue", "Ocean blue"),
-	],
+	options: [opt("Red", "Ruby red"), opt("Blue", "Ocean blue")],
 };
 
 // ── hasAnyPreview ─────────────────────────────────────────────────────
@@ -85,8 +86,8 @@ describe("sentinelsFor", () => {
 	test('single-select without preview appends "Type something."', () => {
 		const r = sentinelsFor(qSingleNoPreview);
 		expect(r).toHaveLength(1);
-		expect(r[0]!.kind).toBe("other");
-		expect(r[0]!.label).toBe("Type something.");
+		expect(r[0]?.kind).toBe("other");
+		expect(r[0]?.label).toBe("Type something.");
 	});
 
 	test('single-select with preview appends nothing (only "Chat about this" is separate)', () => {
@@ -97,8 +98,8 @@ describe("sentinelsFor", () => {
 	test('multi-select appends "Next"', () => {
 		const r = sentinelsFor(qMulti);
 		expect(r).toHaveLength(1);
-		expect(r[0]!.kind).toBe("next");
-		expect(r[0]!.label).toBe("Next");
+		expect(r[0]?.kind).toBe("next");
+		expect(r[0]?.label).toBe("Next");
 	});
 
 	test("multi-select never appends Type something.", () => {
@@ -109,14 +110,14 @@ describe("sentinelsFor", () => {
 	test("empty options still gets freeform sentinel (no preview = single-select)", () => {
 		const r = sentinelsFor({ question: "?", header: "X", options: [] });
 		expect(r).toHaveLength(1);
-		expect(r[0]!.kind).toBe("other");
+		expect(r[0]?.kind).toBe("other");
 	});
 });
 
 // ── formatAnswerScalar ────────────────────────────────────────────────
 
 describe("formatAnswerScalar", () => {
-	test('option kind returns the answer string', () => {
+	test("option kind returns the answer string", () => {
 		const a = {
 			questionIndex: 0,
 			question: "Q",
@@ -126,7 +127,7 @@ describe("formatAnswerScalar", () => {
 		expect(formatAnswerScalar(a)).toBe("REST");
 	});
 
-	test('multi kind joins selected with comma', () => {
+	test("multi kind joins selected with comma", () => {
 		const a = {
 			questionIndex: 0,
 			question: "Q",
@@ -137,7 +138,7 @@ describe("formatAnswerScalar", () => {
 		expect(formatAnswerScalar(a)).toBe("Auth, Search");
 	});
 
-	test('custom kind returns the typed text', () => {
+	test("custom kind returns the typed text", () => {
 		const a = {
 			questionIndex: 0,
 			question: "Q",
@@ -147,7 +148,7 @@ describe("formatAnswerScalar", () => {
 		expect(formatAnswerScalar(a)).toBe("my custom answer");
 	});
 
-	test('chat kind returns (chat)', () => {
+	test("chat kind returns (chat)", () => {
 		const a = {
 			questionIndex: 0,
 			question: "Q",
@@ -163,7 +164,12 @@ describe("formatAnswerScalar", () => {
 describe("buildResponseText", () => {
 	test("formats single answer", () => {
 		const answers = [
-			{ questionIndex: 0, question: "Which approach?", kind: "option" as const, answer: "REST" },
+			{
+				questionIndex: 0,
+				question: "Which approach?",
+				kind: "option" as const,
+				answer: "REST",
+			},
 		];
 		const text = buildResponseText(answers, [qSingle]);
 		expect(text).toContain("REST");
@@ -202,7 +208,12 @@ describe("buildResponseText", () => {
 	test("formats multiple answers", () => {
 		const qs = [qSingle, qMulti];
 		const answers = [
-			{ questionIndex: 0, question: "Which approach?", kind: "option" as const, answer: "GraphQL" },
+			{
+				questionIndex: 0,
+				question: "Which approach?",
+				kind: "option" as const,
+				answer: "GraphQL",
+			},
 			{
 				questionIndex: 1,
 				question: "Which features?",

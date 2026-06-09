@@ -12,7 +12,7 @@ async function clearCache(pi: ExtensionAPI, ctx: ExtensionCommandContext) {
 		.filter(Boolean)
 		.join("\n")
 		.trim();
-	if ((result.exitCode ?? 0) !== 0) {
+	if ((result.code ?? 0) !== 0) {
 		ctx.ui.notify(`Cache clear failed. ${output || "No output."}`, "error");
 		return;
 	}

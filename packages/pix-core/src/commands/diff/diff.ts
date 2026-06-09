@@ -18,7 +18,8 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 const COMMAND = "diff";
 
 function getStringPath(input: unknown): string | undefined {
-	if (!input || typeof input !== "object" || !("path" in input)) return undefined;
+	if (!input || typeof input !== "object" || !("path" in input))
+		return undefined;
 	const p = (input as { path?: unknown }).path;
 	return typeof p === "string" ? p : undefined;
 }
@@ -45,8 +46,15 @@ function parseGitStatus(output: string, cwd: string): Set<string> {
 	return files;
 }
 
-async function getGitChanged(pi: ExtensionAPI, cwd: string): Promise<Set<string>> {
-	const r = await pi.exec("git", ["status", "--porcelain", "--untracked-files=all"], { cwd, timeout: 5000 });
+async function getGitChanged(
+	pi: ExtensionAPI,
+	cwd: string,
+): Promise<Set<string>> {
+	const r = await pi.exec(
+		"git",
+		["status", "--porcelain", "--untracked-files=all"],
+		{ cwd, timeout: 5000 },
+	);
 	if (r.code !== 0) return new Set();
 	return parseGitStatus(r.stdout, cwd);
 }
@@ -56,7 +64,8 @@ function diff(current: Set<string>, baseline: Set<string>): Set<string> {
 }
 
 function pickEditor(): { cmd: string; args: (file: string) => string[] } {
-	const env = process.env.PI_DIFF_EDITOR || process.env.VISUAL || process.env.EDITOR;
+	const env =
+		process.env.PI_DIFF_EDITOR || process.env.VISUAL || process.env.EDITOR;
 	if (env) {
 		const parts = env.split(/\s+/);
 		const cmd = parts[0];
@@ -88,12 +97,16 @@ export default function (pi: ExtensionAPI) {
 		const now = await getGitChanged(pi, ctx.cwd);
 		changed = new Set([...diff(now, baseline), ...touched]);
 		if (changed.size > 0) {
-			ctx.ui.notify(`📝 ${changed.size} changed file(s). Run /${COMMAND} to view/open.`, "info");
+			ctx.ui.notify(
+				`📝 ${changed.size} changed file(s). Run /${COMMAND} to view/open.`,
+				"info",
+			);
 		}
 	});
 
 	pi.registerCommand(COMMAND, {
-		description: "Show files changed by the last agent run and open one in your editor",
+		description:
+			"Show files changed by the last agent run and open one in your editor",
 		handler: async (args, ctx) => {
 			await ctx.waitForIdle();
 			const arg = (args ?? "").trim();
@@ -106,19 +119,30 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 
-			const files = [...changed].sort((a, b) => toRel(ctx.cwd, a).localeCompare(toRel(ctx.cwd, b)));
+			const files = [...changed].sort((a, b) =>
+				toRel(ctx.cwd, a).localeCompare(toRel(ctx.cwd, b)),
+			);
 			if (files.length === 0) {
-				ctx.ui.notify("No changed files tracked from the last agent run", "info");
+				ctx.ui.notify(
+					"No changed files tracked from the last agent run",
+					"info",
+				);
 				return;
 			}
 
 			if (arg === "list") {
-				ctx.ui.notify(`Changed files:\n${files.map((f) => `- ${toRel(ctx.cwd, f)}`).join("\n")}`, "info");
+				ctx.ui.notify(
+					`Changed files:\n${files.map((f) => `- ${toRel(ctx.cwd, f)}`).join("\n")}`,
+					"info",
+				);
 				return;
 			}
 
 			if (arg) {
-				ctx.ui.notify(`Unknown /${COMMAND} argument: ${arg}. Try /${COMMAND}, /${COMMAND} list, /${COMMAND} clear.`, "warning");
+				ctx.ui.notify(
+					`Unknown /${COMMAND} argument: ${arg}. Try /${COMMAND}, /${COMMAND} list, /${COMMAND} clear.`,
+					"warning",
+				);
 				return;
 			}
 
@@ -130,9 +154,17 @@ export default function (pi: ExtensionAPI) {
 			if (!file) return;
 
 			const ed = pickEditor();
-			const r = await pi.exec(ed.cmd, ed.args(file), { cwd: ctx.cwd, timeout: 5000 });
-			if (r.code === 0) ctx.ui.notify(`Opened ${selected} in ${ed.cmd}`, "info");
-			else ctx.ui.notify(r.stderr.trim() || `Failed to open ${selected} in ${ed.cmd}`, "error");
+			const r = await pi.exec(ed.cmd, ed.args(file), {
+				cwd: ctx.cwd,
+				timeout: 5000,
+			});
+			if (r.code === 0)
+				ctx.ui.notify(`Opened ${selected} in ${ed.cmd}`, "info");
+			else
+				ctx.ui.notify(
+					r.stderr.trim() || `Failed to open ${selected} in ${ed.cmd}`,
+					"error",
+				);
 		},
 	});
 }

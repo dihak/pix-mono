@@ -1,9 +1,9 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	OptimizerStatus,
+	renderStatus,
 	STATUS_KEY,
 	TOOL_ICONS,
-	renderStatus,
 } from "./status.ts";
 
 /** Tagging colorizer: <accent>X</accent> / <dim>X</dim> for assertions. */

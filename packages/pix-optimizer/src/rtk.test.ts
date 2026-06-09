@@ -1,9 +1,9 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
-	splitChain,
-	rewriteChain,
 	applyRtkRewrite,
 	type BashCallEvent,
+	rewriteChain,
+	splitChain,
 } from "./rtk.ts";
 
 /** Build a fresh bash tool_call event for hook tests. */
@@ -111,7 +111,10 @@ describe("rewriteChain", () => {
 describe("applyRtkRewrite (tool_call hook step)", () => {
 	it("mutates event.input.command in place for a known bash command", () => {
 		const event = bashEvent("git status");
-		const changed = applyRtkRewrite(event, { enabled: true, rtkAvailable: true });
+		const changed = applyRtkRewrite(event, {
+			enabled: true,
+			rtkAvailable: true,
+		});
 		expect(changed).toBe(true);
 		expect(event.input.command).toBe("rtk git status");
 	});
@@ -124,49 +127,74 @@ describe("applyRtkRewrite (tool_call hook step)", () => {
 
 	it("does not mutate when disabled", () => {
 		const event = bashEvent("git status");
-		const changed = applyRtkRewrite(event, { enabled: false, rtkAvailable: true });
+		const changed = applyRtkRewrite(event, {
+			enabled: false,
+			rtkAvailable: true,
+		});
 		expect(changed).toBe(false);
 		expect(event.input.command).toBe("git status");
 	});
 
 	it("does not mutate when rtk binary is unavailable", () => {
 		const event = bashEvent("git status");
-		const changed = applyRtkRewrite(event, { enabled: true, rtkAvailable: false });
+		const changed = applyRtkRewrite(event, {
+			enabled: true,
+			rtkAvailable: false,
+		});
 		expect(changed).toBe(false);
 		expect(event.input.command).toBe("git status");
 	});
 
 	it("ignores non-bash tools", () => {
-		const event: BashCallEvent = { toolName: "grep", input: { command: "git status" } };
-		const changed = applyRtkRewrite(event, { enabled: true, rtkAvailable: true });
+		const event: BashCallEvent = {
+			toolName: "grep",
+			input: { command: "git status" },
+		};
+		const changed = applyRtkRewrite(event, {
+			enabled: true,
+			rtkAvailable: true,
+		});
 		expect(changed).toBe(false);
 		expect(event.input.command).toBe("git status");
 	});
 
 	it("leaves unknown commands untouched", () => {
 		const event = bashEvent("mkdir build && cd build");
-		const changed = applyRtkRewrite(event, { enabled: true, rtkAvailable: true });
+		const changed = applyRtkRewrite(event, {
+			enabled: true,
+			rtkAvailable: true,
+		});
 		expect(changed).toBe(false);
 		expect(event.input.command).toBe("mkdir build && cd build");
 	});
 
 	it("does not double-prefix an already-rtk command", () => {
 		const event = bashEvent("rtk git status");
-		const changed = applyRtkRewrite(event, { enabled: true, rtkAvailable: true });
+		const changed = applyRtkRewrite(event, {
+			enabled: true,
+			rtkAvailable: true,
+		});
 		expect(changed).toBe(false);
 		expect(event.input.command).toBe("rtk git status");
 	});
 
 	it("handles missing / non-string command safely", () => {
 		const event: BashCallEvent = { toolName: "bash", input: {} };
-		expect(applyRtkRewrite(event, { enabled: true, rtkAvailable: true })).toBe(false);
+		expect(applyRtkRewrite(event, { enabled: true, rtkAvailable: true })).toBe(
+			false,
+		);
 		const event2: BashCallEvent = { toolName: "bash", input: { command: 123 } };
-		expect(applyRtkRewrite(event2, { enabled: true, rtkAvailable: true })).toBe(false);
+		expect(applyRtkRewrite(event2, { enabled: true, rtkAvailable: true })).toBe(
+			false,
+		);
 	});
 
 	it("leaves command unchanged on unbalanced quotes", () => {
 		const event = bashEvent('git commit -m "oops');
-		const changed = applyRtkRewrite(event, { enabled: true, rtkAvailable: true });
+		const changed = applyRtkRewrite(event, {
+			enabled: true,
+			rtkAvailable: true,
+		});
 		expect(changed).toBe(false);
 		expect(event.input.command).toBe('git commit -m "oops');
 	});

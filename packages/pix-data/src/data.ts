@@ -20,8 +20,8 @@
  *   import { lookupModelsDev, lookupBenchmark } from "./data.ts";
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -131,7 +131,11 @@ export class DataSource<T> {
 		try {
 			const url =
 				typeof this.opts.url === "function" ? this.opts.url() : this.opts.url;
-			const response = await fetchWithTimeout(url, this.opts.timeoutMs, this.opts.headers());
+			const response = await fetchWithTimeout(
+				url,
+				this.opts.timeoutMs,
+				this.opts.headers(),
+			);
 			if (!response.ok)
 				throw new Error(`${this.opts.label} fetch failed: ${response.status}`);
 			const raw = await response.json();
@@ -142,7 +146,9 @@ export class DataSource<T> {
 		} catch (error) {
 			const msg = error instanceof Error ? error.message : String(error);
 			if (cached !== undefined) {
-				console.warn(`${this.opts.label} fetch failed, using stale cache: ${msg}`);
+				console.warn(
+					`${this.opts.label} fetch failed, using stale cache: ${msg}`,
+				);
 				const val = this.opts.parseCache(cached.data);
 				this._mem = val;
 				return val;
@@ -152,7 +158,9 @@ export class DataSource<T> {
 		}
 	}
 
-	private async _readCache(): Promise<{ ts: number; data: unknown } | undefined> {
+	private async _readCache(): Promise<
+		{ ts: number; data: unknown } | undefined
+	> {
 		try {
 			const raw = await readFile(this.opts.cachePath, "utf8");
 			const parsed = JSON.parse(raw) as { ts: number; data: unknown };
@@ -166,7 +174,10 @@ export class DataSource<T> {
 	private async _writeCache(data: unknown): Promise<void> {
 		try {
 			await mkdir(dirname(this.opts.cachePath), { recursive: true });
-			await writeFile(this.opts.cachePath, JSON.stringify({ ts: Date.now(), data }));
+			await writeFile(
+				this.opts.cachePath,
+				JSON.stringify({ ts: Date.now(), data }),
+			);
 		} catch {
 			// Write failure is non-fatal — stale cache used on next run
 		}
@@ -226,7 +237,9 @@ function stripPrefix(id: string): string {
 	return i >= 0 ? id.slice(i + 1) : id;
 }
 
-export function buildModelsDevIndex(api: ModelsDevApi): Map<string, ModelsDevModel> {
+export function buildModelsDevIndex(
+	api: ModelsDevApi,
+): Map<string, ModelsDevModel> {
 	const index = new Map<string, ModelsDevModel>();
 	for (const provider of Object.values(api)) {
 		if (!provider?.models) continue;
@@ -254,7 +267,10 @@ export function lookupInIndex(
 	return undefined;
 }
 
-export function lookupModelsDev(provider: string, id: string): ModelsDevModel | undefined {
+export function lookupModelsDev(
+	provider: string,
+	id: string,
+): ModelsDevModel | undefined {
 	const data = modelsDev.getCached();
 	const canonical = id.includes("/") ? id.slice(id.lastIndexOf("/") + 1) : id;
 	const exact = data[provider]?.models?.[canonical];
@@ -266,12 +282,18 @@ export function lookupModelsDev(provider: string, id: string): ModelsDevModel | 
 	return undefined;
 }
 
-export async function fetchModelsDevIndex(): Promise<Map<string, ModelsDevModel>> {
+export async function fetchModelsDevIndex(): Promise<
+	Map<string, ModelsDevModel>
+> {
 	return buildModelsDevIndex(await modelsDev.get());
 }
 
 function normBench(s: string): string {
-	return s.toLowerCase().replace(/[-_.]+/g, " ").replace(/\s+/g, " ").trim();
+	return s
+		.toLowerCase()
+		.replace(/[-_.]+/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
 }
 
 export function lookupBenchmark(modelName: string): BenchmarkEntry | undefined {

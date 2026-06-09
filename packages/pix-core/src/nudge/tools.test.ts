@@ -114,15 +114,23 @@ describe("classifyCompound", () => {
 });
 
 describe("nudgeReason", () => {
-		test("active tool: point straight at it, no toolbox", () => {
-		const msg = nudgeReason("Searching file contents via bash grep/rg.", "grep", true);
+	test("active tool: point straight at it, no toolbox", () => {
+		const msg = nudgeReason(
+			"Searching file contents via bash grep/rg.",
+			"grep",
+			true,
+		);
 		expect(msg).toContain("Use `grep` instead");
 		expect(msg).toContain("function definitions");
 		expect(msg).not.toContain("toolbox");
 	});
 
-		test("gated tool: route through toolbox enable, not a direct call", () => {
-		const msg = nudgeReason("Listing a directory via bash ls/tree.", "ls", false);
+	test("gated tool: route through toolbox enable, not a direct call", () => {
+		const msg = nudgeReason(
+			"Listing a directory via bash ls/tree.",
+			"ls",
+			false,
+		);
 		expect(msg).toContain('toolbox(action:"enable", name:"ls")');
 		expect(msg).toContain("prompt-hidden");
 		expect(msg).toContain("function definitions");
@@ -131,13 +139,17 @@ describe("nudgeReason", () => {
 	});
 
 	test("gated find tool names itself in the enable hint", () => {
-		expect(nudgeReason("Locating files via bash find/fd.", "find", false)).toContain(
-			'toolbox(action:"enable", name:"find")',
-		);
+		expect(
+			nudgeReason("Locating files via bash find/fd.", "find", false),
+		).toContain('toolbox(action:"enable", name:"find")');
 	});
 
-		test("is a single short line — no inventory dump, no newlines", () => {
-		const msg = nudgeReason("Listing a directory via bash ls/tree.", "ls", false);
+	test("is a single short line — no inventory dump, no newlines", () => {
+		const msg = nudgeReason(
+			"Listing a directory via bash ls/tree.",
+			"ls",
+			false,
+		);
 		expect(msg).not.toContain("\n");
 		expect(msg).not.toContain("Available tools");
 		expect(msg.length).toBeLessThan(400);

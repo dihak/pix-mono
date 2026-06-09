@@ -6,7 +6,7 @@
  * See: pi-crash.log — "Rendered line 38 exceeds terminal width (285 > 283)"
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import { restyleMarkers } from "./paste-chips";
 

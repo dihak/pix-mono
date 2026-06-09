@@ -6,10 +6,10 @@
  *   ROUTER_API_KEY   — bearer token for the router
  */
 
-import { execFile } from "node:child_process";
+import { type ExecFileException, execFile } from "node:child_process";
+import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { StringEnum } from "@earendil-works/pi-ai";
 import { routerBaseUrl } from "./data.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -59,9 +59,10 @@ function curl(args: string[]): Promise<string> {
 			{ maxBuffer: 10 * 1024 * 1024, timeout: 30_000 },
 			(err, stdout, stderr) => {
 				if (err) {
-					const msg = (err as NodeJS.ErrnoException).killed
+					const e = err as ExecFileException;
+					const msg = e.killed
 						? "curl timed out"
-						: `curl exit ${(err as NodeJS.ErrnoException).code ?? "??"}: ${stderr.slice(0, 300)}`;
+						: `curl exit ${e.code ?? "??"}: ${stderr.slice(0, 300)}`;
 					reject(new Error(msg));
 					return;
 				}
@@ -108,6 +109,7 @@ export default function registerFetch(pi: ExtensionAPI): void {
 					content: [
 						{ type: "text", text: `Fetching (${fmt}): ${params.url}...` },
 					],
+					details: undefined,
 				});
 
 				const raw = await apiPost(
@@ -123,7 +125,7 @@ export default function registerFetch(pi: ExtensionAPI): void {
 
 				const truncated =
 					maxChars > 0 && raw.length > maxChars
-						? raw.slice(0, maxChars) + "\n\n[truncated]"
+						? `${raw.slice(0, maxChars)}\n\n[truncated]`
 						: raw;
 
 				return {
@@ -143,13 +145,14 @@ export default function registerFetch(pi: ExtensionAPI): void {
 							text: `API failed: ${apiMsg}\nFalling back to curl...`,
 						},
 					],
+					details: undefined,
 				});
 			}
 
 			try {
 				let html = await curl(["-L", params.url]);
 				if (maxChars > 0 && html.length > maxChars)
-					html = html.slice(0, maxChars) + "\n\n[truncated]";
+					html = `${html.slice(0, maxChars)}\n\n[truncated]`;
 
 				const banner =
 					"[FALLBACK — raw curl] API unavailable, content may differ from exa formatted output.";

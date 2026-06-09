@@ -16,20 +16,20 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import registerWelcome from "./ui/welcome.ts";
-import registerFooter from "./ui/footer.ts";
-import registerDiagnostics from "./ui/diagnostics.ts";
-import registerModels from "./commands/models/models.ts";
-import registerUpdate from "./commands/update/update.ts";
-import registerLg from "./commands/lg/lg.ts";
-import registerYeet from "./commands/yeet/yeet.ts";
+import registerClear from "./commands/clear/clear.ts";
 import registerCopyAll from "./commands/copy-all/copy-all.ts";
 import registerDiff from "./commands/diff/diff.ts";
-import registerClear from "./commands/clear/clear.ts";
-import registerTodo from "./tool/todo/todo.ts";
-import registerAsk from "./tool/ask/ask.ts";
-import registerToolbox from "./tool/toolbox/toolbox.ts";
+import registerLg from "./commands/lg/lg.ts";
+import registerModels from "./commands/models/models.ts";
+import registerUpdate from "./commands/update/update.ts";
+import registerYeet from "./commands/yeet/yeet.ts";
 import registerNudges from "./nudge/index.ts";
+import registerAsk from "./tool/ask/ask.ts";
+import registerTodo from "./tool/todo/todo.ts";
+import registerToolbox from "./tool/toolbox/toolbox.ts";
+import registerDiagnostics from "./ui/diagnostics.ts";
+import registerFooter from "./ui/footer.ts";
+import registerWelcome from "./ui/welcome.ts";
 
 export default function (pi: ExtensionAPI): void {
 	registerWelcome(pi);

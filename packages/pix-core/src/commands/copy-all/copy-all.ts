@@ -16,7 +16,12 @@ function textFromContent(content: unknown): string {
 	return content
 		.map((block) => {
 			if (!block || typeof block !== "object" || !("type" in block)) return "";
-			if (block.type === "text" && "text" in block && typeof block.text === "string") return block.text;
+			if (
+				block.type === "text" &&
+				"text" in block &&
+				typeof block.text === "string"
+			)
+				return block.text;
 			if (block.type === "image") return "[image]";
 			return "";
 		})
@@ -43,11 +48,14 @@ function copyToClipboard(text: string): Promise<void> {
 		}
 		const child = spawn(c.cmd, c.args);
 		let stderr = "";
-		child.stderr.on("data", (chunk) => { stderr += String(chunk); });
+		child.stderr.on("data", (chunk) => {
+			stderr += String(chunk);
+		});
 		child.on("error", reject);
 		child.on("close", (code) => {
 			if (code === 0) resolve();
-			else reject(new Error(stderr.trim() || `${c.cmd} exited with code ${code}`));
+			else
+				reject(new Error(stderr.trim() || `${c.cmd} exited with code ${code}`));
 		});
 		child.stdin.end(text);
 	});
@@ -55,7 +63,8 @@ function copyToClipboard(text: string): Promise<void> {
 
 export default function (pi: ExtensionAPI) {
 	pi.registerCommand("copy-all", {
-		description: "Copy all user/assistant messages in this thread to the clipboard",
+		description:
+			"Copy all user/assistant messages in this thread to the clipboard",
 		handler: async (_args, ctx) => {
 			await ctx.waitForIdle();
 
@@ -80,9 +89,15 @@ export default function (pi: ExtensionAPI) {
 
 			try {
 				await copyToClipboard(text);
-				ctx.ui.notify(`📋 Copied ${messages.length} messages to clipboard`, "info");
+				ctx.ui.notify(
+					`📋 Copied ${messages.length} messages to clipboard`,
+					"info",
+				);
 			} catch (err) {
-				ctx.ui.notify(`Clipboard copy failed: ${err instanceof Error ? err.message : String(err)}`, "error");
+				ctx.ui.notify(
+					`Clipboard copy failed: ${err instanceof Error ? err.message : String(err)}`,
+					"error",
+				);
 			}
 		},
 	});

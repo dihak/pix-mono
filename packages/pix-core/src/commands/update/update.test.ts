@@ -1,10 +1,10 @@
-import { describe, it, expect } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
-	isTransient,
 	commandFor,
 	formatUpdateSummary,
-	PACKAGE_NAME,
 	type InstallMethod,
+	isTransient,
+	PACKAGE_NAME,
 } from "./update.ts";
 
 describe("isTransient", () => {
@@ -48,28 +48,28 @@ describe("commandFor", () => {
 		for (const m of methods) {
 			const spec = commandFor(m);
 			expect(spec).toBeDefined();
-			expect(spec!.command).toBeTruthy();
-			expect(spec!.label).toBeTruthy();
+			expect(spec?.command).toBeTruthy();
+			expect(spec?.label).toBeTruthy();
 		}
 	});
 
 	it("vp uses vp add -g", () => {
 		const spec = commandFor("vp")!;
 		expect(spec.command).toBe("vp");
-		expect(spec.args).toContain(PACKAGE_NAME + "@latest");
+		expect(spec.args).toContain(`${PACKAGE_NAME}@latest`);
 	});
 
 	it("bun uses bun add -g", () => {
 		const spec = commandFor("bun")!;
 		expect(spec.command).toBe("bun");
-		expect(spec.args).toContain(PACKAGE_NAME + "@latest");
+		expect(spec.args).toContain(`${PACKAGE_NAME}@latest`);
 	});
 
 	it("npm uses npm install -g", () => {
 		const spec = commandFor("npm")!;
 		expect(spec.command).toBe("npm");
 		expect(spec.args).toContain("-g");
-		expect(spec.args).toContain(PACKAGE_NAME + "@latest");
+		expect(spec.args).toContain(`${PACKAGE_NAME}@latest`);
 	});
 
 	it("brew uses sh -lc", () => {

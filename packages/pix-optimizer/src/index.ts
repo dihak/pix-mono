@@ -13,10 +13,14 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { caveman } from "./caveman.ts";
-import { rtk } from "./rtk.ts";
 import { json } from "./json.ts";
-import { OptimizerStatus, type OptimizerHandle, type OptimizerTool } from "./status.ts";
 import { registerOptCommand } from "./opt.ts";
+import { rtk } from "./rtk.ts";
+import {
+	type OptimizerHandle,
+	OptimizerStatus,
+	type OptimizerTool,
+} from "./status.ts";
 
 export default function optimizer(pi: ExtensionAPI) {
 	const status = new OptimizerStatus();

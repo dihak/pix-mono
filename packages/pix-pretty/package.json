@@ -1,54 +1,54 @@
 {
-  "name": "@xynogen/pix-pretty",
-  "version": "1.0.0",
-  "description": "Enhanced tool output rendering with syntax highlighting, file icons, tree views, FFF search, and paste chip formatting",
-  "type": "module",
-  "main": "src/index.ts",
-  "scripts": {
-    "test": "bun test"
-  },
-  "files": [
-    "src",
-    "README.md",
-    "LICENSE"
-  ],
-  "pi": {
-    "extensions": [
-      "./src/index.ts",
-      "./src/paste-chips.ts",
-      "./src/thinking.ts"
-    ]
-  },
-  "keywords": [
-    "pi",
-    "pi-package",
-    "pi-extension",
-    "syntax-highlighting",
-    "fff",
-    "paste-chips",
-    "tool-rendering"
-  ],
-  "author": "xynogen",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xynogen/pix-mono.git",
-    "directory": "packages/pix-pretty"
-  },
-  "homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-pretty#readme",
-  "bugs": {
-    "url": "https://github.com/xynogen/pix-mono/issues"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "dependencies": {
-    "cli-highlight": "^2.1.11",
-    "@ff-labs/fff-node": "^0.5.2",
-    "diff": "^7.0.0"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*"
-  }
+	"name": "@xynogen/pix-pretty",
+	"version": "1.0.0",
+	"description": "Enhanced tool output rendering with syntax highlighting, file icons, tree views, FFF search, and paste chip formatting",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"./src/index.ts",
+			"./src/paste-chips.ts",
+			"./src/thinking.ts"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"syntax-highlighting",
+		"fff",
+		"paste-chips",
+		"tool-rendering"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-pretty"
+	},
+	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-pretty#readme",
+	"bugs": {
+		"url": "https://github.com/xynogen/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"cli-highlight": "^2.1.11",
+		"@ff-labs/fff-node": "^0.5.2",
+		"diff": "^7.0.0"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	}
 }

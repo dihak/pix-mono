@@ -23,7 +23,7 @@ import {
 	Text,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
-import { lookupModelsDev, lookupBenchmark } from "../../lib/data";
+import { lookupBenchmark, lookupModelsDev } from "../../lib/data";
 
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────
 

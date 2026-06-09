@@ -76,10 +76,7 @@ const JSON_TRIGGERS = [
 	"swagger",
 ] as const;
 
-const JSON_TRIGGER_RE = new RegExp(
-	`\\b(${JSON_TRIGGERS.join("|")})\\b`,
-	"i",
-);
+const JSON_TRIGGER_RE = new RegExp(`\\b(${JSON_TRIGGERS.join("|")})\\b`, "i");
 
 /**
  * True when the user prompt mentions JSON (or a related token), so the
@@ -120,7 +117,10 @@ export function adviseToon(value: unknown, maxDepth = 4): ToonAdvice {
 		}
 		// Array of arrays: TOON's only structurally-worse case.
 		if (value.every((v) => Array.isArray(v))) {
-			return { useToon: false, reason: "array of arrays — JSON is more compact" };
+			return {
+				useToon: false,
+				reason: "array of arrays — JSON is more compact",
+			};
 		}
 		// Uniform array of flat objects → tabular sweet spot.
 		if (isUniformObjectArray(value)) {
@@ -131,9 +131,15 @@ export function adviseToon(value: unknown, maxDepth = 4): ToonAdvice {
 		}
 		// Array of primitives.
 		if (value.every((v) => !isObjectLike(v))) {
-			return { useToon: true, reason: "primitive array — TOON omits quotes/braces" };
+			return {
+				useToon: true,
+				reason: "primitive array — TOON omits quotes/braces",
+			};
 		}
-		return { useToon: false, reason: "non-uniform array — savings uncertain, keep JSON" };
+		return {
+			useToon: false,
+			reason: "non-uniform array — savings uncertain, keep JSON",
+		};
 	}
 
 	if (isObjectLike(value)) {
@@ -144,7 +150,10 @@ export function adviseToon(value: unknown, maxDepth = 4): ToonAdvice {
 				reason: `nesting depth ${depth} > ${maxDepth} — compact JSON may win`,
 			};
 		}
-		return { useToon: true, reason: "shallow object — TOON drops quotes/braces" };
+		return {
+			useToon: true,
+			reason: "shallow object — TOON drops quotes/braces",
+		};
 	}
 
 	return { useToon: false, reason: "primitive value — nothing to compress" };
@@ -209,7 +218,10 @@ export function skillDir(): string {
 
 // ── Pi extension ──────────────────────────────────────────────────────────────
 
-export function json(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle {
+export function json(
+	pi: ExtensionAPI,
+	status: OptimizerStatus,
+): OptimizerHandle {
 	let enabled = true;
 
 	// Report into the shared optimizer indicator.
@@ -217,9 +229,15 @@ export function json(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle
 		status.set("toon", enabled, ctx);
 	}
 
-	pi.on("session_start", async (_event, ctx) => { syncStatus(ctx); });
-	pi.on("agent_start", async (_event, ctx) => { syncStatus(ctx); });
-	pi.on("agent_end", async (_event, ctx) => { syncStatus(ctx); });
+	pi.on("session_start", async (_event, ctx) => {
+		syncStatus(ctx);
+	});
+	pi.on("agent_start", async (_event, ctx) => {
+		syncStatus(ctx);
+	});
+	pi.on("agent_end", async (_event, ctx) => {
+		syncStatus(ctx);
+	});
 
 	// Surface the bundled skill so the model can load the full workflow.
 	pi.on("resources_discover", async () => {
@@ -234,7 +252,7 @@ export function json(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle
 		if (!enabled) return undefined;
 		if (!mentionsJson(event.prompt)) return undefined;
 		const existing = event.systemPrompt ?? "";
-		return { systemPrompt: JSON_SYSTEM_PROMPT + "\n\n" + existing };
+		return { systemPrompt: `${JSON_SYSTEM_PROMPT}\n\n${existing}` };
 	});
 
 	// -- Subcommand handler (dispatched by the merged /opt router) --
@@ -242,14 +260,21 @@ export function json(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle
 	function complete(prefix: string) {
 		const items = [
 			{ value: "on", label: "on", description: "Force JSON/TOON guidance on" },
-			{ value: "off", label: "off", description: "Force JSON/TOON guidance off" },
+			{
+				value: "off",
+				label: "off",
+				description: "Force JSON/TOON guidance off",
+			},
 		];
 		const n = prefix.trim().toLowerCase();
 		const filtered = items.filter((i) => i.value.startsWith(n));
 		return filtered.length > 0 ? filtered : null;
 	}
 
-	async function run(args: string, ctx: ExtensionCommandContext): Promise<void> {
+	async function run(
+		args: string,
+		ctx: ExtensionCommandContext,
+	): Promise<void> {
 		{
 			const arg = args.trim().toLowerCase();
 			if (arg === "on") enabled = true;

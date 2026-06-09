@@ -9,8 +9,8 @@
  * checklist is seeded by the model via the tool's `set` action.
  */
 
-import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
 
 export type TodoStatus = "pending" | "in_progress" | "done" | "blocked";
 
@@ -44,7 +44,9 @@ export default function registerTodo(pi: ExtensionAPI): void {
 	function todoSummary(): string {
 		if (!todos.length) return "(no todos)";
 		const done = todos.filter((t) => t.status === "done").length;
-		const lines = todos.map((t) => `${TODO_GLYPH[t.status]} ${t.id}. ${t.text}`);
+		const lines = todos.map(
+			(t) => `${TODO_GLYPH[t.status]} ${t.id}. ${t.text}`,
+		);
 		return `Todos ${done}/${todos.length} done:\n${lines.join("\n")}`;
 	}
 
@@ -101,19 +103,24 @@ export default function registerTodo(pi: ExtensionAPI): void {
 			),
 		}),
 		async execute(_id, params) {
+			// AgentToolResult now requires a `details` field. These todo results have
+			// no structured details, so emit `undefined` via small local helpers.
+			const ok = (text: string) => ({
+				content: [{ type: "text" as const, text }],
+				details: undefined,
+			});
+			const fail = (text: string) => ({
+				content: [{ type: "text" as const, text }],
+				details: undefined,
+				isError: true,
+			});
 			switch (params.action) {
 				case "list":
-					return { content: [{ type: "text", text: todoSummary() }] };
+					return ok(todoSummary());
 
 				case "set": {
 					const texts = parseItems(params.items ?? "");
-					if (!texts.length)
-						return {
-							content: [
-								{ type: "text", text: "set requires non-empty `items`." },
-							],
-							isError: true,
-						};
+					if (!texts.length) return fail("set requires non-empty `items`.");
 					nextTodoId = 1;
 					todos = texts.map((text) => ({
 						id: nextTodoId++,
@@ -121,55 +128,35 @@ export default function registerTodo(pi: ExtensionAPI): void {
 						status: "pending" as TodoStatus,
 					}));
 					persistTodos();
-					return { content: [{ type: "text", text: todoSummary() }] };
+					return ok(todoSummary());
 				}
 
 				case "add": {
 					const texts = parseItems(params.items ?? "");
-					if (!texts.length)
-						return {
-							content: [
-								{ type: "text", text: "add requires non-empty `items`." },
-							],
-							isError: true,
-						};
+					if (!texts.length) return fail("add requires non-empty `items`.");
 					for (const text of texts)
 						todos.push({ id: nextTodoId++, text, status: "pending" });
 					persistTodos();
-					return { content: [{ type: "text", text: todoSummary() }] };
+					return ok(todoSummary());
 				}
 
 				case "update": {
 					const t = todos.find((x) => x.id === params.id);
-					if (!t)
-						return {
-							content: [
-								{ type: "text", text: `No todo with id ${params.id}.` },
-							],
-							isError: true,
-						};
+					if (!t) return fail(`No todo with id ${params.id}.`);
 					if (params.status) t.status = params.status;
 					if (params.text) t.text = params.text;
 					persistTodos();
-					return { content: [{ type: "text", text: todoSummary() }] };
+					return ok(todoSummary());
 				}
 
 				case "clear":
 					todos = [];
 					nextTodoId = 1;
 					persistTodos();
-					return { content: [{ type: "text", text: "Todos cleared." }] };
+					return ok("Todos cleared.");
 
 				default:
-					return {
-						content: [
-							{
-								type: "text",
-								text: `Unknown action: ${String(params.action)}`,
-							},
-						],
-						isError: true,
-					};
+					return fail(`Unknown action: ${String(params.action)}`);
 			}
 		},
 	});

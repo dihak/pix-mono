@@ -1,40 +1,47 @@
 {
-  "name": "@xynogen/pix-9router",
-  "version": "0.1.0",
-  "description": "Pi extension — 9Router provider + fetch/search tools via router API",
-  "type": "module",
-  "main": "src/index.ts",
-  "scripts": {
-    "test": "bun test"
-  },
-  "files": [
-    "src",
-    "README.md",
-    "LICENSE"
-  ],
-  "pi": {
-    "extensions": ["src/index.ts"]
-  },
-  "keywords": ["pi", "pi-package", "pi-extension", "9router"],
-  "author": "xynogen",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xynogen/pix-mono.git",
-    "directory": "packages/pix-9router"
-  },
-  "homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-9router#readme",
-  "bugs": {
-    "url": "https://github.com/xynogen/pix-mono/issues"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-ai": "*"
-  },
-  "dependencies": {
-    "typebox": "^1.1.38"
-  }
+	"name": "@xynogen/pix-9router",
+	"version": "0.1.0",
+	"description": "Pi extension — 9Router provider + fetch/search tools via router API",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"src/index.ts"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"9router"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-9router"
+	},
+	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-9router#readme",
+	"bugs": {
+		"url": "https://github.com/xynogen/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-ai": "*"
+	},
+	"dependencies": {
+		"typebox": "^1.1.38"
+	}
 }

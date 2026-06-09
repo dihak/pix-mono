@@ -28,7 +28,6 @@ import {
 	isToolCallEventType,
 } from "@earendil-works/pi-coding-agent";
 
-
 /** Categories that map a raw shell command to a dedicated Pi tool. */
 type Category = "read" | "ls" | "grep" | "find" | "edit";
 
@@ -116,7 +115,6 @@ export function splitSegments(command: string): Segment[] {
 	const re = /(\|\||&&|[|;&\n])/g;
 	let last = 0;
 	let m: RegExpExecArray | null;
-	// biome-ignore lint/suspicious/noAssignInExpressions: standard regex walk
 	while ((m = re.exec(command)) !== null) {
 		out.push({ text: command.slice(last, m.index), followedBy: m[1] });
 		last = m.index + m[1].length;

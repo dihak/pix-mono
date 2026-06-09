@@ -8,8 +8,8 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import registerToolsNudge from "./tools.ts";
 import registerCapabilityNudge from "./capability.ts";
+import registerToolsNudge from "./tools.ts";
 
 export default function registerNudges(pi: ExtensionAPI): void {
 	registerToolsNudge(pi);

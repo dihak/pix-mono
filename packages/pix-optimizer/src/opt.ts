@@ -12,7 +12,11 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { CompletionItem, OptimizerHandle, OptimizerTool } from "./status.ts";
+import type {
+	CompletionItem,
+	OptimizerHandle,
+	OptimizerTool,
+} from "./status.ts";
 
 /** Split raw args into the subcommand name and the rest. */
 export function parseInvocation(args: string): { name: string; rest: string } {
@@ -38,7 +42,7 @@ export function completeInvocation(
 	handles: Record<OptimizerTool, OptimizerHandle>,
 ): CompletionItem[] | null {
 	// No space yet → still completing the tool name.
-	if (!/\s/.test(args.trimStart()) ) {
+	if (!/\s/.test(args.trimStart())) {
 		const prefix = args.trim().toLowerCase();
 		const names = (Object.keys(handles) as OptimizerTool[])
 			.filter((n) => n.startsWith(prefix))
@@ -58,11 +62,18 @@ export function completeInvocation(
 }
 
 /** Build the `/opt` help text listing every tool. */
-export function buildOptHelp(handles: Record<OptimizerTool, OptimizerHandle>): string {
+export function buildOptHelp(
+	handles: Record<OptimizerTool, OptimizerHandle>,
+): string {
 	const lines = (Object.keys(handles) as OptimizerTool[]).map(
 		(n) => `  /opt ${handles[n].help}`,
 	);
-	return ["pix-optimizer — token tools", "", "Usage: /opt <tool> [args]", ...lines].join("\n");
+	return [
+		"pix-optimizer — token tools",
+		"",
+		"Usage: /opt <tool> [args]",
+		...lines,
+	].join("\n");
 }
 
 export function registerOptCommand(
@@ -71,7 +82,8 @@ export function registerOptCommand(
 ): void {
 	pi.registerCommand("opt", {
 		description: "pix-optimizer: caveman / rtk / toon token tools",
-		getArgumentCompletions: (prefix: string) => completeInvocation(prefix, handles),
+		getArgumentCompletions: (prefix: string) =>
+			completeInvocation(prefix, handles),
 		handler: async (args, ctx) => {
 			const { name, rest } = parseInvocation(args ?? "");
 

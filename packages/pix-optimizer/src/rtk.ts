@@ -1,6 +1,6 @@
 /**
  * Simple RTK Integration
- * 
+ *
  * 1. Injects RTK system prompt (tells model to prefix commands with rtk)
  * 2. Rewrites bash commands to add rtk prefix when model forgets
  * 3. Falls back gracefully if rtk binary is missing
@@ -62,13 +62,40 @@ RTK also has filtering subcommands the auto-rewriter won't add — reach for the
 
 // Commands that should be prefixed with rtk
 const RTK_COMMANDS = new Set([
-	"git", "gh", "ls", "tree", "find", "grep", "cat", "head", "tail",
-	"tsc", "lint", "eslint", "prettier", "next", "cargo", "rustc",
-	"vitest", "playwright", "jest", "test",
-	"pnpm", "npm", "npx", "yarn", "bun",
-	"docker", "kubectl", "aws", "psql",
-	"curl", "wget", "wc",
-	"prisma", "dotnet"
+	"git",
+	"gh",
+	"ls",
+	"tree",
+	"find",
+	"grep",
+	"cat",
+	"head",
+	"tail",
+	"tsc",
+	"lint",
+	"eslint",
+	"prettier",
+	"next",
+	"cargo",
+	"rustc",
+	"vitest",
+	"playwright",
+	"jest",
+	"test",
+	"pnpm",
+	"npm",
+	"npx",
+	"yarn",
+	"bun",
+	"docker",
+	"kubectl",
+	"aws",
+	"psql",
+	"curl",
+	"wget",
+	"wc",
+	"prisma",
+	"dotnet",
 ]);
 
 interface RtkStatus {
@@ -159,7 +186,10 @@ export function rewriteChain(command: string): string {
 	return changed ? rewritten.join("") : command;
 }
 
-export function rtk(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle {
+export function rtk(
+	pi: ExtensionAPI,
+	status: OptimizerStatus,
+): OptimizerHandle {
 	let rtkStatus: RtkStatus | null = null;
 	let warnedMissing = false;
 	let enabled = true;
@@ -183,18 +213,18 @@ export function rtk(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle 
 				rtkStatus = {
 					available: true,
 					checkedAt: Date.now(),
-					path: result.stdout.trim()
+					path: result.stdout.trim(),
 				};
 				warnedMissing = false;
 				return rtkStatus;
 			}
-		} catch (error) {
+		} catch (_error) {
 			// which command failed
 		}
 
 		rtkStatus = {
 			available: false,
-			checkedAt: Date.now()
+			checkedAt: Date.now(),
 		};
 		return rtkStatus;
 	};
@@ -203,7 +233,7 @@ export function rtk(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle 
 	pi.on("before_agent_start", async (event) => {
 		if (!enabled) return undefined;
 		const existing = event.systemPrompt ?? "";
-		return { systemPrompt: RTK_SYSTEM_PROMPT + "\n\n" + existing };
+		return { systemPrompt: `${RTK_SYSTEM_PROMPT}\n\n${existing}` };
 	});
 
 	// Keep the status indicator in sync across the agent lifecycle. Probe
@@ -212,12 +242,19 @@ export function rtk(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle 
 		await checkRtkAvailability();
 		syncStatus(ctx);
 	});
-	pi.on("agent_start", async (_event, ctx) => { syncStatus(ctx); });
-	pi.on("agent_end", async (_event, ctx) => { syncStatus(ctx); });
+	pi.on("agent_start", async (_event, ctx) => {
+		syncStatus(ctx);
+	});
+	pi.on("agent_end", async (_event, ctx) => {
+		syncStatus(ctx);
+	});
 
 	// -- Subcommand handler (dispatched by the merged /opt router) --
 
-	async function run(args: string, ctx: ExtensionCommandContext): Promise<void> {
+	async function run(
+		args: string,
+		ctx: ExtensionCommandContext,
+	): Promise<void> {
 		const arg = args.trim().toLowerCase();
 		if (arg === "on") enabled = true;
 		else if (arg === "off") enabled = false;
@@ -259,7 +296,7 @@ export function rtk(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle 
 			if (!warnedMissing) {
 				ctx.ui.notify(
 					"RTK binary not found. Install: cargo install rtk-ai",
-					"warning"
+					"warning",
 				);
 				warnedMissing = true;
 			}

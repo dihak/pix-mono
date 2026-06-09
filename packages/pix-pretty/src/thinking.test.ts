@@ -2,8 +2,8 @@
  * Tests for thinking tag rendering
  */
 
-import { describe, it, expect } from "bun:test";
-import { renderThinking } from "./thinking";
+import { describe, expect, it } from "bun:test";
+import { renderThinking, stripPartialTailTag } from "./thinking";
 
 describe("thinking tag rendering", () => {
 	describe("closed thinking blocks", () => {
@@ -181,6 +181,50 @@ describe("thinking tag rendering", () => {
 			const input = "Line 1\n\nLine 2";
 			const output = renderThinking(input);
 			expect(output).toBe(input);
+		});
+	});
+
+	describe("streaming (partial tail tags + live rendering)", () => {
+		it("strips a half-streamed opening tag", () => {
+			expect(stripPartialTailTag("Hello <thin")).toBe("Hello ");
+			expect(stripPartialTailTag("Hello <")).toBe("Hello ");
+			expect(stripPartialTailTag("Hello <thinking")).toBe("Hello ");
+		});
+
+		it("strips a half-streamed closing tag", () => {
+			expect(stripPartialTailTag("reasoning </thinkin")).toBe("reasoning ");
+			expect(stripPartialTailTag("reasoning </")).toBe("reasoning ");
+		});
+
+		it("keeps non-reasoning partial tags", () => {
+			expect(stripPartialTailTag("a generic <div")).toBe("a generic <div");
+			expect(stripPartialTailTag("math: 1 < 2")).toBe("math: 1 < 2");
+		});
+
+		it("keeps complete tags (only the trailing fragment is stripped)", () => {
+			expect(stripPartialTailTag("<thinking>body")).toBe("<thinking>body");
+		});
+
+		it("renders an open block as blockquote before close tag arrives", () => {
+			// Simulates mid-stream state: open tag + partial body, no close tag.
+			const midStream = "<thinking>I am reasoning about";
+			const output = renderThinking(stripPartialTailTag(midStream));
+			expect(output).toBe("> I am reasoning about\n\n");
+		});
+
+		it("renders progressively without flashing partial close tag", () => {
+			const step1 = renderThinking(stripPartialTailTag("<think>step one"));
+			const step2 = renderThinking(
+				stripPartialTailTag("<think>step one and two</thi"),
+			);
+			const step3 = renderThinking(
+				stripPartialTailTag("<think>step one and two</think>\n\nAnswer"),
+			);
+			expect(step1).toBe("> step one\n\n");
+			expect(step2).toBe("> step one and two\n\n");
+			expect(step3).toContain("> step one and two");
+			expect(step3).toContain("Answer");
+			expect(step3).not.toContain("<think>");
 		});
 	});
 

@@ -12,10 +12,7 @@
  */
 
 import { execFile } from "node:child_process";
-import { join } from "node:path";
 import { promisify } from "node:util";
-import { lookupModelsDev, lookupBenchmark } from "../lib/data";
-import type { ModelsDevModel } from "../lib/data";
 import type {
 	AssistantMessage,
 	AssistantMessageEvent,
@@ -25,6 +22,8 @@ import type {
 	ReadonlyFooterDataProvider,
 } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
+import type { ModelsDevModel } from "../lib/data";
+import { lookupBenchmark, lookupModelsDev } from "../lib/data";
 
 // ─── Pure formatting helpers ─────────────────────────────────────────
 
@@ -197,7 +196,7 @@ function renderBranch(
 
 /** "<modelId> [· thinking] [· ctxK · $in/$out]" */
 function renderModel(
-	model: { id?: string; provider?: string } | undefined,
+	model: { id?: string; provider?: string; name?: string } | undefined,
 	thinking: string,
 	theme: Theme,
 ): string {

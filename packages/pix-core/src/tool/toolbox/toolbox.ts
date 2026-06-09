@@ -339,7 +339,6 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 		};
 	}): Promise<void> {
 		await ctx.ui.custom<null>(
-			// biome-ignore lint: factory signature from ExtensionUIContext.custom
 			(tui: any, theme: any, _kb: unknown, done: (r: null) => void) => {
 				const accent = "accent";
 				const mute = (s: string) => theme.fg("muted", s);
