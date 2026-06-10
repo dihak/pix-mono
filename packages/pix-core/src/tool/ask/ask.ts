@@ -388,16 +388,20 @@ class AskQuestionnaire extends Container {
 		const hints: string[] = [];
 		if (this.inputMode) {
 			hints.push(dim(t)("enter=submit • esc=back • ^c=cancel"));
-		} else if (isMulti) {
-			hints.push(
-				dim(t)(
-					"↑↓=nav • space=toggle • enter=commit & next • esc=clear • ^c=cancel",
-				),
-			);
 		} else {
-			hints.push(
-				dim(t)("↑↓=nav • type=filter • enter=select • esc=clear • ^c=cancel"),
-			);
+			const multiQ = this.params.questions.length > 1;
+			const nav = multiQ ? "↑↓=nav • ←→=question" : "↑↓=nav";
+			if (isMulti) {
+				hints.push(
+					dim(t)(
+						`${nav} • space=toggle • enter=commit & next • esc=clear • ^c=cancel`,
+					),
+				);
+			} else {
+				hints.push(
+					dim(t)(`${nav} • type=filter • enter=select • esc=clear • ^c=cancel`),
+				);
+			}
 		}
 		return new Text(hints.join("\n"), 1, 0);
 	}
@@ -467,22 +471,58 @@ class AskQuestionnaire extends Container {
 		this.nextQuestion();
 	}
 
-	private nextQuestion(): void {
+	private gotoQuestion(index: number): void {
+		if (index < 0 || index >= this.params.questions.length) return;
+		this.currentIndex = index;
 		this.searchQuery = "";
 		this.multiChecked.clear();
 		this.inputMode = false;
 		this.selectedOptionIndex = 0;
 		this.freeformText = "";
 		this.editor = undefined;
+		this.restoreAnswerState();
+		this.invalidate();
+		this.renderLayout();
+		this.tui.requestRender();
+	}
 
-		if (this.currentIndex + 1 < this.params.questions.length) {
-			this.currentIndex++;
-			this.invalidate();
-			this.renderLayout();
-			this.tui.requestRender();
-		} else {
-			this.onDone({ answers: this.answers, cancelled: false });
+	/** Re-select the previously recorded answer when revisiting a question. */
+	private restoreAnswerState(): void {
+		const prev = this.answers.find(
+			(a) => a.questionIndex === this.currentIndex,
+		);
+		if (!prev) return;
+		const q = this.currentQ;
+		if (prev.kind === "multi") {
+			for (let i = 0; i < q.options.length; i++) {
+				if (prev.selected?.includes(q.options[i]!.label)) {
+					this.multiChecked.add(i);
+				}
+			}
+		} else if (prev.kind === "option" && prev.answer) {
+			const idx = this.mainListItems.findIndex(
+				(it) => it.kind === "option" && it.option?.label === prev.answer,
+			);
+			if (idx >= 0) this.selectedOptionIndex = idx;
+		} else if (prev.kind === "custom") {
+			const idx = this.mainListItems.findIndex((it) => it.kind === "other");
+			if (idx >= 0) this.selectedOptionIndex = idx;
 		}
+	}
+
+	private nextQuestion(): void {
+		const total = this.params.questions.length;
+		const answered = new Set(this.answers.map((a) => a.questionIndex));
+		// Advance to the next unanswered question (wrapping), finish when none left.
+		for (let step = 1; step <= total; step++) {
+			const idx = (this.currentIndex + step) % total;
+			if (!answered.has(idx)) {
+				this.gotoQuestion(idx);
+				return;
+			}
+		}
+		this.answers.sort((a, b) => a.questionIndex - b.questionIndex);
+		this.onDone({ answers: this.answers, cancelled: false });
 	}
 
 	private cancel(): void {
@@ -547,6 +587,16 @@ class AskQuestionnaire extends Container {
 				this.invalidate();
 				this.tui.requestRender();
 			}
+			return;
+		}
+
+		// Left/Right: move between questions (answers preserved)
+		if (matchesKey(data, Key.left)) {
+			this.gotoQuestion(this.currentIndex - 1);
+			return;
+		}
+		if (matchesKey(data, Key.right)) {
+			this.gotoQuestion(this.currentIndex + 1);
 			return;
 		}
 
@@ -857,10 +907,12 @@ class AskQuestionnaire extends Container {
 
 		// Footer hints
 		const hintTexts: string[] = [];
+		const navHint =
+			this.params.questions.length > 1 ? "↑↓ nav • ←→ question" : "↑↓ nav";
 		if (isMulti) {
-			hintTexts.push("↑↓ nav • space toggle • enter commit • esc clear");
+			hintTexts.push(`${navHint} • space toggle • enter commit • esc clear`);
 		} else {
-			hintTexts.push("↑↓ nav • type filter • enter select • esc clear");
+			hintTexts.push(`${navHint} • type filter • enter select • esc clear`);
 		}
 		hintTexts.push("ctrl+c cancel");
 		const hint = dim(t)(hintTexts.join(" • "));
