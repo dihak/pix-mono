@@ -21,13 +21,13 @@ jobs:
         with:
           bun-version: latest
 
-      # Node 24 ships an npm new enough for OIDC trusted publishing. We do NOT
-      # set registry-url here: it writes a token-based .npmrc that interferes
-      # with OIDC and is a known cause of the misleading E404 on publish
-      # (npm/cli#8976, #8730).
+      # Node 24 ships an npm new enough for OIDC trusted publishing. The
+      # registry-url is required so the npm CLI knows the publish target and
+      # engages OIDC; without it the CLI falls back to ENEEDAUTH (npm/cli#8730).
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
+          registry-url: "https://registry.npmjs.org"
 
       # Belt-and-suspenders: ensure npm CLI >= 11.5.1 for trusted publishing.
       - name: Upgrade npm for trusted publishing
@@ -51,3 +51,6 @@ jobs:
       # is attached automatically.
       - name: Publish changed packages to npm
         run: bun run publish:all
+        env:
+          # Force provenance for OIDC trusted publishing (npm/cli#8730).
+          NPM_CONFIG_PROVENANCE: "true"

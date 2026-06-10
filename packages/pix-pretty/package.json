@@ -40,7 +40,8 @@
 		"url": "https://github.com/xynogen/pix-mono/issues"
 	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"provenance": true
 	},
 	"dependencies": {
 		"cli-highlight": "^2.1.11",

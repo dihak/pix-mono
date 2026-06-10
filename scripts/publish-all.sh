@@ -12,12 +12,10 @@
 # present we also attach a provenance statement.
 set -euo pipefail
 
-# Attach provenance only when running under a CI OIDC environment (trusted
-# publishing). Locally this stays empty so `npm publish` works token-based.
+# Provenance is controlled by the NPM_CONFIG_PROVENANCE env var, set by the
+# publish workflow when running under OIDC. Locally it is unset, so token-based
+# publishes still work.
 publish_flags="--access public"
-if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
-	publish_flags="$publish_flags --provenance"
-fi
 
 published=0
 skipped=0
@@ -46,7 +44,6 @@ for dir in packages/*/; do
 	fi
 
 	echo "→ publishing ${name}@${version}"
-	# shellcheck disable=SC2086 # intentional word splitting of publish_flags
 	if (cd "$dir" && npm publish $publish_flags); then
 		published=$((published + 1))
 	else
