@@ -43,14 +43,14 @@ test("renderResult dims every line", () => {
 test("renderResult caps preview when not expanded", () => {
 	const stub = stubComponent();
 	const rr = makeRenderResult();
-	const body = Array.from({ length: 45 }, (_, i) => `L${i}`).join("\n");
+	const body = Array.from({ length: 37 }, (_, i) => `L${i}`).join("\n");
 	rr(
 		{ content: [{ type: "text", text: body }] } as never,
 		{ expanded: false, isPartial: false },
 		theme,
 		{ lastComponent: stub.component as never, isError: false },
 	);
-	expect(stub.get()).toContain("… 5 more lines");
+	expect(stub.get()).toContain("… 5 more lines"); // 37 lines − 32 cap
 });
 
 test("renderResult renders empty body marker", () => {

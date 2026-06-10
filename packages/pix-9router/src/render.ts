@@ -33,7 +33,7 @@ type TextCtor = new (text?: string, padX?: number, padY?: number) => TextLike;
 // Preview cap is intentionally generous — dimming already de-emphasises the
 // body, so we only truncate to keep pathological multi-thousand-line dumps
 // from flooding the viewport. Expanding shows everything.
-const MAX_PREVIEW_LINES = 40;
+const MAX_PREVIEW_LINES = 32;
 
 let TextComponent: TextCtor | undefined;
 try {
