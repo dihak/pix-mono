@@ -98,6 +98,8 @@ export type RenderContextLike<
 	expanded: boolean;
 	isError: boolean;
 	invalidate: () => void;
+	/** Stable id for this tool execution — used to key resize invalidators. */
+	toolCallId?: string;
 };
 
 type SessionContextLike = ExtensionContext;

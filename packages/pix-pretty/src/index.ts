@@ -115,10 +115,32 @@ import {
 	trimToUndefined,
 } from "./utils.js";
 
+// ---------------------------------------------------------------------------
+// Global resize invalidation
+// Each diff renderResult registers its ctx.invalidate keyed by toolCallId so
+// terminal resize triggers a re-render with the new termW() — busting the
+// width-keyed cache and re-rendering at the correct width.
+// ---------------------------------------------------------------------------
+const _resizeInvalidators = new Map<string, () => void>();
+let _resizeListenerAttached = false;
+
+function attachResizeListener(): void {
+	if (_resizeListenerAttached) return;
+	_resizeListenerAttached = true;
+	process.stdout.on("resize", () => {
+		for (const inv of _resizeInvalidators.values()) inv();
+	});
+}
+
+function trackInvalidator(toolCallId: string, inv: () => void): void {
+	_resizeInvalidators.set(toolCallId, inv);
+}
+
 export default function piPrettyExtension(
 	pi: PiPrettyApi,
 	deps?: PiPrettyDeps,
 ): void {
+	attachResizeListener();
 	let createReadTool: ToolFactory<ReadToolInput> | undefined;
 	let createBashTool: ToolFactory<BashToolInput> | undefined;
 	let createLsTool: ToolFactory<LsToolInput> | undefined;
@@ -1370,6 +1392,7 @@ export default function piPrettyExtension(
 				// Single edit — show full split diff
 				if (d?._type === "editInfo") {
 					const key = `ed:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${d.oldContent.length}:${d.newContent.length}:${d.language ?? ""}`;
+					if (ctx.toolCallId) trackInvalidator(ctx.toolCallId, ctx.invalidate);
 					if (ctx.state._edk !== key) {
 						ctx.state._edk = key;
 						const loc =
@@ -1402,6 +1425,7 @@ export default function piPrettyExtension(
 				// Multiple edits — show each op as its own split diff, stacked
 				if (d?._type === "multiEditInfo") {
 					const key = `med:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${d.editCount}:${d.diffLineCount}`;
+					if (ctx.toolCallId) trackInvalidator(ctx.toolCallId, ctx.invalidate);
 					if (ctx.state._edk !== key) {
 						ctx.state._edk = key;
 						ctx.state._edt = `  ${d.editCount} edits ${d.summary}\n${theme.fg("muted", "  rendering diff…")}`;
@@ -1556,6 +1580,7 @@ export default function piPrettyExtension(
 
 				if (d?._type === "diff") {
 					const key = `wd:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${d.newContent.length}:${d.language ?? ""}`;
+					if (ctx.toolCallId) trackInvalidator(ctx.toolCallId, ctx.invalidate);
 					if (ctx.state._wdk !== key) {
 						ctx.state._wdk = key;
 						ctx.state._wdt = `  ${d.summary}\n${theme.fg("muted", "  rendering diff…")}`;
