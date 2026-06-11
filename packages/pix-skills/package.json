@@ -1,0 +1,48 @@
+{
+	"name": "@xynogen/pix-skills",
+	"version": "0.1.0",
+	"description": "Pi extension — agent skill loader (read_skill tool + skills bundle)",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"skills",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"src/index.ts"
+		],
+		"skills": [
+			"./skills"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"pix"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-skills"
+	},
+	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-skills#readme",
+	"bugs": {
+		"url": "https://github.com/xynogen/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	}
+}
