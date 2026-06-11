@@ -11,3 +11,6 @@ package-lock.json
 # Pix Agent
 .ai/
 .pi-lens/
+
+# Graphify knowledge graph output
+graphify-out/
