@@ -15,7 +15,7 @@ export type {
 	BenchmarkEntry,
 	ModelsDevApi,
 	ModelsDevModel,
-} from "@xynogen/pix-data";
+} from "../../../pix-data/src/index.ts";
 export {
 	benchmark,
 	buildModelsDevIndex,
@@ -26,7 +26,7 @@ export {
 	lookupInIndex,
 	lookupModelsDev,
 	modelsDev,
-} from "@xynogen/pix-data";
+} from "../../../pix-data/src/index.ts";
 
 export default function (_pi: unknown): void {
 	// pix-data warms this cache on startup — nothing to do here.

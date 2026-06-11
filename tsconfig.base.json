@@ -3,6 +3,11 @@
 		"target": "ES2022",
 		"module": "ESNext",
 		"moduleResolution": "Bundler",
+		"baseUrl": ".",
+		"paths": {
+			"@xynogen/pix-data": ["packages/pix-data/src/index.ts"],
+			"@xynogen/pix-skills": ["packages/pix-skills/src/index.ts"]
+		},
 		"lib": ["ES2022"],
 		"strict": true,
 		"esModuleInterop": true,

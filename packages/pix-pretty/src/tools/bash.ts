@@ -19,6 +19,7 @@ import {
 	fillToolBackground,
 	getTextContent,
 	isTextContent,
+	normalizeLineEndings,
 	renderToolError,
 	rule,
 	setResultDetails,
@@ -84,12 +85,22 @@ export function registerBashTool(
 			renderCtx: RenderContextLike,
 		) {
 			const cmd = args.command ?? "";
+			const displayCmdRaw = cmd.trim();
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 			const timeout = args.timeout
 				? ` ${theme.fg("muted", `(${args.timeout}s timeout)`)}`
 				: "";
+			const cmdLines = displayCmdRaw.split("\n");
+			const firstLine = cmdLines[0] ?? "";
+			const compactCmd =
+				cmdLines.length > 1
+					? `${firstLine} ${theme.fg("muted", `… (+${cmdLines.length - 1} lines)`)}`
+					: firstLine;
+			const baseCmd = renderCtx.expanded ? displayCmdRaw : compactCmd;
 			const displayCmd =
-				renderCtx.expanded || cmd.length <= 80 ? cmd : `${cmd.slice(0, 77)}…`;
+				renderCtx.expanded || baseCmd.length <= 80
+					? baseCmd
+					: `${baseCmd.slice(0, 77)}…`;
 			text.setText(
 				fillToolBackground(
 					`${theme.fg("toolTitle", theme.bold("bash"))} ${theme.fg("accent", displayCmd)}${timeout}`,
@@ -113,17 +124,20 @@ export function registerBashTool(
 
 			const d = result.details as Record<string, unknown> | undefined;
 			if (d?._type === "bashResult") {
+				const normalizedText = normalizeLineEndings(d.text as string)
+					.replace(/\n{3,}/g, "\n\n")
+					.replace(/^\n+|\n+$/g, "");
 				const { summary } = renderBashOutput(
-					d.text as string,
+					normalizedText,
 					d.exitCode as number | null,
 				);
-				const lines = (d.text as string).split("\n");
+				const lines = normalizedText ? normalizedText.split("\n") : [];
 				const lineCount = lines.length;
 				const lineInfo =
 					lineCount > 1 ? `  ${FG_DIM}(${lineCount} lines)${RST}` : "";
 				const header = `  ${summary}${lineInfo}`;
 
-				if ((d.text as string).trim()) {
+				if (normalizedText) {
 					const maxShow = renderCtx.expanded ? lineCount : MAX_PREVIEW_LINES;
 					const show = lines.slice(0, maxShow);
 					const tw = termW();
