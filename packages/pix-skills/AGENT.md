@@ -58,7 +58,7 @@ Complex/underspecified → explicit modes (skip simple single-step).
 
 ## 10. Code Style
 Defer to repo linter/formatter when present.
-- **NAMING**: `snake_case` vars/fns, `PascalCase` types, `SCREAMING_SNAKE_CASE` consts. No abbrev unless universal (`url`/`id`/`err`).
+- **NAMING**: follow language conventions. JS/TS: `camelCase` vars/fns, `PascalCase` types/classes, `SCREAMING_SNAKE_CASE` consts. Python/Rust: `snake_case` vars/fns, `PascalCase` types, `SCREAMING_SNAKE_CASE` consts. Go: `camelCase`/`PascalCase` by visibility. No abbrev unless universal (`url`/`id`/`err`).
 - **FORMATTING**: spaces (2 JS/TS/YAML, 4 Py/Rust). ≤100 chars/line. 1 blank between blocks, 2 before top-level defs.
 - **FUNCTIONS**: single responsibility, prefer pure. ≤~40 lines; extract if longer.
 - **CONTROL FLOW**: flat. Early returns/guards over nesting. Errors/edge first, happy path last.

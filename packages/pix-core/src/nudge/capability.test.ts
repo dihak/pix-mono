@@ -45,8 +45,14 @@ describe("CAPABILITY_REMINDER", () => {
 		expect(CAPABILITY_REMINDER.toLowerCase()).toContain("improvis");
 	});
 
-	test("points at the toolbox tool for discovery", () => {
-		expect(CAPABILITY_REMINDER).toContain("toolbox");
+	test("nudges model to call skill() when a skill matches", () => {
+		expect(CAPABILITY_REMINDER).toContain("skill()");
+	});
+
+	test("points at /toolbox slash command for discovery (not a function call)", () => {
+		expect(CAPABILITY_REMINDER).toContain("/toolbox");
+		// must NOT imply toolbox is a callable function
+		expect(CAPABILITY_REMINDER).not.toContain("toolbox(");
 		expect(CAPABILITY_REMINDER).toContain("function definitions");
 	});
 });
@@ -123,10 +129,13 @@ describe("buildOrientation", () => {
 		expect(out).toContain("2 skills");
 	});
 
-	test("explains how to explore via the toolbox tool", () => {
+	test("explains how to use skill() and /toolbox for discovery", () => {
 		const out = buildOrientation([tool("read", "builtin")], []);
-		expect(out).toContain("toolbox(query");
-		expect(out.toLowerCase()).toMatch(/fuzzy|search|discover/);
+		expect(out).toContain("skill()");
+		expect(out).toContain("/toolbox");
+		// toolbox must NOT appear as a function call
+		expect(out).not.toContain("toolbox(");
+		expect(out.toLowerCase()).toMatch(/discover|enable/);
 	});
 
 	test("calls out gated tools and points at toolbox to enable them", () => {

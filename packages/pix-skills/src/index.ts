@@ -1,7 +1,7 @@
 /**
  * pix-skills — skill loader extension
  *
- * Registers a `read_skill` tool that lets the agent load any bundled skill's
+ * Registers a `skill` tool that lets the agent load any bundled skill's
  * full SKILL.md (or flat .md) by name. This is the safe "agent prompts itself"
  * pattern: the agent calls the tool explicitly; no autonomous injection.
  *
@@ -87,16 +87,16 @@ const ParamsSchema = Type.Object({
 
 export default function registerSkillLoader(pi: ExtensionAPI): void {
 	pi.registerTool({
-		name: "read_skill",
+		name: "skill",
 		label: "Read Skill",
 		description:
 			"Browse and load bundled skills. No args → list all skills with descriptions. name only → description for that skill. name + full=true → full instructions.",
 		promptSnippet: "Browse and load bundled skill instructions",
 		promptGuidelines: [
-			"Call read_skill() with no arguments to list all available skills and their descriptions.",
-			"Call read_skill(name=<skill>) to read the description of a specific skill before deciding to load it.",
-			"Call read_skill(name=<skill>, full=true) to load the full procedure for a skill before executing it.",
-			"Prefer read_skill over the read tool for skills — it resolves the correct path regardless of install location.",
+			"Call skill() with no arguments to list all available skills and their descriptions.",
+			"Call skill(name=<skill>) to read the description of a specific skill before deciding to load it.",
+			"Call skill(name=<skill>, full=true) to load the full procedure for a skill before executing it.",
+			"Prefer skill() over the read tool for skills — it resolves the correct path regardless of install location.",
 		],
 		executionMode: "sequential",
 		parameters: ParamsSchema,
@@ -173,7 +173,7 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 			const { name, full } = args as { name?: string; full?: boolean };
 			const label = name ? `${name}${full ? " (full)" : ""}` : "list";
 			return new Text(
-				`${theme.fg("toolTitle", theme.bold("read_skill"))} ${theme.fg("muted", label)}`,
+				`${theme.fg("toolTitle", theme.bold("skill"))} ${theme.fg("muted", label)}`,
 				0,
 				0,
 			);

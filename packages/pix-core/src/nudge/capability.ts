@@ -9,11 +9,15 @@
  * Two modes:
  *   1. FIRST prompt of the session — an orientation block: a high-level
  *      description of WHAT is available (counts of tools / MCP tools / skills)
- *      and HOW to explore it on demand via the `toolbox` tool. We deliberately
- *      do NOT dump the whole inventory every turn — that is what `toolbox`
- *      (fuzzy search over names + descriptions) is for.
+ *      and HOW to explore it. We deliberately do NOT dump the whole inventory
+ *      every turn — the model should call skill() for skills and use /toolbox
+ *      (slash command, user-facing) to discover/enable gated tools.
  *   2. EVERY subsequent prompt — the terse one-line CAPABILITY_REMINDER, a
- *      cheap (~40 tok) reinforcement that points back at toolbox.
+ *      cheap (~40 tok) reinforcement that steers toward skill() and /toolbox.
+ *
+ * NOTE: `toolbox` is a slash command only (/toolbox) — NOT a model-callable
+ * function tool. The model cannot call toolbox() in function definitions.
+ * The `skill` tool IS model-callable: skill() lists/loads bundled skills.
  */
 
 import type {
@@ -26,10 +30,11 @@ type LoadedSkill = NonNullable<BuildSystemPromptOptions["skills"]>[number];
 
 /** The standing per-turn reminder. Kept terse — it ships on every turn. */
 export const CAPABILITY_REMINDER =
-	"Reminder — always check your knowledge resources " +
+	"Reminder — check knowledge resources " +
 	"(skills/tools/MCP/web/user) before improvising. " +
-	"`toolbox(query)` finds the right one; enable gated tools via toolbox. " +
-	"All tools are always callable via function definitions.";
+	"Matching skill? Call skill() first. " +
+	"Use /toolbox to discover/enable gated tools. " +
+	"All tools callable via function definitions.";
 
 /** Count model-invocable skills (excludes user-only /skill:name entries). */
 export function countInvocableSkills(
@@ -107,7 +112,8 @@ export function buildOrientation(
 	if (gateLine) lines.push(gateLine);
 	lines.push(
 		"Don't improvise what a capability covers — ask the user, search the web, or pull docs first.",
-		"toolbox is the gateway: `toolbox(query)` searches tools/MCP/skills/commands; `toolbox(action:'enable'|'disable', name)` toggles a gated tool prompt-visible or gated. Empty query lists all.",
+		"`skill()` lists/loads bundled skills — call it when a skill matches your task. " +
+			"/toolbox (slash command) discovers and enables gated tools.",
 	);
 	if (skillNames.length) {
 		lines.push(`Skills: ${skillNames.join(", ")}.`);
