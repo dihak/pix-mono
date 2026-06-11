@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-core",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Pi extension — core UI/UX bundle (welcome banner, footer, model picker, self-update)",
 	"type": "module",
 	"main": "src/index.ts",
@@ -42,7 +42,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-skills": "^0.1.0",
+		"@xynogen/pix-skills": "^0.1.1",
 		"typebox": "^1.1.38"
 	},
 	"peerDependencies": {
