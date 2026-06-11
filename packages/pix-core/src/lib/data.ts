@@ -11,6 +11,11 @@
  *   models.ts  — lookupModelsDev, lookupBenchmark
  */
 
+export type {
+	BenchmarkEntry,
+	ModelsDevApi,
+	ModelsDevModel,
+} from "@xynogen/pix-data";
 export {
 	benchmark,
 	buildModelsDevIndex,
@@ -21,11 +26,6 @@ export {
 	lookupInIndex,
 	lookupModelsDev,
 	modelsDev,
-} from "@xynogen/pix-data";
-export type {
-	BenchmarkEntry,
-	ModelsDevApi,
-	ModelsDevModel,
 } from "@xynogen/pix-data";
 
 export default function (_pi: unknown): void {

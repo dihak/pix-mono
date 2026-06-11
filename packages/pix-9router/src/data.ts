@@ -18,6 +18,7 @@
 import { join } from "node:path";
 import { CACHE_DIR, DataSource } from "@xynogen/pix-data";
 
+export type { ModelsDevApi, ModelsDevModel } from "@xynogen/pix-data";
 // Re-export the shared models.dev API so existing consumers (provider.ts)
 // can keep importing these names from "./data".
 export {
@@ -25,7 +26,6 @@ export {
 	fetchModelsDevIndex,
 	lookupInIndex,
 } from "@xynogen/pix-data";
-export type { ModelsDevApi, ModelsDevModel } from "@xynogen/pix-data";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

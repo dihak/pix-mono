@@ -10,6 +10,11 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { benchmark, modelsDev } from "./data.ts";
 
+export type {
+	BenchmarkEntry,
+	ModelsDevApi,
+	ModelsDevModel,
+} from "./data.ts";
 // Public data API — single source of truth for the shared model data layer.
 // Consumers (pix-core, pix-9router, …) import these instead of duplicating
 // the DataSource implementation and models.dev/BenchLM lookups.
@@ -23,11 +28,6 @@ export {
 	lookupInIndex,
 	lookupModelsDev,
 	modelsDev,
-} from "./data.ts";
-export type {
-	BenchmarkEntry,
-	ModelsDevApi,
-	ModelsDevModel,
 } from "./data.ts";
 
 export default function (_pi: ExtensionAPI): void {

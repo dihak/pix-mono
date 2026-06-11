@@ -1,6 +1,6 @@
+import { describe, expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, test } from "bun:test";
 import {
 	buildOrientation,
 	CAPABILITY_REMINDER,
