@@ -39,6 +39,22 @@ bun run publish:dry   # verify what would be published
 bun run publish:all   # publish every package to npm
 ```
 
+## Lineage
+
+Several packages here originated as forks or merges of community Pi packages:
+
+| Upstream | Disposition |
+|---|---|
+| `npm:pi-caveman` | replaced by `git:github.com/jonjonrankin/pi-caveman` fork |
+| `git:github.com/jonjonrankin/pi-caveman` | merged into `pix-optimizer` |
+| `npm:pi-rtk-optimizer` | merged into `pix-optimizer` |
+| `npm:@heyhuynhgiabuu/pi-pretty` | replaced by `@xynogen/pix-pretty` |
+| `npm:@heyhuynhgiabuu/pi-diff` | superseded (merged into `pix-core`) |
+| `npm:@juicesharp/rpiv-ask-user-question` | removed in zsh-shell migration |
+| `npm:context-mode` | removed in zsh-shell migration |
+
+Previous standalone repos migrated into this monorepo: `pix-optimizer`, `pix-tokyo-night`, `pix-pretty`, `pix-core`, `pix-9router`, `pix-data`.
+
 ## License
 
 MIT

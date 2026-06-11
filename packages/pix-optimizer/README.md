@@ -101,6 +101,22 @@ that `/opt` dispatches to. All three share one `OptimizerStatus`.
 bun test
 ```
 
+## Origin
+
+This package was built by merging two upstream Pi community packages:
+
+- **Caveman mode** — merged from [`git:github.com/jonjonrankin/pi-caveman`](https://github.com/jonjonrankin/pi-caveman)
+  (itself a fork of `npm:pi-caveman`). Reimplemented here with multiple compression levels,
+  a settings dialog, per-session persistence, and integration with the shared `/opt` command.
+
+- **RTK rewriting** — merged from `npm:pi-rtk-optimizer`. Reimplemented here with a two-layer
+  approach: prompt injection + live bash command rewriting that handles chained commands
+  (`&&`, `||`, `;`, `|`).
+
+Both upstreams are MIT licensed. Neither codebase was copied directly — the logic was
+rewritten and combined into a single extension with a unified `/opt` command and shared status bar.
+This package does not sync back to either upstream.
+
 ## License
 
 MIT

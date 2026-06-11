@@ -56,12 +56,17 @@ Both work independently but complement each other for a cohesive visual experien
 
 ## Origin
 
-Tool rendering is a vendored fork of [`@heyhuynhgiabuu/pi-pretty`](https://github.com/buddingnewinsights/pi-pretty) with two key changes:
+Tool rendering replaced `npm:@heyhuynhgiabuu/pi-pretty` (which was previously replaced by `npm:@heyhuynhgiabuu/pi-diff`). This package is a clean reimplementation — no code was copied directly. Developed independently; changes are not submitted back and upstream changes are not pulled in.
 
-1. **Highlight engine: shiki → cli-highlight** - Simpler, synchronous, no WASM
-2. **FFF state dir: `~/.pi/agent/pi-pretty/fff` → `~/.cache/pi/fff`** - Standard XDG cache location
+Key divergences from upstream:
 
-Paste chip formatting is custom logic for Pi's paste marker system.
+1. **Highlight engine: shiki → cli-highlight** - Simpler, no WASM, synchronous
+2. **FFF state dir** - `~/.pi/agent/pi-pretty/fff` → `~/.cache/pi/fff` (XDG cache)
+3. **Split diff view for edit/write tools** - Full side-by-side diff with gutter, line numbers, syntax highlighting
+4. **Paste chip formatting** - Custom editor component for Pi's paste marker system (not in upstream)
+5. **Reasoning tag rendering** - Collapsible `<think>`/`<thinking>` blocks (not in upstream)
+
+Paste chip formatting and reasoning tag rendering are original additions with no upstream equivalent.
 
 ## License
 
