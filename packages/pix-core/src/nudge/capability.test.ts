@@ -204,6 +204,13 @@ describe("buildOrientation", () => {
 		const out = buildOrientation([tool("read", "builtin")], []);
 		expect(out.toLowerCase()).toContain("improvis");
 	});
+
+	test("frames the block as non-actionable so the model acts on the prompt", () => {
+		const out = buildOrientation([tool("read", "builtin")], []);
+		const last = out.trim().split("\n").at(-1) ?? "";
+		expect(last.toLowerCase()).toContain("not a task");
+		expect(last.toLowerCase()).toContain("do not reply");
+	});
 });
 
 describe("graphifyHint", () => {

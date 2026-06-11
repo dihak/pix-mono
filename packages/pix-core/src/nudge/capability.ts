@@ -137,6 +137,12 @@ export function buildOrientation(
 	// Graphify hint — only when a graph is already built for this project
 	const gHint = graphifyHint(process.cwd());
 	if (gHint) lines.push(gHint);
+	// Framing — this block is orientation context, not a task. Without it the
+	// model can mistake the first-turn orientation for the prompt and reply
+	// "Ready, waiting for task" instead of acting on the user's request.
+	lines.push(
+		"(Orientation only — not a task. Act on the user's request now; do not reply to this notice.)",
+	);
 	return lines.join("\n");
 }
 
