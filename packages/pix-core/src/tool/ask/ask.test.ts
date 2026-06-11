@@ -13,7 +13,7 @@ import {
 	type OptionData,
 	type QuestionData,
 	sentinelsFor,
-} from "./ask.ts";
+} from "./index.ts";
 
 // ── Fixtures ──────────────────────────────────────────────────────────
 
@@ -237,7 +237,7 @@ describe("buildResponseText", () => {
 
 describe("registerAsk", () => {
 	test("exports a default function", async () => {
-		const mod = await import("./ask.ts");
+		const mod = await import("./index.ts");
 		expect(typeof mod.default).toBe("function");
 	});
 });

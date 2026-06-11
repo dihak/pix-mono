@@ -1,16 +1,5 @@
-/**
- * Ask Tool — structured questionnaire for pi-coding-agent
- *
- * Single file. Single tool. `ask_user_question` API style:
- * multiple questions, options w/ label/description/preview, multiSelect.
- *
- * Replaces both the old `ask` and the external `ask_user_question` package.
- */
-
-import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";
-import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
+import type { Theme } from "@earendil-works/pi-coding-agent";
 import {
-	type Component,
 	Container,
 	decodeKittyPrintable,
 	Editor,
@@ -18,7 +7,6 @@ import {
 	Key,
 	type KeybindingsManager,
 	Markdown,
-	type MarkdownTheme,
 	matchesKey,
 	Spacer,
 	Text,
@@ -26,214 +14,26 @@ import {
 	truncateToWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
-import { type Static, Type } from "typebox";
 
-// ── Constants ──────────────────────────────────────────────────────────
+import { dim, TabBar } from "./components.js";
+import { safeMarkdownTheme, scrollIndicator, sentinelsFor } from "./helpers.js";
+import type { OptionData, Params, QuestionData } from "./schema.js";
+import {
+	SENTINEL_CHAT,
+	SENTINEL_FREEFORM,
+	SENTINEL_NEXT,
+	SEPARATOR,
+	SPLIT_PANE_MIN_WIDTH,
+} from "./schema.js";
+import type {
+	AnswerKind,
+	QuestionAnswer,
+	QuestionnaireResult,
+} from "./types.js";
 
-const MAX_QUESTIONS = 4;
-const MIN_OPTIONS = 2;
-const MAX_OPTIONS = 4;
-const MAX_HEADER_LENGTH = 16;
-const MAX_LABEL_LENGTH = 60;
+// ── AskQuestionnaire ───────────────────────────────────────────────────
 
-const SENTINEL_FREEFORM = "Type something.";
-const SENTINEL_CHAT = "Chat about this";
-const SENTINEL_NEXT = "Next";
-
-const SPLIT_PANE_MIN_WIDTH = 84;
-const SEPARATOR = " │ ";
-
-// ── Schema ─────────────────────────────────────────────────────────────
-
-const OptionSchema = Type.Object({
-	label: Type.String({
-		maxLength: MAX_LABEL_LENGTH,
-		description: `MAX ${MAX_LABEL_LENGTH} CHARACTERS. Display text for this option. Concise (1-5 words).`,
-	}),
-	description: Type.String({
-		description: "Explanation of what this option means or trade-offs.",
-	}),
-	preview: Type.Optional(
-		Type.String({
-			description:
-				"Optional markdown preview for side-by-side layout (single-select only).",
-		}),
-	),
-});
-
-const QuestionSchema = Type.Object({
-	question: Type.String({
-		description: "Clear, specific question ending with ?",
-	}),
-	header: Type.String({
-		maxLength: MAX_HEADER_LENGTH,
-		description: `MAX ${MAX_HEADER_LENGTH} CHARS — short chip/tag. E.g. "Auth method", "Approach".`,
-	}),
-	options: Type.Array(OptionSchema, {
-		minItems: MIN_OPTIONS,
-		maxItems: MAX_OPTIONS,
-		description:
-			"2-4 options. 'Type something.' and 'Chat about this' are auto-appended.",
-	}),
-	multiSelect: Type.Optional(
-		Type.Boolean({
-			default: false,
-			description:
-				"Allow multiple selections. Suppresses 'Type something.' row.",
-		}),
-	),
-});
-
-const QuestionsSchema = Type.Array(QuestionSchema, {
-	minItems: 1,
-	maxItems: MAX_QUESTIONS,
-	description: "1-4 questions",
-});
-
-const ParamsSchema = Type.Object({ questions: QuestionsSchema });
-
-export type OptionData = Static<typeof OptionSchema>;
-export type QuestionData = Static<typeof QuestionSchema>;
-type Params = Static<typeof ParamsSchema>;
-
-// ── Answer types ───────────────────────────────────────────────────────
-
-type AnswerKind = "option" | "custom" | "chat" | "multi";
-
-interface QuestionAnswer {
-	questionIndex: number;
-	question: string;
-	kind: AnswerKind;
-	answer: string | null;
-	selected?: string[];
-	preview?: string;
-}
-
-interface QuestionnaireResult {
-	answers: QuestionAnswer[];
-	cancelled: boolean;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────
-
-function safeMarkdownTheme(): MarkdownTheme | undefined {
-	try {
-		const md = getMarkdownTheme();
-		if (!md) return undefined;
-		md.bold("");
-		return md;
-	} catch {
-		return undefined;
-	}
-}
-
-export function hasAnyPreview(q: QuestionData): boolean {
-	return q.options.some(
-		(o) => typeof o.preview === "string" && o.preview.length > 0,
-	);
-}
-
-/** Which sentinel rows are auto-appended for a question. */
-export function sentinelsFor(
-	q: QuestionData,
-): Array<{ kind: string; label: string }> {
-	const out: Array<{ kind: string; label: string }> = [];
-	if (q.multiSelect) {
-		out.push({ kind: "next", label: SENTINEL_NEXT });
-	} else if (!hasAnyPreview(q)) {
-		out.push({ kind: "other", label: SENTINEL_FREEFORM });
-	}
-	// Chat sentinel is always last (in its own row list, not in main list)
-	return out;
-}
-
-export function formatAnswerScalar(a: QuestionAnswer): string {
-	if (a.kind === "multi") return (a.selected ?? []).join(", ");
-	if (a.kind === "custom") return a.answer ?? "(custom)";
-	if (a.kind === "chat") return "(chat)";
-	return a.answer ?? "(selected)";
-}
-
-export function buildResponseText(
-	answers: QuestionAnswer[],
-	questions: QuestionData[],
-): string {
-	const segs: string[] = [];
-	for (const a of answers) {
-		const q = questions[a.questionIndex]?.question ?? `Q${a.questionIndex + 1}`;
-		let s = `"${q}"="${formatAnswerScalar(a)}"`;
-		if (a.preview) s += `. selected preview: ${a.preview}`;
-		segs.push(s);
-	}
-	return segs.length
-		? `User answered: ${segs.join(". ")}.`
-		: "User declined to answer questions.";
-}
-
-// ── Scrollbar helper ───────────────────────────────────────────────────
-
-function scrollIndicator(index: number, total: number): string {
-	if (total <= 1) return "";
-	const pos = Math.round((index / (total - 1)) * 6);
-	const bar = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦"][pos] ?? "·";
-	return ` ${bar} ${index + 1}/${total}`;
-}
-
-// ── TUI Components ─────────────────────────────────────────────────────
-
-function _borderColor(theme: Theme): (s: string) => string {
-	return (s: string) => theme.fg("accent", s);
-}
-
-function dim(theme: Theme): (s: string) => string {
-	return (s: string) => theme.fg("dim", s);
-}
-
-class TabBar implements Component {
-	private questions: QuestionData[];
-	private activeIndex: number;
-	private theme: Theme;
-
-	constructor(questions: QuestionData[], activeIndex: number, theme: Theme) {
-		this.questions = questions;
-		this.activeIndex = activeIndex;
-		this.theme = theme;
-	}
-
-	invalidate(): void {}
-
-	render(width: number): string[] {
-		const t = this.theme;
-		const inner = Math.max(10, width - 2);
-		// Build tab labels: "1.Approach  2.Auth  3.Database"
-		const parts: string[] = [];
-		for (let i = 0; i < this.questions.length; i++) {
-			const active = i === this.activeIndex;
-			const num = `${i + 1}`;
-			const tag = `${num}.${this.questions[i]?.header}`;
-			if (active) {
-				parts.push(t.fg("accent", t.bold(tag)));
-			} else {
-				parts.push(t.fg("dim", tag));
-			}
-		}
-		const line = parts.join(t.fg("dim", "  "));
-		return [
-			truncateToWidth(
-				t.fg("accent", "╭─") +
-					line +
-					t.fg(
-						"accent",
-						`${"─".repeat(Math.max(0, inner - line.length - 1))}╮`,
-					),
-				width,
-				"",
-			),
-		].filter(Boolean);
-	}
-}
-
-class AskQuestionnaire extends Container {
+export class AskQuestionnaire extends Container {
 	private params: Params;
 	private tui: TUI;
 	private theme: Theme;
@@ -245,12 +45,9 @@ class AskQuestionnaire extends Container {
 	private searchQuery = "";
 	private selectedOptionIndex = 0;
 	private multiChecked = new Set<number>();
-	private inputMode = false; // typing freeform text
-	private freeformText = "";
+	private inputMode = false;
 	private editor?: Editor;
 	private mdTheme = safeMarkdownTheme();
-	// Resolve panel width once
-	private _splitWidth: number | null = null;
 
 	constructor(
 		params: Params,
@@ -267,6 +64,8 @@ class AskQuestionnaire extends Container {
 		this.onDone = onDone;
 		this.renderLayout();
 	}
+
+	// ── Accessors ──────────────────────────────────────────────────────
 
 	private get currentQ(): QuestionData {
 		return this.params.questions[this.currentIndex]!;
@@ -305,23 +104,22 @@ class AskQuestionnaire extends Container {
 		return this.mainListItems[this.selectedOptionIndex];
 	}
 
-	invalidate(): void {
+	// ── Layout ─────────────────────────────────────────────────────────
+
+	override invalidate(): void {
 		super.invalidate();
-		this._splitWidth = null;
 	}
 
 	renderLayout(): void {
 		this.clear();
 		const t = this.theme;
-		// Border top
-		this.addChild(new Text("", 0, 0)); // placeholder, re-rendered
 
-		// Tab bar
+		this.addChild(new Text("", 0, 0));
+
 		if (this.params.questions.length > 1) {
 			this.addChild(new TabBar(this.params.questions, this.currentIndex, t));
 		}
 
-		// Question header chip
 		const q = this.currentQ;
 		const chip = t.fg("accent", t.bold(q.header));
 		const prog =
@@ -332,12 +130,9 @@ class AskQuestionnaire extends Container {
 				: "";
 		this.addChild(new Text(`${chip}${prog}`, 1, 0));
 		this.addChild(new Spacer(1));
-
-		// Question text
 		this.addChild(new Text(t.fg("text", t.bold(q.question)), 1, 0));
 		this.addChild(new Spacer(1));
 
-		// Search bar for single-select
 		if (!q.multiSelect && !this.inputMode) {
 			const searchVal = this.searchQuery
 				? t.fg("text", this.searchQuery)
@@ -347,19 +142,14 @@ class AskQuestionnaire extends Container {
 			);
 		}
 
-		// Options area (filled on render)
 		this.addChild(new Spacer(1));
 
-		// Input mode editor
 		if (this.inputMode) {
 			this.addChild(this.ensureEditor());
 		}
 
-		// Footer hints
 		this.addChild(new Spacer(1));
-		this.addChild(this.buildHintText());
-
-		// Border bottom
+		this.addChild(this._buildHintText());
 		this.addChild(new Text("", 0, 0));
 	}
 
@@ -377,12 +167,12 @@ class AskQuestionnaire extends Container {
 		});
 		editor.disableSubmit = false;
 		editor.onSubmit = (text: string) => this.handleFreeformSubmit(text);
-		(editor as any).focused = true;
+		editor.focused = true;
 		this.editor = editor;
 		return editor;
 	}
 
-	private buildHintText(): Text {
+	private _buildHintText(): Text {
 		const t = this.theme;
 		const isMulti = !!this.currentQ.multiSelect;
 		const hints: string[] = [];
@@ -406,13 +196,14 @@ class AskQuestionnaire extends Container {
 		return new Text(hints.join("\n"), 1, 0);
 	}
 
+	// ── Answer management ──────────────────────────────────────────────
+
 	private recordAnswer(
 		kind: AnswerKind,
 		answer: string | null,
 		selected?: string[],
 		preview?: string,
 	): void {
-		// Remove any previous answer for this question
 		this.answers = this.answers.filter(
 			(a) => a.questionIndex !== this.currentIndex,
 		);
@@ -443,13 +234,11 @@ class AskQuestionnaire extends Container {
 			this.nextQuestion();
 		} else if (item.kind === "other") {
 			this.inputMode = true;
-			this.freeformText = "";
-			(this.ensureEditor() as any).focused = true;
+			this.ensureEditor().focused = true;
 			this.invalidate();
 			this.renderLayout();
 			this.tui.requestRender();
 		} else if (item.kind === "next") {
-			// multi-select commit
 			const selected = Array.from(this.multiChecked)
 				.sort((a, b) => a - b)
 				.map((i) => this.currentQ.options[i]?.label);
@@ -478,7 +267,6 @@ class AskQuestionnaire extends Container {
 		this.multiChecked.clear();
 		this.inputMode = false;
 		this.selectedOptionIndex = 0;
-		this.freeformText = "";
 		this.editor = undefined;
 		this.restoreAnswerState();
 		this.invalidate();
@@ -486,7 +274,6 @@ class AskQuestionnaire extends Container {
 		this.tui.requestRender();
 	}
 
-	/** Re-select the previously recorded answer when revisiting a question. */
 	private restoreAnswerState(): void {
 		const prev = this.answers.find(
 			(a) => a.questionIndex === this.currentIndex,
@@ -513,7 +300,6 @@ class AskQuestionnaire extends Container {
 	private nextQuestion(): void {
 		const total = this.params.questions.length;
 		const answered = new Set(this.answers.map((a) => a.questionIndex));
-		// Advance to the next unanswered question (wrapping), finish when none left.
 		for (let step = 1; step <= total; step++) {
 			const idx = (this.currentIndex + step) % total;
 			if (!answered.has(idx)) {
@@ -536,14 +322,14 @@ class AskQuestionnaire extends Container {
 		this.invalidate();
 	}
 
+	// ── Input handling ─────────────────────────────────────────────────
+
 	handleInput(data: string): void {
-		// Global: cancel
 		if (this.keybindings.matches(data, "tui.select.cancel")) {
 			this.cancel();
 			return;
 		}
 
-		// Input mode: handle editor keys
 		if (this.inputMode) {
 			if (matchesKey(data, Key.escape)) {
 				this.inputMode = false;
@@ -553,7 +339,6 @@ class AskQuestionnaire extends Container {
 				this.tui.requestRender();
 				return;
 			}
-			// Forward all other keys to the Editor (typing, enter=submit, etc.)
 			this.ensureEditor().handleInput(data);
 			this.tui.requestRender();
 			return;
@@ -562,7 +347,6 @@ class AskQuestionnaire extends Container {
 		const isMulti = !!this.currentQ.multiSelect;
 		const total = this.totalItems;
 
-		// Navigation
 		if (
 			this.keybindings.matches(data, "tui.select.up") ||
 			matchesKey(data, Key.shift("tab")) ||
@@ -590,7 +374,6 @@ class AskQuestionnaire extends Container {
 			return;
 		}
 
-		// Left/Right: move between questions (answers preserved)
 		if (matchesKey(data, Key.left)) {
 			this.gotoQuestion(this.currentIndex - 1);
 			return;
@@ -600,7 +383,6 @@ class AskQuestionnaire extends Container {
 			return;
 		}
 
-		// Backspace: pop search
 		if (
 			this.keybindings.matches(data, "tui.editor.deleteCharBackward") ||
 			matchesKey(data, Key.backspace)
@@ -616,7 +398,6 @@ class AskQuestionnaire extends Container {
 			return;
 		}
 
-		// Escape: clear search
 		if (matchesKey(data, Key.escape)) {
 			if (this.searchQuery) {
 				this.searchQuery = "";
@@ -627,7 +408,6 @@ class AskQuestionnaire extends Container {
 			return;
 		}
 
-		// Space: toggle multi-select
 		if (matchesKey(data, Key.space) && isMulti) {
 			if (this.selectedItem?.kind === "option" && this.selectedItem.option) {
 				const idx = this.filteredOptions.indexOf(this.selectedItem.option);
@@ -638,7 +418,6 @@ class AskQuestionnaire extends Container {
 			return;
 		}
 
-		// Number shortcut
 		const numMatch = data.match(/^[1-9]$/);
 		if (numMatch && this.filteredOptions.length > 0) {
 			const idx = Number(numMatch[0]) - 1;
@@ -649,7 +428,6 @@ class AskQuestionnaire extends Container {
 					this.invalidate();
 					this.tui.requestRender();
 				} else {
-					// Direct select
 					const opt = this.filteredOptions[idx]!;
 					this.recordAnswer("option", opt.label, undefined, opt.preview);
 					this.nextQuestion();
@@ -658,13 +436,11 @@ class AskQuestionnaire extends Container {
 			}
 		}
 
-		// Submit / select
 		if (this.keybindings.matches(data, "tui.select.confirm")) {
 			this.commitAnswer();
 			return;
 		}
 
-		// Search input: type to filter
 		if (!isMulti) {
 			const printable = decodeKittyPrintable(data);
 			if (printable !== undefined) {
@@ -688,6 +464,8 @@ class AskQuestionnaire extends Container {
 			}
 		}
 	}
+
+	// ── Rendering ──────────────────────────────────────────────────────
 
 	private renderOptions(width: number): string[] {
 		const t = this.theme;
@@ -803,19 +581,14 @@ class AskQuestionnaire extends Container {
 			this.selectedItem?.kind === "option" &&
 			!!this.selectedItem?.option?.preview;
 
-		// Decide layout: split pane if preview and wide enough
 		const useSplit = hasPreview && width >= SPLIT_PANE_MIN_WIDTH;
 		const leftWidth = useSplit ? Math.floor((width - 6) * 0.45) : inner;
 		const previewWidth = useSplit ? Math.max(20, width - leftWidth - 10) : 0;
 
 		const lines: string[] = [];
 
-		// Build a bordered body row: pad/truncate the (ANSI-containing) content to
-		// exactly `inner` visible columns, then wrap in side borders. Using
-		// visibleWidth() (not String.length) keeps ANSI codes + wide glyphs honest.
-		const row = (content: string): string => {
-			return ` ${truncateToWidth(content, Math.max(0, width - 1), "")}`;
-		};
+		const row = (content: string): string =>
+			` ${truncateToWidth(content, Math.max(0, width - 1), "")}`;
 
 		// Tab bar
 		if (this.params.questions.length > 1) {
@@ -825,8 +598,7 @@ class AskQuestionnaire extends Container {
 				const tag = `${i + 1}.${this.params.questions[i]?.header}`;
 				tabParts.push(active ? t.fg("accent", t.bold(tag)) : t.fg("dim", tag));
 			}
-			const tabLine = tabParts.join(t.fg("dim", "  "));
-			lines.push(row(tabLine));
+			lines.push(row(tabParts.join(t.fg("dim", "  "))));
 		}
 
 		// Header chip
@@ -838,22 +610,22 @@ class AskQuestionnaire extends Container {
 		lines.push(row(`${chip}${prog}`));
 
 		// Question text
-		const questionWrapped = wrapTextWithAnsi(
+		for (const w of wrapTextWithAnsi(
 			this.currentQ.question,
 			Math.max(10, inner),
-		);
-		for (const w of questionWrapped) {
+		)) {
 			lines.push(row(t.fg("text", t.bold(w))));
 		}
 
-		// Input mode: render the freeform editor instead of the options list.
+		// Input mode
 		if (this.inputMode) {
 			lines.push("");
 			lines.push(row(t.fg("accent", t.bold("Type your response:"))));
 			lines.push("");
 			const editorLines = this.ensureEditor().render(Math.max(0, width - 1));
-			for (const el of editorLines)
+			for (const el of editorLines) {
 				lines.push(` ${truncateToWidth(el, Math.max(0, width - 1), "")}`);
+			}
 			lines.push("");
 			lines.push(row(dim(t)("enter submit • esc back • ctrl+c cancel")));
 			lines.push("");
@@ -868,14 +640,14 @@ class AskQuestionnaire extends Container {
 			lines.push(row(`${t.fg("accent", "Filter:")} ${searchVal}`));
 		}
 
-		// Chat sentinel row (above options for single-select, always visible)
+		// Chat sentinel
 		const chatLabel =
 			this.selectedOptionIndex === -999
 				? t.fg("accent", t.bold(SENTINEL_CHAT))
 				: t.fg("dim", SENTINEL_CHAT);
 		lines.push(row(`  ${t.fg("dim", "💬")} ${chatLabel}`));
 
-		// Options (with optional preview pane)
+		// Options (with optional split-pane preview)
 		const optionLines = this.renderOptions(useSplit ? leftWidth : width - 4);
 		const previewLines = useSplit ? this.renderPreview(previewWidth) : [];
 		const maxOptLines = Math.max(optionLines.length, previewLines.length);
@@ -894,213 +666,28 @@ class AskQuestionnaire extends Container {
 					previewWidth - 2,
 					"",
 				);
-				const paintedLeft = left || " ".repeat(leftWidth - 1);
-				const paintedRight = right || " ".repeat(previewWidth - 2);
-				const body = `${paintedLeft}${sep}${paintedRight}`;
+				const body = `${left || " ".repeat(leftWidth - 1)}${sep}${right || " ".repeat(previewWidth - 2)}`;
 				lines.push(` ${truncateToWidth(body, Math.max(0, width - 1), "")}`);
 			}
 		} else {
-			for (const line of optionLines) {
-				lines.push(row(line));
-			}
+			for (const line of optionLines) lines.push(row(line));
 		}
 
 		// Footer hints
-		const hintTexts: string[] = [];
 		const navHint =
 			this.params.questions.length > 1 ? "↑↓ nav • ←→ question" : "↑↓ nav";
-		if (isMulti) {
-			hintTexts.push(`${navHint} • space toggle • enter commit • esc clear`);
-		} else {
-			hintTexts.push(`${navHint} • type filter • enter select • esc clear`);
-		}
-		hintTexts.push("ctrl+c cancel");
-		const hint = dim(t)(hintTexts.join(" • "));
-		lines.push(row(hint));
+		const hintParts = isMulti
+			? [
+					`${navHint} • space toggle • enter commit • esc clear`,
+					"ctrl+c cancel",
+				]
+			: [
+					`${navHint} • type filter • enter select • esc clear`,
+					"ctrl+c cancel",
+				];
+		lines.push(row(dim(t)(hintParts.join(" • "))));
 		lines.push("");
 
-		// Final safety net: never emit a line wider than the terminal.
 		return lines.map((l) => truncateToWidth(l, width, ""));
 	}
-}
-
-// ── RPC fallback ───────────────────────────────────────────────────────
-
-async function rpcFallback(
-	ui: { select: Function; input: Function },
-	params: Params,
-): Promise<QuestionnaireResult> {
-	const answers: QuestionAnswer[] = [];
-	let cancelled = false;
-
-	for (let i = 0; i < params.questions.length; i++) {
-		const q = params.questions[i]!;
-		const header = q.header;
-
-		if (q.multiSelect) {
-			const lines = q.options.map(
-				(o, idx) => `${idx + 1}. ${o.label} — ${o.description}`,
-			);
-			const raw = await ui.input(
-				`${header}: ${q.question}\n\n${lines.join("\n")}\n\nEnter numbers separated by commas:`,
-				"e.g. 1,3",
-			);
-			if (raw == null) {
-				cancelled = true;
-				break;
-			}
-			const indices = String(raw)
-				.split(",")
-				.map((s) => Number(s.trim()))
-				.filter((n) => n >= 1 && n <= q.options.length);
-			const selected = indices.map((n) => q.options[n - 1]?.label);
-			if (selected.length > 0) {
-				answers.push({
-					questionIndex: i,
-					question: q.question,
-					kind: "multi",
-					answer: null,
-					selected,
-				});
-			} else {
-				cancelled = true;
-				break;
-			}
-		} else {
-			const items = q.options.map((o) => `${o.label} — ${o.description}`);
-			items.push(SENTINEL_FREEFORM);
-			const chosen = await ui.select(`${header}: ${q.question}`, items);
-			if (chosen == null) {
-				cancelled = true;
-				break;
-			}
-			if (chosen === SENTINEL_FREEFORM) {
-				const text = await ui.input(q.question, "Type your answer...");
-				if (text == null) {
-					cancelled = true;
-					break;
-				}
-				answers.push({
-					questionIndex: i,
-					question: q.question,
-					kind: "custom",
-					answer: String(text),
-				});
-			} else {
-				const opt = q.options.find(
-					(o) =>
-						chosen === o.label || `${o.label} — ${o.description}` === chosen,
-				)!;
-				answers.push({
-					questionIndex: i,
-					question: q.question,
-					kind: "option",
-					answer: opt?.label ?? String(chosen),
-				});
-			}
-		}
-	}
-
-	return { answers, cancelled };
-}
-
-// ── Tool registration ──────────────────────────────────────────────────
-
-export default function registerAsk(pi: ExtensionAPI): void {
-	pi.registerTool({
-		name: "ask_user",
-		label: "Ask",
-		description: `Ask the user up to ${MAX_QUESTIONS} structured questions (${MIN_OPTIONS}-${MAX_OPTIONS} options each) when requirements are ambiguous.`,
-		promptSnippet: `Ask the user up to ${MAX_QUESTIONS} structured questions (${MIN_OPTIONS}-${MAX_OPTIONS} options each) when requirements are ambiguous`,
-		promptGuidelines: [
-			`Use ask whenever the user's request is underspecified and you cannot proceed without concrete decisions — you can ask up to ${MAX_QUESTIONS} questions per invocation.`,
-			`Each question MUST have ${MIN_OPTIONS}-${MAX_OPTIONS} options. Every option requires a concise label (1-5 words) and a description explaining what the choice means or its trade-offs. The user can additionally type a custom answer ("${SENTINEL_FREEFORM}" row is appended automatically to single-select questions) or pick "${SENTINEL_CHAT}" to abandon the questionnaire.`,
-			`Set multiSelect: true when multiple answers are valid; this suppresses the "${SENTINEL_FREEFORM}" row. Provide an options[].preview markdown string when an option benefits from richer side-by-side context (mockups, code snippets, diagrams, configs) — single-select only. NOTE: any non-empty preview on a single-select question ALSO suppresses the "${SENTINEL_FREEFORM}" row (no room in the side-by-side layout); "${SENTINEL_CHAT}" remains the escape hatch. If you recommend a specific option, make it the first option and append "(Recommended)" to its label.`,
-			"Do not stack multiple ask calls back-to-back — group all clarifying questions into one invocation.",
-		],
-		executionMode: "sequential",
-		parameters: ParamsSchema,
-
-		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-			if (signal?.aborted) {
-				return {
-					content: [{ type: "text", text: "Cancelled" }],
-					details: { answers: [], cancelled: true },
-				};
-			}
-
-			const typed = params as unknown as Params;
-
-			// Validate
-			if (!Array.isArray(typed.questions) || typed.questions.length === 0) {
-				return {
-					content: [
-						{ type: "text", text: "At least one question is required." },
-					],
-					isError: true,
-					details: { answers: [], cancelled: true },
-				};
-			}
-
-			if (!ctx.hasUI) {
-				const result = await rpcFallback(ctx.ui, typed);
-				const text = result.cancelled
-					? "User cancelled the questionnaire"
-					: buildResponseText(result.answers, typed.questions);
-				return { content: [{ type: "text", text }], details: result };
-			}
-
-			// Render inline in the conversation thread (no floating overlay).
-			const result = await ctx.ui.custom<QuestionnaireResult | null>(
-				(tui, theme, keybindings, done) => {
-					if (signal) {
-						signal.addEventListener(
-							"abort",
-							() => done({ answers: [], cancelled: true }),
-							{ once: true },
-						);
-					}
-					return new AskQuestionnaire(typed, tui, theme, keybindings, done);
-				},
-			);
-
-			if (!result || result.cancelled) {
-				return {
-					content: [{ type: "text", text: "User cancelled the questionnaire" }],
-					details: result ?? { answers: [], cancelled: true },
-				};
-			}
-
-			const text = buildResponseText(result.answers, typed.questions);
-			return { content: [{ type: "text", text }], details: result };
-		},
-
-		renderCall(args, theme) {
-			const questions = Array.isArray(args.questions) ? args.questions : [];
-			const count = questions.length;
-			const firstQ = (questions[0]?.question ?? "") as string;
-			let text = theme.fg("toolTitle", theme.bold(`ask (${count}) `));
-			text += theme.fg("muted", firstQ);
-			if (count > 1) text += theme.fg("dim", ` +${count - 1} more`);
-			return new Text(text, 0, 0);
-		},
-
-		renderResult(result, options, theme) {
-			const details = result.details as
-				| { answers?: QuestionAnswer[]; cancelled?: boolean }
-				| undefined;
-			if (options.isPartial) {
-				return new Text(theme.fg("muted", "Waiting for user input..."), 0, 0);
-			}
-			if (!details || details.cancelled || !details.answers?.length) {
-				return new Text(theme.fg("warning", "Cancelled"), 0, 0);
-			}
-			const texts = details.answers.map((a) => {
-				const v =
-					a.kind === "multi" ? (a.selected ?? []).join(", ") : (a.answer ?? "");
-				return `${a.questionIndex + 1}: ${v}`;
-			});
-			return new Text(theme.fg("success", `✓ ${texts.join(" • ")}`), 0, 0);
-		},
-	});
 }

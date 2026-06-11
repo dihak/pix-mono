@@ -24,7 +24,7 @@ import registerModels from "./commands/models/models.ts";
 import registerUpdate from "./commands/update/update.ts";
 import registerYeet from "./commands/yeet/yeet.ts";
 import registerNudges from "./nudge/index.ts";
-import registerAsk from "./tool/ask/ask.ts";
+import registerAsk from "./tool/ask/index.ts";
 import registerTodo from "./tool/todo/todo.ts";
 import registerToolbox from "./tool/toolbox/toolbox.ts";
 import registerDiagnostics from "./ui/diagnostics.ts";
