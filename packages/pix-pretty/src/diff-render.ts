@@ -201,12 +201,36 @@ function tabs(s: string): string {
 }
 
 function termW(): number {
+	// Delegate to utils.termW which has tty ioctl fallback + resize invalidation
+	const stderrCols = (process.stderr as { columns?: number }).columns;
 	const raw =
 		process.stdout.columns ||
-		(process.stderr as { columns?: number }).columns ||
+		stderrCols ||
 		Number.parseInt(process.env.COLUMNS ?? "", 10) ||
+		_readTtyColsDR() ||
 		DEFAULT_TERM_WIDTH;
-	return Math.max(80, Math.min(raw - 4, MAX_TERM_WIDTH));
+	return Math.max(80, Math.min(raw, MAX_TERM_WIDTH));
+}
+
+function _readTtyColsDR(): number | undefined {
+	try {
+		const { getWindowSize } = require("tty") as {
+			getWindowSize?: (fd: number) => [number, number];
+		};
+		if (getWindowSize) {
+			for (const fd of [1, 2, 0]) {
+				try {
+					const [cols] = getWindowSize(fd);
+					if (cols && cols > 0) return cols;
+				} catch {
+					/* not a tty */
+				}
+			}
+		}
+	} catch {
+		/* tty unavailable */
+	}
+	return undefined;
 }
 
 /** Pad/truncate `s` to exactly `w` visible chars. ANSI-aware. */
@@ -602,11 +626,9 @@ export async function renderUnified(
 		const gutter = buildGutter({ ...gutterArgs, continuation: false });
 		const contGutter = buildGutter({ ...gutterArgs, continuation: true });
 		const rows = wrapAnsi(tabs(body), cw, adaptiveWrapRows(), bodyBg);
-		// Fill the terminal margin gap (termW trims 4 cols)
-		const bgFill = bodyBg ? `${bodyBg}    ${RST}` : `${BG_BASE}    ${RST}`;
-		out.push(`${gutter}${rows[0]}${bgFill}`);
+		out.push(`${gutter}${rows[0]}${RST}`);
 		for (let r = 1; r < rows.length; r++)
-			out.push(`${contGutter}${rows[r]}${bgFill}`);
+			out.push(`${contGutter}${rows[r]}${RST}`);
 	}
 
 	while (idx < vis.length) {
@@ -931,15 +953,7 @@ export async function renderSplit(
 				(rightIsEmpty
 					? stripes(cw, stripeRow)
 					: `${BG_EMPTY}${" ".repeat(cw)}${RST}`);
-			// Determine right-side bg to fill the 4-col terminal margin gap
-			const rBgFill = rightIsEmpty
-				? ""
-				: r.right?.type === "add"
-					? `${BG_ADD}    ${RST}`
-					: r.right?.type === "del"
-						? `${BG_DEL}    ${RST}`
-						: `${BG_BASE}    ${RST}`;
-			out.push(`${lg}${lb}${DIVIDER}${rg}${rb}${rBgFill}`);
+			out.push(`${lg}${lb}${DIVIDER}${rg}${rb}${RST}`);
 			stripeRow++;
 		}
 	}

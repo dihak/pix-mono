@@ -48,7 +48,14 @@ export function fillToolBackground(text: string, bg = BG_BASE): string {
 		.join("\n");
 }
 
+let _cachedTermW: number | undefined;
+
+/** Read terminal width — checks all available sources in priority order.
+ *  Falls back to querying the controlling tty via fd 1/2/stdin ioctl.
+ *  Result is cached and invalidated on SIGWINCH / stdout resize. */
 export function termW(): number {
+	if (_cachedTermW !== undefined) return _cachedTermW;
+
 	const stderrWithColumns = process.stderr as NodeJS.WriteStream & {
 		columns?: number;
 	};
@@ -56,8 +63,44 @@ export function termW(): number {
 		process.stdout.columns ||
 		stderrWithColumns.columns ||
 		Number.parseInt(process.env.COLUMNS ?? "", 10) ||
-		200;
-	return Math.max(1, Math.min(raw - 4, 210));
+		_readTtyColumns() ||
+		120;
+	_cachedTermW = Math.max(1, Math.min(raw, 210));
+
+	// Invalidate on resize so next call re-reads
+	process.stdout.once("resize", () => {
+		_cachedTermW = undefined;
+	});
+	process.stdin.once("resize", () => {
+		_cachedTermW = undefined;
+	});
+
+	return _cachedTermW;
+}
+
+/** Synchronously query the tty size via Node's built-in ioctl binding.
+ *  Works even when stdout/stderr are piped, as long as stdin is a tty. */
+function _readTtyColumns(): number | undefined {
+	try {
+		// Node exposes getWindowSize() on tty.ReadStream / tty.WriteStream
+		const { getWindowSize } = require("tty") as {
+			getWindowSize?: (fd: number) => [number, number];
+		};
+		if (getWindowSize) {
+			// Try fd 1 (stdout), 2 (stderr), 0 (stdin) in order
+			for (const fd of [1, 2, 0]) {
+				try {
+					const [cols] = getWindowSize(fd);
+					if (cols && cols > 0) return cols;
+				} catch {
+					/* fd not a tty */
+				}
+			}
+		}
+	} catch {
+		/* tty module unavailable */
+	}
+	return undefined;
 }
 
 export function shortPath(cwd: string, home: string, p: string): string {
