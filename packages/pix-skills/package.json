@@ -10,6 +10,8 @@
 	"files": [
 		"src",
 		"skills",
+		"AGENT.md",
+		"SOP.md",
 		"README.md",
 		"LICENSE"
 	],

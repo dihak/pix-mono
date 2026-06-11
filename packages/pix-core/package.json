@@ -42,6 +42,7 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@xynogen/pix-skills": "^0.1.0",
 		"typebox": "^1.1.38"
 	},
 	"peerDependencies": {

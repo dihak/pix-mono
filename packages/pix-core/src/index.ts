@@ -16,6 +16,7 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import registerAgentSop from "./commands/agent-sop/agent-sop.ts";
 import registerClear from "./commands/clear/clear.ts";
 import registerCopyAll from "./commands/copy-all/copy-all.ts";
 import registerDiff from "./commands/diff/diff.ts";
@@ -32,6 +33,7 @@ import registerFooter from "./ui/footer.ts";
 import registerWelcome from "./ui/welcome.ts";
 
 export default function (pi: ExtensionAPI): void {
+	registerAgentSop(pi);
 	registerWelcome(pi);
 	registerFooter(pi);
 	registerDiagnostics(pi);
