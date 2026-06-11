@@ -3,11 +3,8 @@ import * as childProcess from "node:child_process";
 import type { ImageProtocol } from "./types.js";
 
 let _tmuxClientTermCache: string | null | undefined;
-
 let _tmuxAllowPassthroughCache: boolean | null | undefined;
-
 let _tmuxClientTermOverrideForTests: string | null | undefined;
-
 let _tmuxAllowPassthroughOverrideForTests: boolean | null | undefined;
 
 function isTmuxSession(): boolean {

@@ -1,29 +1,19 @@
 import type { BgTheme } from "./types.js";
 
 export let RST = "\x1b[0m";
-
 export const BOLD = "\x1b[1m";
 
 export const FG_LNUM = "\x1b[38;2;100;100;100m";
-
 export const FG_DIM = "\x1b[38;2;80;80;80m";
-
 export const FG_RULE = "\x1b[38;2;50;50;50m";
-
 export const FG_GREEN = "\x1b[38;2;100;180;120m";
-
 export const FG_RED = "\x1b[38;2;200;100;100m";
-
 export const FG_YELLOW = "\x1b[38;2;220;180;80m";
-
 export const FG_BLUE = "\x1b[38;2;100;140;220m";
-
 const FG_MUTED = "\x1b[38;2;139;148;158m";
 
 const BG_DEFAULT = "\x1b[49m";
-
 export let BG_BASE = BG_DEFAULT; // tool box success/base bg — updated from theme's toolSuccessBg
-
 export let BG_ERROR = BG_DEFAULT; // tool box error bg — updated from theme's toolErrorBg
 
 /** Parse an ANSI 24-bit color escape into { r, g, b }. Handles both fg (38;2) and bg (48;2). */
