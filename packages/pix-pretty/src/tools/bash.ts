@@ -4,6 +4,7 @@ import type {
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 
+import { truncateToWidth } from "@earendil-works/pi-tui";
 import { FG_DIM, RST } from "../ansi.js";
 import { MAX_PREVIEW_LINES } from "../config.js";
 import { renderBashOutput } from "../renderers.js";
@@ -87,6 +88,7 @@ export function registerBashTool(
 			const cmd = args.command ?? "";
 			const displayCmdRaw = cmd.trim();
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			const label = theme.fg("toolTitle", theme.bold("bash"));
 			const timeout = args.timeout
 				? ` ${theme.fg("muted", `(${args.timeout}s timeout)`)}`
 				: "";
@@ -97,15 +99,15 @@ export function registerBashTool(
 					? `${firstLine} ${theme.fg("muted", `… (+${cmdLines.length - 1} lines)`)}`
 					: firstLine;
 			const baseCmd = renderCtx.expanded ? displayCmdRaw : compactCmd;
-			const displayCmd =
-				renderCtx.expanded || baseCmd.length <= 80
-					? baseCmd
-					: `${baseCmd.slice(0, 77)}…`;
-			text.setText(
-				fillToolBackground(
-					`${theme.fg("toolTitle", theme.bold("bash"))} ${theme.fg("accent", displayCmd)}${timeout}`,
-				),
+			const availableWidth = Math.max(1, termW() - 1);
+			const prefix = `${label} `;
+			const reserve = Math.max(0, availableWidth - timeout.length);
+			const displayCmd = truncateToWidth(
+				theme.fg("accent", baseCmd),
+				Math.max(1, reserve - prefix.length),
+				"…",
 			);
+			text.setText(fillToolBackground(`${prefix}${displayCmd}${timeout}`));
 			return text;
 		},
 
