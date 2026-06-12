@@ -3,7 +3,8 @@ import type {
 	ExtensionContext,
 	LsToolInput,
 } from "@earendil-works/pi-coding-agent";
-
+import { FG_DIM, RST } from "../ansi.js";
+import { renderTree } from "../renderers.js";
 import type {
 	LsParams,
 	PiPrettyApi,
@@ -12,8 +13,6 @@ import type {
 	ToolFactory,
 	ToolResultLike,
 } from "../types.js";
-import { FG_DIM, RST } from "../ansi.js";
-import { renderTree } from "../renderers.js";
 import {
 	fillToolBackground,
 	getTextContent,
