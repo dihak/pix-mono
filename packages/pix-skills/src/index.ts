@@ -81,11 +81,46 @@ function discoverSkills(): SkillEntry[] {
 }
 
 /** Extract the `description` from YAML frontmatter, or null. */
-function extractDescription(content: string): string | null {
+export function extractDescription(content: string): string | null {
 	const m = content.match(/^---\s*\n([\s\S]*?)\n---/);
 	if (!m) return null;
 	const dm = m[1]!.match(/^description\s*:\s*["']?(.+?)["']?\s*$/m);
 	return dm ? dm[1]!.trim() : null;
+}
+
+export function extractName(content: string): string | null {
+	const m = content.match(/^---\s*\n([\s\S]*?)\n---/);
+	if (!m) return null;
+	const nm = m[1]!.match(/^name\s*:\s*["']?(.+?)["']?\s*$/m);
+	return nm ? nm[1]!.trim() : null;
+}
+
+export type ThemeLike = {
+	bold: (text: string) => string;
+	fg: (key: "accent" | "muted" | "toolTitle", text: string) => string;
+};
+
+export function formatSkillSummary(text: string, theme: ThemeLike): string {
+	const trimmed = text.trim();
+	if (!trimmed) return theme.fg("muted", "No skills found.");
+
+	const name = extractName(trimmed);
+	const desc = extractDescription(trimmed);
+	if (name) {
+		return `${theme.fg("accent", theme.bold(name))} ${theme.fg("muted", desc ?? "(no description)")}`;
+	}
+
+	// List form: each skill is a single-token name followed by ": <desc>".
+	// Lines without that exact shape (headers, blanks) pass through muted so
+	// we don't mis-tint "Available skills (3):" as a skill entry.
+	const lines = trimmed.split("\n");
+	return lines
+		.map((line) => {
+			const match = line.match(/^(\S+):\s+(.+)$/);
+			if (!match) return theme.fg("muted", line);
+			return `${theme.fg("accent", theme.bold(match[1]!))} ${theme.fg("muted", match[2]!)}`;
+		})
+		.join("\n");
 }
 
 // ─── Tool registration ────────────────────────────────────────────────────────
@@ -198,6 +233,14 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 				0,
 				0,
 			);
+		},
+
+		renderResult(result, _options, theme) {
+			const text = result.content
+				?.filter((content) => content.type === "text")
+				.map((content) => content.text || "")
+				.join("\n");
+			return new Text(formatSkillSummary(text ?? "", theme), 0, 0);
 		},
 	});
 }
