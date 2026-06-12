@@ -24,6 +24,7 @@ import {
 	visibleWidth,
 } from "@earendil-works/pi-tui";
 import { lookupBenchmark, lookupModelsDev } from "../../lib/data";
+import { patchOutBuiltinModelCommand } from "./patch-builtin";
 
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────
 
@@ -352,6 +353,10 @@ export async function showEnhancedPicker(
 }
 
 export default function modelPickerExtension(pi: ExtensionAPI) {
+	// Remove Pi's built-in /model so only the enhanced /models picker remains.
+	// Self-healing: re-applies on every load, so a Pi upgrade can't restore it.
+	patchOutBuiltinModelCommand();
+
 	const handler = async (_args: unknown, ctx: ExtensionContext) => {
 		await showEnhancedPicker(pi, ctx);
 	};
