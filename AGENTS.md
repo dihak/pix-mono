@@ -119,6 +119,19 @@ bun run publish:dry
 
 ---
 
+## Package Independence
+
+Each package is intended to be **independently installable and usable**.
+
+- **No cross-package imports unless unavoidable.** `pix-9router` and `pix-core` depend on `pix-data` — that's an intentional shared data layer. Beyond that, keep packages self-contained.
+- **Prefer duplicating small utilities over adding a cross-package dep.** A shared dep creates a hard install coupling.
+- **Each package has its own `package.json` version.** Bump only the package(s) actually changed — unrelated packages keep their version and are skipped at publish time.
+- **Pi host is always a `peerDependency`**, never a direct dep. Users already have Pi installed.
+- **Third-party deps go in the package that needs them**, not hoisted to the root.
+- When adding a new package: keep it zero-dep on other `pix-*` packages if at all possible.
+
+---
+
 ## Key Rules
 
 - **Never commit directly without running `bun run check` + `bun run typecheck`** — CI will fail.
