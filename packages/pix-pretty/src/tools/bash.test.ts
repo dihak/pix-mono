@@ -46,11 +46,6 @@ describe("registerBashTool", () => {
 					TextComponent: MockTextComponent as any,
 					fffState: {} as any,
 					cursorStore: {} as any,
-					multiGrepRipgrepFallback: async () => ({
-						text: "",
-						matchCount: 0,
-						limitReached: false,
-					}),
 				},
 			);
 

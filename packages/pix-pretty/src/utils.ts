@@ -258,34 +258,3 @@ export function trimToUndefined(value: string | undefined): string | undefined {
 	const trimmed = value?.trim();
 	return trimmed ? trimmed : undefined;
 }
-
-function escapeRegexLiteral(text: string): string {
-	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-export function buildLiteralAlternationPattern(patterns: string[]): string {
-	return patterns
-		.map(escapeRegexLiteral)
-		.sort((a, b) => b.length - a.length)
-		.join("|");
-}
-
-export function shouldIgnoreCaseForPatterns(patterns: string[]): boolean {
-	return patterns.every((pattern) => pattern.toLowerCase() === pattern);
-}
-
-export function getConstraintBackedPath(
-	constraints: string | undefined,
-): string | undefined {
-	const trimmed = trimToUndefined(constraints);
-	if (
-		!trimmed ||
-		/\s/.test(trimmed) ||
-		trimmed.includes("!") ||
-		trimmed.endsWith("/") ||
-		/[*?[{]/.test(trimmed)
-	) {
-		return undefined;
-	}
-	return trimmed;
-}

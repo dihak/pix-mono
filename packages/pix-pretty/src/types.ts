@@ -21,35 +21,6 @@ export type BundledLanguage = string;
 export type BundledTheme = string;
 
 // ---------------------------------------------------------------------------
-// Multi-grep ripgrep fallback contracts
-// ---------------------------------------------------------------------------
-
-export type ConstraintParseResult =
-	| { ok: true; globs: string[]; tokens: string[] }
-	| { ok: false; error: string };
-
-export type MultiGrepRipgrepFallbackParams = {
-	cwd: string;
-	patterns: string[];
-	path?: string;
-	constraints?: string;
-	context?: number;
-	limit: number;
-	ignoreCase: boolean;
-	signal?: AbortSignal;
-};
-
-export type MultiGrepRipgrepFallbackResult = {
-	text: string;
-	matchCount: number;
-	limitReached: boolean;
-};
-
-export type MultiGrepRipgrepFallback = (
-	params: MultiGrepRipgrepFallbackParams,
-) => Promise<MultiGrepRipgrepFallbackResult>;
-
-// ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
@@ -203,14 +174,6 @@ export type FindParams = FindToolInput;
 
 export type GrepParams = GrepToolInput;
 
-export type MultiGrepParams = {
-	patterns: string[];
-	path?: string;
-	constraints?: string;
-	context?: number;
-	limit?: number;
-};
-
 export type EditRenderState = {
 	_pk?: string;
 	_pt?: string;
@@ -322,5 +285,4 @@ export interface PiPrettyDeps {
 	sdk: PiPrettySdk;
 	TextComponent: TextComponentCtor;
 	fffModule?: OptionalFffModule;
-	multiGrepRipgrepFallback?: MultiGrepRipgrepFallback;
 }

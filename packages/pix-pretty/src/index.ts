@@ -16,7 +16,7 @@
  *   fff.ts            Fast File Finder + cursor store + multi-grep fallback
  *   diff.ts           unified diff parser
  *   diff-render.ts    split/word-level diff renderer
- *   tools/            per-tool registrars (read/bash/ls/find/grep/multi-grep/edit/write)
+ *   tools/            per-tool registrars (read/bash/ls/find/grep/edit/write)
  *   commands/         slash command registrars (fff)
  */
 
@@ -40,7 +40,6 @@ import {
 	fffEnsureFinder,
 	fffState,
 	getPiPrettyFffDir,
-	runMultiGrepRipgrepFallback,
 } from "./fff.js";
 import { clearHighlightCache } from "./highlight.js";
 import { registerBashTool } from "./tools/bash.js";
@@ -49,7 +48,6 @@ import { registerEditTool } from "./tools/edit.js";
 import { registerFindTool } from "./tools/find.js";
 import { registerGrepTool } from "./tools/grep.js";
 import { registerLsTool } from "./tools/ls.js";
-import { registerMultiGrepTool } from "./tools/multi-grep.js";
 import { registerReadTool } from "./tools/read.js";
 import { registerWriteTool } from "./tools/write.js";
 import type {
@@ -134,9 +132,6 @@ export default function piPrettyExtension(
 	const cwd = process.cwd();
 	const home = process.env.HOME ?? "";
 	const sp = (p: string) => shortPath(cwd, home, p);
-	const multiGrepRipgrepFallback =
-		deps?.multiGrepRipgrepFallback ?? runMultiGrepRipgrepFallback;
-
 	// Respect PRETTY_DISABLE_TOOLS env var
 	const disabledTools = new Set(
 		(process.env.PRETTY_DISABLE_TOOLS ?? "")
@@ -224,7 +219,6 @@ export default function piPrettyExtension(
 		TextComponent: TextComponent!,
 		fffState,
 		cursorStore,
-		multiGrepRipgrepFallback,
 	};
 
 	// ── Register tools ──────────────────────────────────────────────────
@@ -243,9 +237,6 @@ export default function piPrettyExtension(
 	}
 	if (isToolEnabled("grep") && createGrepTool) {
 		registerGrepTool(pi, createGrepTool, toolCtx);
-	}
-	if (isToolEnabled("multi_grep") && (fffState.module || createGrepTool)) {
-		registerMultiGrepTool(pi, createGrepTool ?? null, toolCtx);
 	}
 	if (isToolEnabled("edit") && createEditTool) {
 		registerEditTool(pi, createEditTool, toolCtx, trackInvalidator);

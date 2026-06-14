@@ -1,5 +1,5 @@
 import type { CursorStore, FffState } from "../fff.js";
-import type { MultiGrepRipgrepFallback, TextComponentCtor } from "../types.js";
+import type { TextComponentCtor } from "../types.js";
 
 // ── Shared context passed to each tool registrar ───────────────────────
 
@@ -14,6 +14,4 @@ export interface ToolContext {
 	fffState: FffState;
 	/** FFF cursor store */
 	cursorStore: CursorStore;
-	/** Ripgrep fallback for multi_grep */
-	multiGrepRipgrepFallback: MultiGrepRipgrepFallback;
 }
