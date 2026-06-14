@@ -3,7 +3,8 @@ name: Publish
 on:
   push:
     tags:
-      - "release-*"
+      # Format: release-YYYYMMDD-HHMM (e.g. release-20260614-1201)
+      - "release-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]"
   # Manual fallback from the Actions tab.
   workflow_dispatch:
 
