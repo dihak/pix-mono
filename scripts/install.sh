@@ -16,7 +16,7 @@ set -eu
 PI_ROOT="$HOME/.pi/agent"
 PI_THEME="pix-tokyo-night"
 SETTINGS_FILE="$PI_ROOT/settings.json"
-DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "search", "fetch"]'
+DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "search", "fetch", "transcribe", "ask_user", "todo", "read_skills", "ast_grep_search", "ast_grep_replace", "lsp_navigation", "lsp_diagnostics", "lens_diagnostics"]'
 
 # Space-separated package list (POSIX sh has no arrays).
 PIX_PACKAGES="
