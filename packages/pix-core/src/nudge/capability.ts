@@ -31,12 +31,13 @@ import type {
 type LoadedSkill = NonNullable<BuildSystemPromptOptions["skills"]>[number];
 
 /** The standing per-turn reminder. Kept terse — it ships on every turn. */
+/** How often (in turns after the first) to re-send the capability reminder. */
+const REMINDER_INTERVAL = 10;
+
 export const CAPABILITY_REMINDER =
 	"Reminder — check knowledge resources " +
 	"(skills/tools/MCP/web/user) before improvising. " +
-	"Matching skill? Call read_skills() first. " +
-	"Use /toolbox to discover/enable gated tools. " +
-	"All tools callable via function definitions.";
+	"Matching skill? Call read_skills() first.";
 
 /**
  * Build the optional graphify hint line.
@@ -119,7 +120,7 @@ export function buildOrientation(
 	// Lead with the gate — tools not described in the prompt are still callable
 	// via function definitions, but the model doesn't know about them.
 	const gateLine = gated
-		? `${gated} ${gated === 1 ? "is" : "are"} gated (kept out of the prompt to save context) — enable via toolbox to discover. All tools are always callable via function definitions.`
+		? `${gated} ${gated === 1 ? "is" : "are"} gated (kept out of the prompt to save context). All tools are always callable via function definitions.`
 		: undefined;
 
 	const lines = [
@@ -128,8 +129,7 @@ export function buildOrientation(
 	if (gateLine) lines.push(gateLine);
 	lines.push(
 		"Don't improvise what a capability covers — ask the user, search the web, or pull docs first.",
-		"`read_skills()` lists/loads bundled skills — call it when a skill matches your task. " +
-			"/toolbox (slash command) discovers and enables gated tools.",
+		"`read_skills()` lists/loads bundled skills — call it when a skill matches your task.",
 	);
 	if (skillNames.length) {
 		lines.push(`Skills: ${skillNames.join(", ")}.`);
@@ -147,14 +147,14 @@ export function buildOrientation(
 }
 
 export default function registerCapabilityNudge(pi: ExtensionAPI): void {
-	let orientationSent = false;
+	let turnCount = 0;
 
 	pi.on("before_agent_start", async (event) => {
 		const skills = event.systemPromptOptions?.skills;
+		turnCount++;
 
 		let content: string;
-		if (!orientationSent) {
-			orientationSent = true;
+		if (turnCount === 1) {
 			let tools: ToolInfo[] | undefined;
 			try {
 				tools = pi.getAllTools();
@@ -170,13 +170,15 @@ export default function registerCapabilityNudge(pi: ExtensionAPI): void {
 				activeToolNames = undefined;
 			}
 			content = buildOrientation(tools, skills, activeToolNames);
-		} else {
-			// Per-turn reminder — append graphify hint when graph exists
+		} else if (turnCount % REMINDER_INTERVAL === 1) {
+			// Fire reminder every REMINDER_INTERVAL turns (turn 11, 21, ...)
 			const cwd = process.cwd();
 			const gHint = graphifyHint(cwd);
 			content = gHint
 				? `${CAPABILITY_REMINDER}\n${gHint}`
 				: CAPABILITY_REMINDER;
+		} else {
+			return; // no nudge this turn
 		}
 
 		return {
