@@ -208,10 +208,11 @@ function renderModel(
 		minimal: "min",
 		low: "low",
 		medium: "med",
-		high: "hgh",
-		xhigh: "xhg",
+		high: "high",
+		xhigh: "xhigh",
+		off: "off",
 	};
-	if (thinking && thinking !== "off") {
+	if (thinking) {
 		const abbr = THINK_ABBR[thinking] ?? thinking.slice(0, 3);
 		out += theme.fg("muted", " · ") + theme.fg("warning", abbr);
 	}
