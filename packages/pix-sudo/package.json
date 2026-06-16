@@ -1,0 +1,46 @@
+{
+	"name": "@xynogen/pix-sudo",
+	"version": "0.1.0",
+	"description": "Pi extension — sudo_run tool with interactive password prompt (PAM via sudo -S)",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"sudo",
+		"security",
+		"permission"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-sudo"
+	},
+	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-sudo#readme",
+	"bugs": {
+		"url": "https://github.com/xynogen/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	}
+}

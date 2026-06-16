@@ -27,6 +27,7 @@ npm:@xynogen/pix-skills
 npm:@xynogen/pix-tokyo-night
 npm:@xynogen/pix-9router
 npm:@xynogen/pix-data
+npm:@xynogen/pix-sudo
 "
 
 # --- minimal logging helpers (no external lib dependency) ------------------

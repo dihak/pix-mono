@@ -12,6 +12,7 @@ Monorepo of [Pi Coding Agent](https://github.com/badlogic/pi-mono) extensions by
 | [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Performance suite — caveman mode + RTK tool rewriting + jq/TOON JSON compression |
 | [`@xynogen/pix-pretty`](packages/pix-pretty) | Enhanced tool output rendering — syntax highlighting, icons, tree views, FFF, paste chips |
 | [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skill` tool + bundled skills) |
+| [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` tool — executes root commands after interactive password prompt (PAM via `sudo -S`) |
 | [`@xynogen/pix-tokyo-night`](packages/pix-tokyo-night) | Tokyo Night Storm theme |
 
 ## Install
@@ -40,6 +41,7 @@ pi install npm:@xynogen/pix-optimizer
 pi install npm:@xynogen/pix-tokyo-night
 pi install npm:@xynogen/pix-9router
 pi install npm:@xynogen/pix-data
+pi install npm:@xynogen/pix-sudo
 ```
 
 ## Development
