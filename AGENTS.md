@@ -13,9 +13,22 @@ packages/
   pix-core/        # Core UX: welcome, footer, model picker, capability nudge, self-update
   pix-data/        # Shared model data layer (models.dev + BenchLM), cached at ~/.cache/pi
   pix-optimizer/   # Caveman mode, RTK tool rewriting, jq/TOON JSON compression
-  pix-pretty/      # Syntax highlight, file icons, tree views, paste chip formatting
+  pix-pretty/      # Shared rendering lib (highlight, diff, icons, fff) + à-la-carte tool boot
   pix-skills/      # Agent skill loader + bundled skills
   pix-tokyo-night/ # Tokyo Night Storm theme
+  # ── Standalone tool packages (independently installable) ────────────────
+  pix-bash/        # Tool — bash shell execution with pretty output
+  pix-read/        # Tool — file read with syntax highlight
+  pix-write/       # Tool — file write with diff rendering
+  pix-edit/        # Tool — precise text replacement edit with diff rendering
+  pix-find/        # Tool — glob file search (FFF-accelerated)
+  pix-grep/        # Tool — pattern search in files (FFF-accelerated)
+  pix-ls/          # Tool — directory listing with tree view
+  pix-todo/        # Tool — durable execution checklist (survives context compaction)
+  pix-ask/         # Tool — structured questionnaire UI (ask_user)
+  pix-toolbox/     # Tool — gated tool toggle UI (/toolbox)
+  pix-sudo-run/    # Tool — sudo_run with interactive PAM password prompt
+  pix-sudo/        # Thin wrapper re-exporting pix-sudo-run (backward compat)
 scripts/
   dev-link.sh      # Symlink local packages into Pi for instant dev iteration
   publish-all.sh   # Publish changed packages to npm (idempotent — skips already-published versions)
@@ -30,18 +43,22 @@ scripts/
 ## Development
 
 ### Install deps
+
 ```bash
 bun install
 ```
 
 ### Local dev (symlink into Pi — no publish round-trip)
+
 ```bash
 bun run dev:link     # symlink packages/pix-* → ~/.pi/agent/npm/node_modules/@xynogen/
 bun run dev:unlink   # restore npm-installed copies
 ```
+
 Restart Pi session after linking.
 
 ### Quality checks (run before every commit)
+
 ```bash
 bun run check        # biome lint + format check
 bun run typecheck    # tsc --noEmit
@@ -49,6 +66,7 @@ bun test             # unit tests
 ```
 
 Auto-fix lint/format:
+
 ```bash
 bun run check:fix
 ```
@@ -70,6 +88,7 @@ bun run check:fix
 Scope = package name without prefix, e.g. `pix-core` → `fix(pix-core): ...`
 
 Example:
+
 ```
 fix(pix-core): remove /toolbox from nudge, fire reminder every 10 turns
 ```
@@ -90,11 +109,13 @@ No manual trigger needed — just push.
 Publishing is triggered by a **release tag**, never by direct push.
 
 ### Tag format
+
 ```
 release-YYYYMMDD-HHMM
 ```
 
 ### How to publish
+
 ```bash
 # 1. Bump version(s) in the relevant package.json(s)
 # 2. Commit + push to main
@@ -107,12 +128,14 @@ TAG="release-$(date +%Y%m%d-%H%M)" && git tag "$TAG" && git push origin "$TAG"
 ```
 
 ### What the publish workflow does
+
 1. Re-runs the full CI gate (lint + typecheck + test).
 2. For each package: checks if `name@version` already exists on npm — skips if so.
 3. Publishes only packages whose version is new (idempotent).
 4. Uses npm OIDC trusted publishing — no `NPM_TOKEN` needed in CI.
 
 ### Dry run (local check before tagging)
+
 ```bash
 bun run publish:dry
 ```
