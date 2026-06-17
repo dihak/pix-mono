@@ -37,7 +37,7 @@ let requestRenderFn: (() => void) | null = null;
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function clearDiagnosticState(): void {
+function clearDiagnosticState(): void {
 	files.clear();
 }
 

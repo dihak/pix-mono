@@ -6,7 +6,7 @@ import type {
 
 export const PACKAGE_NAME = "@earendil-works/pi-coding-agent";
 
-export const TRANSIENT_PATTERNS = [
+const TRANSIENT_PATTERNS = [
 	/eai_again/i,
 	/etimedout/i,
 	/econnreset/i,

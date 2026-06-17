@@ -78,7 +78,7 @@ export function sortModels<T extends SortableModel>(models: T[]): T[] {
 	});
 }
 
-export async function showEnhancedPicker(
+async function showEnhancedPicker(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
 ): Promise<void> {
