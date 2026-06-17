@@ -1,7 +1,6 @@
-// Minimal ambient shim for the `diff` npm package (v7) — only the surface the
-// vendored pretty extension's diff renderer uses. diff@7 ships no bundled types
-// and @types/diff is not installed into pi's npm root; this keeps the local
-// editor/LSP quiet without vendoring node_modules in-repo.
+// Minimal ambient shim for the `diff` npm package (v7) — only the surface used
+// by diff.ts and diff-render.ts. diff@7 ships no bundled types and @types/diff
+// is not installed into pi's npm root; this keeps tsc quiet without vendoring.
 
 declare module "diff" {
 	export interface StructuredPatchHunk {

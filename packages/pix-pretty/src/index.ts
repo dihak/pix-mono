@@ -21,7 +21,6 @@
  */
 
 import { mkdirSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join } from "node:path";
 import type {
 	BashToolInput,
@@ -33,6 +32,13 @@ import type {
 	ReadToolInput,
 	WriteToolInput,
 } from "@earendil-works/pi-coding-agent";
+import { registerBashTool } from "@xynogen/pix-bash";
+import { registerEditTool } from "@xynogen/pix-edit";
+import { registerFindTool } from "@xynogen/pix-find";
+import { registerGrepTool } from "@xynogen/pix-grep";
+import { registerLsTool } from "@xynogen/pix-ls";
+import { registerReadTool } from "@xynogen/pix-read";
+import { registerWriteTool } from "@xynogen/pix-write";
 import { registerFffCommands } from "./commands/fff.js";
 import { getDefaultAgentDir, setPrettyTheme } from "./config.js";
 import {
@@ -43,31 +49,7 @@ import {
 	getPiPrettyFffDir,
 } from "./fff.js";
 import { clearHighlightCache } from "./highlight.js";
-// Built-in registrars — used as fallback when a pix-* package is not installed
-import { registerBashTool as _registerBashTool } from "./tools/bash.js";
 import type { ToolContext } from "./tools/context.js";
-import { registerEditTool as _registerEditTool } from "./tools/edit.js";
-import { registerFindTool as _registerFindTool } from "./tools/find.js";
-import { registerGrepTool as _registerGrepTool } from "./tools/grep.js";
-import { registerLsTool as _registerLsTool } from "./tools/ls.js";
-import { registerReadTool as _registerReadTool } from "./tools/read.js";
-import { registerWriteTool as _registerWriteTool } from "./tools/write.js";
-
-const _req = createRequire(import.meta.url);
-
-/** Try to load a registrar from an optional pix-* package; fall back to built-in. */
-function loadRegistrar<T>(pkg: string, builtIn: T): T {
-	try {
-		const mod = _req(pkg) as Record<string, unknown>;
-		// ESM-compiled packages expose named exports directly or via .default
-		const keys = Object.keys(mod);
-		// Named export preferred (e.g. registerBashTool); default is the fallback
-		const named = keys.find((k) => k.startsWith("register"));
-		return ((named ? mod[named] : mod.default) as T) ?? builtIn;
-	} catch {
-		return builtIn;
-	}
-}
 
 import type {
 	PiPrettyApi,
@@ -242,35 +224,26 @@ export default function piPrettyExtension(
 
 	// ── Register tools ──────────────────────────────────────────────────
 
-	// Soft-load each tool: prefer installed @xynogen/pix-* package; fall back to built-in.
-	const registerRead = loadRegistrar("@xynogen/pix-read", _registerReadTool);
-	const registerBash = loadRegistrar("@xynogen/pix-bash", _registerBashTool);
-	const registerLs = loadRegistrar("@xynogen/pix-ls", _registerLsTool);
-	const registerFind = loadRegistrar("@xynogen/pix-find", _registerFindTool);
-	const registerGrep = loadRegistrar("@xynogen/pix-grep", _registerGrepTool);
-	const registerEdit = loadRegistrar("@xynogen/pix-edit", _registerEditTool);
-	const registerWrite = loadRegistrar("@xynogen/pix-write", _registerWriteTool);
-
 	if (isToolEnabled("read") && createReadTool) {
-		registerRead(pi, createReadTool, toolCtx);
+		registerReadTool(pi, createReadTool, toolCtx);
 	}
 	if (isToolEnabled("bash") && createBashTool) {
-		registerBash(pi, createBashTool, toolCtx);
+		registerBashTool(pi, createBashTool, toolCtx);
 	}
 	if (isToolEnabled("ls") && createLsTool) {
-		registerLs(pi, createLsTool, toolCtx);
+		registerLsTool(pi, createLsTool, toolCtx);
 	}
 	if (isToolEnabled("find") && createFindTool) {
-		registerFind(pi, createFindTool, toolCtx);
+		registerFindTool(pi, createFindTool, toolCtx);
 	}
 	if (isToolEnabled("grep") && createGrepTool) {
-		registerGrep(pi, createGrepTool, toolCtx);
+		registerGrepTool(pi, createGrepTool, toolCtx);
 	}
 	if (isToolEnabled("edit") && createEditTool) {
-		registerEdit(pi, createEditTool, toolCtx, trackInvalidator);
+		registerEditTool(pi, createEditTool, toolCtx, trackInvalidator);
 	}
 	if (isToolEnabled("write") && createWriteTool) {
-		registerWrite(pi, createWriteTool, toolCtx, trackInvalidator);
+		registerWriteTool(pi, createWriteTool, toolCtx, trackInvalidator);
 	}
 
 	// ── Register FFF commands ───────────────────────────────────────────

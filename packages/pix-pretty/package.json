@@ -60,9 +60,7 @@
 	"dependencies": {
 		"cli-highlight": "^2.1.11",
 		"@ff-labs/fff-node": "^0.5.2",
-		"diff": "^7.0.0"
-	},
-	"optionalDependencies": {
+		"diff": "^7.0.0",
 		"@xynogen/pix-bash": "*",
 		"@xynogen/pix-read": "*",
 		"@xynogen/pix-write": "*",
