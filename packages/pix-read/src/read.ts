@@ -6,6 +6,7 @@ import type {
 
 import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
 import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
+import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { fileIcon } from "@xynogen/pix-pretty/icons";
 import { renderFileContent } from "@xynogen/pix-pretty/renderers";
 import type {
@@ -26,7 +27,6 @@ import {
 	renderToolError,
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
 
 export function registerReadTool(
 	pi: PiPrettyApi,

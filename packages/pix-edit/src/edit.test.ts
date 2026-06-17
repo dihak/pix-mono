@@ -1,11 +1,19 @@
 import { describe, expect, it } from "bun:test";
-import { getEditOperations, registerEditTool, summarizeEditOperations } from "./edit";
+import {
+	getEditOperations,
+	registerEditTool,
+	summarizeEditOperations,
+} from "./edit";
 
 class MockTextComponent {
 	private text = "";
 	constructor(_t = "", _x = 0, _y = 0) {}
-	setText(v: string) { this.text = v; }
-	getText() { return this.text; }
+	setText(v: string) {
+		this.text = v;
+	}
+	getText() {
+		return this.text;
+	}
 }
 
 describe("registerEditTool", () => {
@@ -47,7 +55,9 @@ describe("getEditOperations", () => {
 
 describe("summarizeEditOperations", () => {
 	it("returns a summary string", () => {
-		const { summary } = summarizeEditOperations([{ oldText: "a\nb", newText: "c\nd\ne" }]);
+		const { summary } = summarizeEditOperations([
+			{ oldText: "a\nb", newText: "c\nd\ne" },
+		]);
 		expect(typeof summary).toBe("string");
 		expect(summary.length).toBeGreaterThan(0);
 	});

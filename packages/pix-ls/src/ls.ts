@@ -4,6 +4,7 @@ import type {
 	LsToolInput,
 } from "@earendil-works/pi-coding-agent";
 import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
+import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { renderTree } from "@xynogen/pix-pretty/renderers";
 import type {
 	LsParams,
@@ -19,7 +20,6 @@ import {
 	renderToolError,
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
 
 export function registerLsTool(
 	pi: PiPrettyApi,

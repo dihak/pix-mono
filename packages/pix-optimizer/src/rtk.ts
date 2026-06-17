@@ -33,6 +33,46 @@ export interface BashCallEvent {
  * Extracted from the hook closure so the integration is directly testable
  * without a live ExtensionAPI.
  */
+/**
+ * Return the list of sudo sub-commands found in parsed chain segments.
+ * Each entry is the full segment body (trimmed) that starts with `sudo`.
+ * Operators are excluded. Returns empty array if none found.
+ */
+export function detectSudoSegments(parts: string[]): string[] {
+	return parts
+		.filter((p) => !CHAIN_OPERATORS.has(p.trim()))
+		.map((p) => p.trim())
+		.filter((p) => /^sudo\b/.test(p));
+}
+
+/**
+ * Build the block reason string shown to the model when a sudo command is
+ * intercepted. Directs the model to `sudo_run` when available, otherwise
+ * explains the restriction clearly.
+ */
+export function buildSudoBlockReason(
+	sudoCmds: string[],
+	hasSudoRunTool: boolean,
+): string {
+	const list = sudoCmds.map((c) => `  - ${c}`).join("\n");
+	if (hasSudoRunTool) {
+		return (
+			`bash cannot run sudo commands directly. ` +
+			`Use the \`sudo_run\` tool instead — it shows the user a confirmation dialog ` +
+			`and handles authentication securely.\n` +
+			`Blocked command(s):\n${list}\n` +
+			`Strip the leading \`sudo\` from the command and pass the rest to \`sudo_run\` ` +
+			`with a clear \`reason\` parameter.`
+		);
+	}
+	return (
+		`bash cannot run sudo commands in this session — ` +
+		`no sudo_run tool is available and direct sudo is not permitted.\n` +
+		`Blocked command(s):\n${list}\n` +
+		`Ask the user to run the command manually with elevated privileges.`
+	);
+}
+
 export function applyRtkRewrite(
 	event: BashCallEvent,
 	opts: { enabled: boolean; rtkAvailable: boolean },
@@ -193,6 +233,9 @@ export function rtk(
 	let rtkStatus: RtkStatus | null = null;
 	let warnedMissing = false;
 	let enabled = true;
+	// Tracks whether pix-sudo's sudo_run tool is active this session.
+	// Set from before_agent_start selectedTools; defaults to false until known.
+	let hasSudoRunTool = false;
 
 	// Report into the shared optimizer indicator. RTK counts as "on" only when
 	// enabled AND the binary is actually available.
@@ -229,8 +272,12 @@ export function rtk(
 		return rtkStatus;
 	};
 
-	// Inject RTK system prompt
+	// Inject RTK system prompt + detect sudo_run tool availability.
 	pi.on("before_agent_start", async (event) => {
+		// Detect sudo_run from the active tool list for this session.
+		const tools: string[] = event.systemPromptOptions?.selectedTools ?? [];
+		hasSudoRunTool = tools.includes("sudo_run");
+
 		if (!enabled) return undefined;
 		const existing = event.systemPrompt ?? "";
 		return { systemPrompt: `${RTK_SYSTEM_PROMPT}\n\n${existing}` };
@@ -305,6 +352,20 @@ export function rtk(
 
 		// First confirmed-available probe may have flipped state — refresh icon.
 		syncStatus(ctx);
+
+		// Block sudo segments before rtk rewriting.
+		// splitChain is safe to call here — same parser used by rewriteChain.
+		const command = event.input?.command;
+		if (typeof command === "string" && command) {
+			const parts = splitChain(command);
+			if (parts) {
+				const sudoCmds = detectSudoSegments(parts);
+				if (sudoCmds.length > 0) {
+					const reason = buildSudoBlockReason(sudoCmds, hasSudoRunTool);
+					return { block: true, reason };
+				}
+			}
+		}
 
 		// Rewrite every segment in the command chain that uses a known RTK
 		// command (e.g. `git add . && git push` -> `rtk git add . && rtk git push`).

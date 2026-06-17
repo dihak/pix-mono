@@ -16,15 +16,15 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import registerAsk from "@xynogen/pix-ask";
+import registerTodo from "@xynogen/pix-todo";
+import registerToolbox from "@xynogen/pix-toolbox";
 import registerAgentSop from "./commands/agent-sop/agent-sop.ts";
 import registerClear from "./commands/clear/clear.ts";
 import registerDiff from "./commands/diff/diff.ts";
 import registerModels from "./commands/models/models.ts";
 import registerUpdate from "./commands/update/update.ts";
 import registerNudges from "./nudge/index.ts";
-import registerAsk from "@xynogen/pix-ask";
-import registerTodo from "@xynogen/pix-todo";
-import registerToolbox from "@xynogen/pix-toolbox";
 import registerDiagnostics from "./ui/diagnostics.ts";
 import registerFooter from "./ui/footer.ts";
 import registerWelcome from "./ui/welcome.ts";

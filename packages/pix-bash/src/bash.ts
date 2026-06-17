@@ -7,6 +7,7 @@ import type {
 import { truncateToWidth } from "@earendil-works/pi-tui";
 import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
 import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
+import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { renderBashOutput } from "@xynogen/pix-pretty/renderers";
 import type {
 	BashParams,
@@ -26,7 +27,6 @@ import {
 	setResultDetails,
 	termW,
 } from "@xynogen/pix-pretty/utils";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
 
 export function registerBashTool(
 	pi: PiPrettyApi,

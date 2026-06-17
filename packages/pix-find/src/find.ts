@@ -3,7 +3,7 @@ import type {
 	FindToolInput,
 	ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
-
+import type { ToolContext } from "@xynogen/pix-pretty/context";
 import type {
 	FindParams,
 	FindResultDetails,
@@ -22,7 +22,6 @@ import {
 	renderToolError,
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
 
 export function registerFindTool(
 	pi: PiPrettyApi,

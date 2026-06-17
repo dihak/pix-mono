@@ -7,6 +7,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import { MAX_RENDER_LINES } from "@xynogen/pix-pretty/config";
+import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { parseDiff } from "@xynogen/pix-pretty/diff";
 import {
 	diffThemeCacheKey,
@@ -33,7 +34,6 @@ import {
 	setResultDetails,
 	termW,
 } from "@xynogen/pix-pretty/utils";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 

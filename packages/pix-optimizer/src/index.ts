@@ -21,6 +21,7 @@ import {
 	OptimizerStatus,
 	type OptimizerTool,
 } from "./status.ts";
+import { filterModelWarnings } from "./tool-result-filter.ts";
 
 export default function optimizer(pi: ExtensionAPI) {
 	const status = new OptimizerStatus();
@@ -34,4 +35,14 @@ export default function optimizer(pi: ExtensionAPI) {
 	};
 
 	registerOptCommand(pi, handles);
+
+	// Strip model-guidance warnings injected by pi-lens into tool_result content.
+	// These strings (BLIND WRITE, THRASHING) are directives for the LLM, not
+	// information for the user — filtering them here hides them from the TUI
+	// without affecting the model (it already acted on the write/edit result).
+	pi.on("tool_result", async (event) => {
+		const filtered = filterModelWarnings(event.content);
+		if (filtered === event.content) return undefined;
+		return { content: filtered };
+	});
 }

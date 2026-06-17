@@ -21,6 +21,7 @@
  */
 
 import { mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import type {
 	BashToolInput,
@@ -42,10 +43,9 @@ import {
 	getPiPrettyFffDir,
 } from "./fff.js";
 import { clearHighlightCache } from "./highlight.js";
-import { createRequire } from "node:module";
-import type { ToolContext } from "./tools/context.js";
 // Built-in registrars — used as fallback when a pix-* package is not installed
 import { registerBashTool as _registerBashTool } from "./tools/bash.js";
+import type { ToolContext } from "./tools/context.js";
 import { registerEditTool as _registerEditTool } from "./tools/edit.js";
 import { registerFindTool as _registerFindTool } from "./tools/find.js";
 import { registerGrepTool as _registerGrepTool } from "./tools/grep.js";
@@ -68,6 +68,7 @@ function loadRegistrar<T>(pkg: string, builtIn: T): T {
 		return builtIn;
 	}
 }
+
 import type {
 	PiPrettyApi,
 	PiPrettyDeps,

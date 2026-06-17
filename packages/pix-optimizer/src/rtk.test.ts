@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test";
 import {
 	applyRtkRewrite,
 	type BashCallEvent,
+	buildSudoBlockReason,
+	detectSudoSegments,
 	rewriteChain,
 	splitChain,
 } from "./rtk.ts";
@@ -102,6 +104,73 @@ describe("rewriteChain", () => {
 		expect(rewriteChain("git log | grep fix")).toBe(
 			"rtk git log | rtk grep fix",
 		);
+	});
+});
+
+// ── detectSudoSegments ───────────────────────────────────────────────────────
+
+describe("detectSudoSegments", () => {
+	it("returns empty for command with no sudo", () => {
+		expect(detectSudoSegments(["git status"])).toEqual([]);
+	});
+
+	it("detects a plain sudo segment", () => {
+		expect(detectSudoSegments(["sudo apt-get install foo"])).toEqual([
+			"sudo apt-get install foo",
+		]);
+	});
+
+	it("detects sudo in a chain (operators excluded)", () => {
+		const parts = ["git status ", "&&", " sudo make install"];
+		expect(detectSudoSegments(parts)).toEqual(["sudo make install"]);
+	});
+
+	it("detects multiple sudo segments", () => {
+		const parts = ["sudo rm -rf /tmp ", ";", " sudo reboot"];
+		expect(detectSudoSegments(parts)).toEqual([
+			"sudo rm -rf /tmp",
+			"sudo reboot",
+		]);
+	});
+
+	it("does not match 'sudoer' or 'pseudo'", () => {
+		expect(detectSudoSegments(["sudoers-check", "pseudo sudo"])).toEqual([]);
+	});
+
+	it("returns empty for operators-only parts", () => {
+		expect(detectSudoSegments(["&&", "||", ";"])).toEqual([]);
+	});
+});
+
+// ── buildSudoBlockReason ──────────────────────────────────────────────────────
+
+describe("buildSudoBlockReason", () => {
+	it("with sudo_run available: mentions sudo_run tool", () => {
+		const reason = buildSudoBlockReason(["sudo apt install curl"], true);
+		expect(reason).toContain("sudo_run");
+		expect(reason).toContain("sudo apt install curl");
+		expect(reason).not.toContain("not available");
+	});
+
+	it("with sudo_run available: instructs to strip sudo prefix", () => {
+		const reason = buildSudoBlockReason(["sudo make install"], true);
+		expect(reason).toContain("Strip the leading");
+	});
+
+	it("without sudo_run: explains restriction and asks user to run manually", () => {
+		const reason = buildSudoBlockReason(["sudo reboot"], false);
+		expect(reason).toContain("no sudo_run tool is available");
+		expect(reason).toContain("manually");
+		expect(reason).toContain("sudo reboot");
+	});
+
+	it("lists all blocked commands", () => {
+		const reason = buildSudoBlockReason(
+			["sudo rm -rf /tmp", "sudo reboot"],
+			true,
+		);
+		expect(reason).toContain("sudo rm -rf /tmp");
+		expect(reason).toContain("sudo reboot");
 	});
 });
 

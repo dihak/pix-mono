@@ -3,7 +3,7 @@ import type {
 	GrepToolInput,
 	ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
-
+import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { fffFormatGrepText } from "@xynogen/pix-pretty/fff";
 import type {
 	GrepParams,
@@ -27,7 +27,6 @@ import {
 	renderToolError,
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
 
 export function registerGrepTool(
 	pi: PiPrettyApi,
