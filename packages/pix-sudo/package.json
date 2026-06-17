@@ -39,6 +39,9 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"dependencies": {
+		"@xynogen/pix-sudo-run": "*"
+	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",
 		"@earendil-works/pi-tui": "*"
