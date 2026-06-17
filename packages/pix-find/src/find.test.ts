@@ -3,7 +3,6 @@ import { registerFindTool } from "./find";
 
 class MockTextComponent {
 	private text = "";
-	constructor(_t = "", _x = 0, _y = 0) {}
 	setText(v: string) {
 		this.text = v;
 	}
