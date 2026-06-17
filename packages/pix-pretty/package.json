@@ -62,6 +62,15 @@
 		"@ff-labs/fff-node": "^0.5.2",
 		"diff": "^7.0.0"
 	},
+	"optionalDependencies": {
+		"@xynogen/pix-bash": "*",
+		"@xynogen/pix-read": "*",
+		"@xynogen/pix-write": "*",
+		"@xynogen/pix-edit": "*",
+		"@xynogen/pix-find": "*",
+		"@xynogen/pix-grep": "*",
+		"@xynogen/pix-ls": "*"
+	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",
 		"@earendil-works/pi-tui": "*"

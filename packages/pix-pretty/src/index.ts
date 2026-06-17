@@ -42,14 +42,32 @@ import {
 	getPiPrettyFffDir,
 } from "./fff.js";
 import { clearHighlightCache } from "./highlight.js";
-import { registerBashTool } from "./tools/bash.js";
+import { createRequire } from "node:module";
 import type { ToolContext } from "./tools/context.js";
-import { registerEditTool } from "./tools/edit.js";
-import { registerFindTool } from "./tools/find.js";
-import { registerGrepTool } from "./tools/grep.js";
-import { registerLsTool } from "./tools/ls.js";
-import { registerReadTool } from "./tools/read.js";
-import { registerWriteTool } from "./tools/write.js";
+// Built-in registrars — used as fallback when a pix-* package is not installed
+import { registerBashTool as _registerBashTool } from "./tools/bash.js";
+import { registerEditTool as _registerEditTool } from "./tools/edit.js";
+import { registerFindTool as _registerFindTool } from "./tools/find.js";
+import { registerGrepTool as _registerGrepTool } from "./tools/grep.js";
+import { registerLsTool as _registerLsTool } from "./tools/ls.js";
+import { registerReadTool as _registerReadTool } from "./tools/read.js";
+import { registerWriteTool as _registerWriteTool } from "./tools/write.js";
+
+const _req = createRequire(import.meta.url);
+
+/** Try to load a registrar from an optional pix-* package; fall back to built-in. */
+function loadRegistrar<T>(pkg: string, builtIn: T): T {
+	try {
+		const mod = _req(pkg) as Record<string, unknown>;
+		// ESM-compiled packages expose named exports directly or via .default
+		const keys = Object.keys(mod);
+		// Named export preferred (e.g. registerBashTool); default is the fallback
+		const named = keys.find((k) => k.startsWith("register"));
+		return ((named ? mod[named] : mod.default) as T) ?? builtIn;
+	} catch {
+		return builtIn;
+	}
+}
 import type {
 	PiPrettyApi,
 	PiPrettyDeps,
@@ -223,26 +241,35 @@ export default function piPrettyExtension(
 
 	// ── Register tools ──────────────────────────────────────────────────
 
+	// Soft-load each tool: prefer installed @xynogen/pix-* package; fall back to built-in.
+	const registerRead = loadRegistrar("@xynogen/pix-read", _registerReadTool);
+	const registerBash = loadRegistrar("@xynogen/pix-bash", _registerBashTool);
+	const registerLs = loadRegistrar("@xynogen/pix-ls", _registerLsTool);
+	const registerFind = loadRegistrar("@xynogen/pix-find", _registerFindTool);
+	const registerGrep = loadRegistrar("@xynogen/pix-grep", _registerGrepTool);
+	const registerEdit = loadRegistrar("@xynogen/pix-edit", _registerEditTool);
+	const registerWrite = loadRegistrar("@xynogen/pix-write", _registerWriteTool);
+
 	if (isToolEnabled("read") && createReadTool) {
-		registerReadTool(pi, createReadTool, toolCtx);
+		registerRead(pi, createReadTool, toolCtx);
 	}
 	if (isToolEnabled("bash") && createBashTool) {
-		registerBashTool(pi, createBashTool, toolCtx);
+		registerBash(pi, createBashTool, toolCtx);
 	}
 	if (isToolEnabled("ls") && createLsTool) {
-		registerLsTool(pi, createLsTool, toolCtx);
+		registerLs(pi, createLsTool, toolCtx);
 	}
 	if (isToolEnabled("find") && createFindTool) {
-		registerFindTool(pi, createFindTool, toolCtx);
+		registerFind(pi, createFindTool, toolCtx);
 	}
 	if (isToolEnabled("grep") && createGrepTool) {
-		registerGrepTool(pi, createGrepTool, toolCtx);
+		registerGrep(pi, createGrepTool, toolCtx);
 	}
 	if (isToolEnabled("edit") && createEditTool) {
-		registerEditTool(pi, createEditTool, toolCtx, trackInvalidator);
+		registerEdit(pi, createEditTool, toolCtx, trackInvalidator);
 	}
 	if (isToolEnabled("write") && createWriteTool) {
-		registerWriteTool(pi, createWriteTool, toolCtx, trackInvalidator);
+		registerWrite(pi, createWriteTool, toolCtx, trackInvalidator);
 	}
 
 	// ── Register FFF commands ───────────────────────────────────────────
