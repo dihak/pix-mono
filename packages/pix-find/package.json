@@ -1,0 +1,42 @@
+{
+	"name": "@xynogen/pix-find",
+	"version": "0.1.0",
+	"description": "Pi tool — glob file search",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"src/index.ts"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"find"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-find"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@xynogen/pix-pretty": "*"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*"
+	}
+}
