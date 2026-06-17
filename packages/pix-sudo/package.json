@@ -12,11 +12,7 @@
 		"README.md",
 		"LICENSE"
 	],
-	"pi": {
-		"extensions": [
-			"./src/index.ts"
-		]
-	},
+	"pi": {},
 	"keywords": [
 		"pi",
 		"pi-package",
