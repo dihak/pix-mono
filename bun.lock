@@ -53,11 +53,8 @@
       "name": "@xynogen/pix-core",
       "version": "0.2.4",
       "dependencies": {
-        "@xynogen/pix-ask": "*",
         "@xynogen/pix-data": "*",
         "@xynogen/pix-skills": "*",
-        "@xynogen/pix-todo": "*",
-        "@xynogen/pix-toolbox": "*",
         "typebox": "^1.1.38",
       },
       "peerDependencies": {
