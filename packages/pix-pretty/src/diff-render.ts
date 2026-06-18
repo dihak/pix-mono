@@ -808,7 +808,7 @@ export async function renderSplit(
 
 	type HalfResult = { gutter: string; contGutter: string; bodyRows: string[] };
 
-	function half_build(
+	function halfBuild(
 		line: DiffLine | null,
 		hl: string,
 		ranges: Array<[number, number]> | null,
@@ -890,14 +890,14 @@ export async function renderSplit(
 		if (paired && wd && wd.similarity >= WORD_DIFF_MIN_SIM && canHL) {
 			const lhl = leftHL[lI++] ?? leftLine.content;
 			const rhl = rightHL[rI++] ?? rightLine.content;
-			lResult = half_build(leftLine, lhl, wd.oldRanges, "left");
-			rResult = half_build(rightLine, rhl, wd.newRanges, "right");
+			lResult = halfBuild(leftLine, lhl, wd.oldRanges, "left");
+			rResult = halfBuild(rightLine, rhl, wd.newRanges, "right");
 		} else if (paired && wd && wd.similarity >= WORD_DIFF_MIN_SIM && !canHL) {
 			const pwd = plainWordDiff(leftLine.content, rightLine.content);
 			lI++;
 			rI++;
-			lResult = half_build(leftLine, pwd.old, null, "left");
-			rResult = half_build(rightLine, pwd.new, null, "right");
+			lResult = halfBuild(leftLine, pwd.old, null, "left");
+			rResult = halfBuild(rightLine, pwd.new, null, "right");
 		} else {
 			const lhl =
 				leftLine && leftLine.type !== "sep"
@@ -907,8 +907,8 @@ export async function renderSplit(
 				rightLine && rightLine.type !== "sep"
 					? (rightHL[rI++] ?? rightLine?.content ?? "")
 					: "";
-			lResult = half_build(leftLine, lhl, null, "left");
-			rResult = half_build(rightLine, rhl, null, "right");
+			lResult = halfBuild(leftLine, lhl, null, "left");
+			rResult = halfBuild(rightLine, rhl, null, "right");
 		}
 
 		const maxRowsN = Math.max(lResult.bodyRows.length, rResult.bodyRows.length);

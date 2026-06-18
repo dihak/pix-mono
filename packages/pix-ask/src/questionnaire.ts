@@ -121,6 +121,11 @@ export class AskQuestionnaire extends Container {
 		return editor;
 	}
 
+	private refresh(): void {
+		this.invalidate();
+		this.tui.requestRender();
+	}
+
 	// ── Answer management ──────────────────────────────────────────────
 
 	private recordAnswer(
@@ -160,8 +165,7 @@ export class AskQuestionnaire extends Container {
 		} else if (item.kind === "other") {
 			this.inputMode = true;
 			this.ensureEditor().focused = true;
-			this.invalidate();
-			this.tui.requestRender();
+			this.refresh();
 		} else if (item.kind === "next") {
 			const selected = Array.from(this.multiChecked)
 				.sort((a, b) => a - b)
@@ -193,8 +197,7 @@ export class AskQuestionnaire extends Container {
 		this.selectedOptionIndex = 0;
 		this.editor = undefined;
 		this.restoreAnswerState();
-		this.invalidate();
-		this.tui.requestRender();
+		this.refresh();
 	}
 
 	private restoreAnswerState(): void {
@@ -257,8 +260,7 @@ export class AskQuestionnaire extends Container {
 			if (matchesKey(data, Key.escape)) {
 				this.inputMode = false;
 				this.editor = undefined;
-				this.invalidate();
-				this.tui.requestRender();
+				this.refresh();
 				return;
 			}
 			this.ensureEditor().handleInput(data);
@@ -277,8 +279,7 @@ export class AskQuestionnaire extends Container {
 			if (total > 0) {
 				this.selectedOptionIndex =
 					(this.selectedOptionIndex - 1 + total) % total;
-				this.invalidate();
-				this.tui.requestRender();
+				this.refresh();
 			}
 			return;
 		}
@@ -290,8 +291,7 @@ export class AskQuestionnaire extends Container {
 		) {
 			if (total > 0) {
 				this.selectedOptionIndex = (this.selectedOptionIndex + 1) % total;
-				this.invalidate();
-				this.tui.requestRender();
+				this.refresh();
 			}
 			return;
 		}
@@ -314,8 +314,7 @@ export class AskQuestionnaire extends Container {
 				chars.pop();
 				this.searchQuery = chars.join("");
 				this.selectedOptionIndex = 0;
-				this.invalidate();
-				this.tui.requestRender();
+				this.refresh();
 			}
 			return;
 		}
@@ -324,8 +323,7 @@ export class AskQuestionnaire extends Container {
 			if (this.searchQuery) {
 				this.searchQuery = "";
 				this.selectedOptionIndex = 0;
-				this.invalidate();
-				this.tui.requestRender();
+				this.refresh();
 			}
 			return;
 		}
@@ -334,8 +332,7 @@ export class AskQuestionnaire extends Container {
 			if (this.selectedItem?.kind === "option" && this.selectedItem.option) {
 				const idx = this.filteredOptions.indexOf(this.selectedItem.option);
 				if (idx >= 0) this.toggleMulti(idx);
-				this.invalidate();
-				this.tui.requestRender();
+				this.refresh();
 			}
 			return;
 		}
@@ -347,8 +344,7 @@ export class AskQuestionnaire extends Container {
 				if (isMulti) {
 					this.toggleMulti(idx);
 					this.selectedOptionIndex = Math.min(idx, this.totalItems - 1);
-					this.invalidate();
-					this.tui.requestRender();
+					this.refresh();
 				} else {
 					const opt = this.filteredOptions[idx]!;
 					this.recordAnswer("option", opt.label, undefined, opt.preview);
@@ -368,8 +364,7 @@ export class AskQuestionnaire extends Container {
 			if (printable !== undefined) {
 				this.searchQuery += printable;
 				this.selectedOptionIndex = 0;
-				this.invalidate();
-				this.tui.requestRender();
+				this.refresh();
 				return;
 			}
 			const chars = [...data];
@@ -381,8 +376,7 @@ export class AskQuestionnaire extends Container {
 			) {
 				this.searchQuery += chars[0];
 				this.selectedOptionIndex = 0;
-				this.invalidate();
-				this.tui.requestRender();
+				this.refresh();
 			}
 		}
 	}

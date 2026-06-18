@@ -348,7 +348,12 @@ export default function (pi: ExtensionAPI) {
 	// upstream type bug, hence the casts in this section.
 	pi.on("message_start", async (event) => {
 		if (event.message.role !== "assistant") return;
-		activeStreams.set((event.message as unknown as { id: string }).id, {
+		type RuntimeMsg = typeof event.message & {
+			id: string;
+			usage?: { output?: number };
+		};
+		const msg = event.message as unknown as RuntimeMsg;
+		activeStreams.set(msg.id, {
 			start: Date.now(),
 			output: 0,
 		});
@@ -363,27 +368,31 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("message_update", async (event) => {
 		if (event.message.role !== "assistant") return;
-		const id = (event.message as unknown as { id: string }).id;
+		type RuntimeMsg = typeof event.message & {
+			id: string;
+			usage?: { output?: number };
+		};
+		const msg = event.message as unknown as RuntimeMsg;
+		const id = msg.id;
 		const s = activeStreams.get(id);
 		if (!s) return;
 		const ame = event.assistantMessageEvent as AssistantMessageEvent & {
 			partial?: { usage?: { output?: number } };
 		};
-		const out =
-			ame.partial?.usage?.output ??
-			(event.message as unknown as { usage?: { output?: number } }).usage
-				?.output ??
-			0;
+		const out = ame.partial?.usage?.output ?? msg.usage?.output ?? 0;
 		if (out > s.output) s.output = out;
 	});
 
 	pi.on("message_end", async (event) => {
 		if (event.message.role !== "assistant") return;
-		const id = (event.message as unknown as { id: string }).id;
+		type RuntimeMsg = typeof event.message & {
+			id: string;
+			usage?: { output?: number };
+		};
+		const msg = event.message as unknown as RuntimeMsg;
+		const id = msg.id;
 		const s = activeStreams.get(id);
-		const finalOut =
-			(event.message as unknown as { usage?: { output?: number } }).usage
-				?.output ?? 0;
+		const finalOut = msg.usage?.output ?? 0;
 		if (s && finalOut > s.output) s.output = finalOut;
 		recomputeTps();
 		activeStreams.delete(id);
