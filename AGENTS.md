@@ -27,6 +27,7 @@ packages/
   pix-todo/        # Tool — durable execution checklist (survives context compaction)
   pix-ask/         # Tool — structured questionnaire UI (ask_user)
   pix-toolbox/     # Tool — gated tool toggle UI (/toolbox)
+  pix-gate/        # Tool — permission gate for dangerous bash commands (confirm/block TUI dialog)
   pix-sudo/        # Tool — sudo_run with interactive PAM password prompt
 scripts/
   dev-link.sh      # Symlink local packages into Pi for instant dev iteration

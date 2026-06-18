@@ -121,6 +121,14 @@
         "@earendil-works/pi-tui": "*",
       },
     },
+    "packages/pix-gate": {
+      "name": "@xynogen/pix-gate",
+      "version": "0.1.0",
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
+      },
+    },
     "packages/pix-grep": {
       "name": "@xynogen/pix-grep",
       "version": "0.1.0",
@@ -209,7 +217,7 @@
     },
     "packages/pix-sudo": {
       "name": "@xynogen/pix-sudo",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "typebox": "^1.1.38",
       },
@@ -460,6 +468,8 @@
     "@xynogen/pix-find": ["@xynogen/pix-find@workspace:packages/pix-find"],
 
     "@xynogen/pix-footer": ["@xynogen/pix-footer@workspace:packages/pix-footer"],
+
+    "@xynogen/pix-gate": ["@xynogen/pix-gate@workspace:packages/pix-gate"],
 
     "@xynogen/pix-grep": ["@xynogen/pix-grep@workspace:packages/pix-grep"],
 
