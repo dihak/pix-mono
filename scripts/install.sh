@@ -20,28 +20,22 @@ DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "ask_user
 
 # The distro installs as two modules:
 #
-#   CORE_PACKAGES      — pix-core (the meta extension) plus the sub-packages
-#                        its extension.ts imports directly: pix-welcome,
+#   CORE_PACKAGE       — pix-core, the meta/aggregator extension. Its
+#                        package.json lists every core member (pix-welcome,
 #                        pix-footer, pix-models, pix-update, pix-commands,
-#                        pix-nudge, pix-diagnostics, pix-prompts, pix-skills.
-#                        Each must be physically installed for those imports
-#                        to resolve. pix-data is the shared model data layer
-#                        the picker + footer read from, so it lives here too.
-#   EXTENSION_PACKAGES — standalone extension + tool packages, each
-#                        independently installable on its own.
-CORE_PACKAGES="
-npm:@xynogen/pix-data
-npm:@xynogen/pix-core
-npm:@xynogen/pix-welcome
-npm:@xynogen/pix-footer
-npm:@xynogen/pix-models
-npm:@xynogen/pix-update
-npm:@xynogen/pix-commands
-npm:@xynogen/pix-nudge
-npm:@xynogen/pix-diagnostics
-npm:@xynogen/pix-prompts
-npm:@xynogen/pix-skills
-"
+#                        pix-nudge, pix-diagnostics, pix-prompts, pix-skills —
+#                        and transitively pix-data via footer/models) as npm
+#                        `dependencies`, so a single `pi install` pulls the
+#                        whole tree. pix-core/src/extension.ts then imports each
+#                        member's factory and boots them in-process. Pi only
+#                        needs the ONE extension registered — installing the
+#                        members separately is redundant (npm already fetched
+#                        them) and would double-register. So: install pix-core
+#                        alone.
+#   EXTENSION_PACKAGES — standalone extension + tool packages. No meta bundles
+#                        these; each registers its own extension/tool and must
+#                        be installed individually.
+CORE_PACKAGE="npm:@xynogen/pix-core"
 
 EXTENSION_PACKAGES="
 npm:@xynogen/pix-tokyo-night
@@ -59,6 +53,7 @@ npm:@xynogen/pix-sudo
 npm:@xynogen/pix-todo
 npm:@xynogen/pix-ask
 npm:@xynogen/pix-toolbox
+npm:@xynogen/pix-gate
 "
 
 # --- minimal logging helpers (no external lib dependency) ------------------
@@ -121,24 +116,28 @@ fs.writeFileSync(file, JSON.stringify(settings, null, 2) + "\n");
 ' "$SETTINGS_FILE" "$PI_THEME" "$DEFAULT_TOOLS"
 
 # --- 3. install the pix distro ---------------------------------------------
+# `pi install` is idempotent and reports its result on stdout. We must NOT
+# pre-guard with `pi list | grep`: `pi list` emits a TTY-dependent listing —
+# piped (no TTY) it omits the extension packages entirely, so the grep would
+# always miss and re-install everything on every run. Call `pi install`
+# unconditionally and classify by its output instead ("Installed" covers both
+# a fresh install and an already-present package).
 install_pi_pkg() {
 	spec="$1"
-	if pi list 2>/dev/null | grep -qF "$spec"; then
-		success "Pi pkg already installed: $spec"
-		return 0
-	fi
 	info "Installing pi pkg: $spec"
-	if pi install "$spec" >/dev/null 2>&1; then
+	out=$(pi install "$spec" 2>&1) || true
+	if printf '%s' "$out" | grep -qiF 'installed'; then
 		success "Pi pkg installed: $spec"
 	else
 		error "Failed to install pi pkg: $spec"
 	fi
 }
 
+# pix-core alone — npm resolves its dependency tree (all core members +
+# pix-data); the aggregator extension boots them in-process. No per-member
+# install needed.
 info "Installing Pix core module..."
-for spec in $CORE_PACKAGES; do
-	install_pi_pkg "$spec"
-done
+install_pi_pkg "$CORE_PACKAGE"
 
 info "Installing Pix extension module..."
 for spec in $EXTENSION_PACKAGES; do
