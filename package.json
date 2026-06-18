@@ -17,6 +17,7 @@
 		"check:fix": "biome check --write packages",
 		"ci": "biome ci",
 		"install:distro": "bash scripts/install.sh",
+		"uninstall:distro": "bash scripts/uninstall.sh",
 		"dev:link": "bash scripts/dev-link.sh",
 		"dev:unlink": "bash scripts/dev-link.sh --unlink",
 		"publish:all": "bash scripts/publish-all.sh",

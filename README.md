@@ -2,6 +2,8 @@
 
 Monorepo of [Pi Coding Agent](https://github.com/badlogic/pi-mono) extensions by xynogen.
 
+> **⚠ Expect breaking changes.** This project is under active development. Packages are regularly split, merged, renamed, or removed. The recommended upgrade path is to **uninstall then reinstall** the distro rather than incrementally updating individual packages. When in doubt, run the uninstall script first.
+
 ## Packages
 
 | Package | Description |
@@ -31,17 +33,27 @@ Or from a local checkout:
 sh scripts/install.sh   # or: bun run install:distro
 ```
 
-### Or install packages individually (as Pi packages)
+## Uninstall
+
+Removes all `@xynogen/pix-*` packages from Pi. Also cleans up sub-packages from older installs that listed them individually.
 
 ```bash
-pi install npm:@xynogen/pix-core
-pi install npm:@xynogen/pix-pretty
-pi install npm:@xynogen/pix-skills
-pi install npm:@xynogen/pix-optimizer
-pi install npm:@xynogen/pix-tokyo-night
-pi install npm:@xynogen/pix-9router
-pi install npm:@xynogen/pix-data
-pi install npm:@xynogen/pix-sudo
+curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/uninstall.sh | sh
+```
+
+Or from a local checkout:
+
+```bash
+sh scripts/uninstall.sh   # or: bun run uninstall:distro
+```
+
+### Upgrade / clean reinstall
+
+When upgrading across breaking changes, uninstall first:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/uninstall.sh | sh
+curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## Development
