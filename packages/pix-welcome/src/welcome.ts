@@ -69,7 +69,7 @@ export const shortCwd = (cwd: string, home?: string): string => {
 	return h && cwd.startsWith(h) ? `~${cwd.slice(h.length)}` : cwd;
 };
 
-export const PI_IGNORE_RULES = [".ai/", ".pi-lens/"];
+export const PI_IGNORE_RULES = [".pi/", ".pi-lens/"];
 const PI_IGNORE_SECTION_HEADER = "# Pix Agent";
 
 // ─── Individual checks ────────────────────────────────────────────────────────

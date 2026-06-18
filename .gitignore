@@ -9,8 +9,6 @@ package-lock.json
 *.tgz
 
 # Pix Agent
-.ai/
+.pi/
 .pi-lens/
-
-# Graphify knowledge graph output
 graphify-out/

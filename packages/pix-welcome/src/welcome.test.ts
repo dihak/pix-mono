@@ -119,6 +119,6 @@ describe("summariseTools", () => {
 
 describe("PI_IGNORE_RULES", () => {
 	it("includes both rules", () => {
-		expect(PI_IGNORE_RULES).toEqual([".ai/", ".pi-lens/"]);
+		expect(PI_IGNORE_RULES).toEqual([".pi/", ".pi-lens/"]);
 	});
 });
