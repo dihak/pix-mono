@@ -48,10 +48,10 @@ npm:@xynogen/pix-toolbox
 npm:@xynogen/pix-sudo
 "
 
-info()    { printf '\033[0;34m›\033[0m %s\n' "$*"; }
+info() { printf '\033[0;34m›\033[0m %s\n' "$*"; }
 success() { printf '\033[0;32m✓\033[0m %s\n' "$*"; }
-warn()    { printf '\033[0;33m!\033[0m %s\n' "$*" >&2; }
-error()   { printf '\033[0;31m✖\033[0m %s\n' "$*" >&2; }
+warn() { printf '\033[0;33m!\033[0m %s\n' "$*" >&2; }
+error() { printf '\033[0;31m✖\033[0m %s\n' "$*" >&2; }
 
 if ! command -v pi >/dev/null 2>&1; then
 	error "'pi' not found on PATH — nothing to uninstall."
