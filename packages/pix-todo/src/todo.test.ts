@@ -1,5 +1,13 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import registerTodo, { renderTodoLines, type TodoItem } from "./todo.ts";
+
+// registerTodo wraps its body in once("pix-todo") — a process-wide globalThis
+// guard that dedupes activation across pix-core + a standalone install. Tests
+// re-register a fresh host per case, so clear the registry first to let each
+// registerTodo run (mirrors pix-core/once.test.ts clearing __pixLoaded).
+beforeEach(() => {
+	delete (globalThis as { __pixLoaded?: Set<string> }).__pixLoaded;
+});
 
 // Stub theme tags each fragment with its color/bold so assertions can verify
 // which status got which tint, without depending on real ANSI codes.

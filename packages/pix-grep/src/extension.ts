@@ -16,88 +16,90 @@ import type {
 	TextComponentCtor,
 } from "@xynogen/pix-pretty/types";
 import { getErrorMessage, shortPath } from "@xynogen/pix-pretty/utils";
-
 import { registerGrepTool } from "./grep.js";
+import { once } from "./once.ts";
 
 export default function pixGrepExtension(pi: PiPrettyApi): void {
-	let sdk: PiPrettySdk;
-	try {
-		sdk = require("@earendil-works/pi-coding-agent");
-	} catch {
-		return;
-	}
-
-	const createGrepTool = sdk.createGrepToolDefinition ?? sdk.createGrepTool;
-	if (!createGrepTool) return;
-
-	let TextComponent: TextComponentCtor;
-	try {
-		TextComponent = require("@earendil-works/pi-tui").Text;
-	} catch {
-		return;
-	}
-
-	const cwd = process.cwd();
-	const home = process.env.HOME ?? "";
-	const cursorStore = new CursorStore();
-
-	// ── FFF init ────────────────────────────────────────────────────────
-	// pix-grep owns the FFF session lifecycle. pix-find shares the same
-	// fffState singleton (module-level in pix-pretty/fff.ts) so both tools
-	// benefit from a single finder instance without double-initializing.
-
-	try {
-		fffState.module = require("@ff-labs/fff-node") as OptionalFffModule;
-		const agentDir = sdk.getAgentDir?.() ?? join(home, ".pi/agent");
-		fffState.dbDir = getPiPrettyFffDir(agentDir);
+	once("pix-grep", () => {
+		let sdk: PiPrettySdk;
 		try {
-			mkdirSync(fffState.dbDir, { recursive: true });
-		} catch {}
-	} catch {
-		/* fff-node not installed — grep falls back to SDK ripgrep */
-	}
-
-	pi.on("session_start", async (_event: unknown, ctx: ExtensionContext) => {
-		if (!fffState.module) {
-			try {
-				// require avoids static type dep — fff-node is optional
-				fffState.module = require("@ff-labs/fff-node") as OptionalFffModule;
-			} catch {
-				/* fff-node not installed — no-op */
-			}
+			sdk = require("@earendil-works/pi-coding-agent");
+		} catch {
+			return;
 		}
-		if (!fffState.module) return;
 
-		if (!fffState.dbDir) {
+		const createGrepTool = sdk.createGrepToolDefinition ?? sdk.createGrepTool;
+		if (!createGrepTool) return;
+
+		let TextComponent: TextComponentCtor;
+		try {
+			TextComponent = require("@earendil-works/pi-tui").Text;
+		} catch {
+			return;
+		}
+
+		const cwd = process.cwd();
+		const home = process.env.HOME ?? "";
+		const cursorStore = new CursorStore();
+
+		// ── FFF init ────────────────────────────────────────────────────────
+		// pix-grep owns the FFF session lifecycle. pix-find shares the same
+		// fffState singleton (module-level in pix-pretty/fff.ts) so both tools
+		// benefit from a single finder instance without double-initializing.
+
+		try {
+			fffState.module = require("@ff-labs/fff-node") as OptionalFffModule;
 			const agentDir = sdk.getAgentDir?.() ?? join(home, ".pi/agent");
 			fffState.dbDir = getPiPrettyFffDir(agentDir);
 			try {
 				mkdirSync(fffState.dbDir, { recursive: true });
 			} catch {}
+		} catch {
+			/* fff-node not installed — grep falls back to SDK ripgrep */
 		}
 
-		try {
-			await fffEnsureFinder(ctx.cwd);
-			if (fffState.partialIndex) {
-				ctx.ui?.notify?.(
-					"FFF: scan timed out — using partial index. Run /fff-rescan when ready.",
-					"warning",
-				);
+		pi.on("session_start", async (_event: unknown, ctx: ExtensionContext) => {
+			if (!fffState.module) {
+				try {
+					// require avoids static type dep — fff-node is optional
+					fffState.module = require("@ff-labs/fff-node") as OptionalFffModule;
+				} catch {
+					/* fff-node not installed — no-op */
+				}
 			}
-		} catch (error: unknown) {
-			ctx.ui?.notify?.(`FFF init failed: ${getErrorMessage(error)}`, "error");
-		}
-	});
+			if (!fffState.module) return;
 
-	pi.on("session_shutdown", async () => {
-		fffDestroy();
-	});
+			if (!fffState.dbDir) {
+				const agentDir = sdk.getAgentDir?.() ?? join(home, ".pi/agent");
+				fffState.dbDir = getPiPrettyFffDir(agentDir);
+				try {
+					mkdirSync(fffState.dbDir, { recursive: true });
+				} catch {}
+			}
 
-	registerGrepTool(pi, createGrepTool, {
-		cwd,
-		sp: (p: string) => shortPath(cwd, home, p),
-		TextComponent,
-		fffState,
-		cursorStore,
+			try {
+				await fffEnsureFinder(ctx.cwd);
+				if (fffState.partialIndex) {
+					ctx.ui?.notify?.(
+						"FFF: scan timed out — using partial index. Run /fff-rescan when ready.",
+						"warning",
+					);
+				}
+			} catch (error: unknown) {
+				ctx.ui?.notify?.(`FFF init failed: ${getErrorMessage(error)}`, "error");
+			}
+		});
+
+		pi.on("session_shutdown", async () => {
+			fffDestroy();
+		});
+
+		registerGrepTool(pi, createGrepTool, {
+			cwd,
+			sp: (p: string) => shortPath(cwd, home, p),
+			TextComponent,
+			fffState,
+			cursorStore,
+		});
 	});
 }
