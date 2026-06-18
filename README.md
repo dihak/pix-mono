@@ -19,7 +19,7 @@ Shared dependencies pulled in automatically — install directly only if you nee
 
 | Package | Description |
 | --- | --- |
-| [`@xynogen/pix-tokyo-night`](packages/pix-tokyo-night) | Tokyo Night Storm theme |
+| [`@xynogen/pix-themes`](packages/pix-themes) | Theme pack — Tokyo Night Storm + One Dark Pro |
 
 ### Core bundle
 
@@ -139,7 +139,7 @@ Several packages here originated as forks or merges of community Pi packages:
 | `npm:@heyhuynhgiabuu/pi-diff` | superseded (merged into `pix-core`) |
 | `npm:@juicesharp/rpiv-ask-user-question` | rewritten as the `ask-user` skill in `pix-core` |
 
-Previous standalone repos migrated into this monorepo: `pix-optimizer`, `pix-tokyo-night`, `pix-pretty`, `pix-core`, `pix-9router`, `pix-data`.
+Previous standalone repos migrated into this monorepo: `pix-optimizer`, `pix-themes`, `pix-pretty`, `pix-core`, `pix-9router`, `pix-data`.
 
 ## License
 

@@ -39,7 +39,7 @@ npm:@xynogen/pix-models
 
 # EXTENSION module — standalone extension + tool packages.
 EXTENSION_PACKAGES="
-npm:@xynogen/pix-tokyo-night
+npm:@xynogen/pix-themes
 npm:@xynogen/pix-optimizer
 npm:@xynogen/pix-9router
 npm:@xynogen/pix-pretty

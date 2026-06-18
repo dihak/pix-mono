@@ -34,9 +34,10 @@ DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "ask_user
 #                        and boots them in-process. Pi only needs the ONE
 #                        extension registered — installing bundled members
 #                        separately is redundant. So: install pix-core alone.
-#   THEME_PACKAGE      — pix-tokyo-night: the default theme. Not bundled by
-#                        pix-core but installed unconditionally (it is the
-#                        distro's default look, not an opt-in capability).
+#   THEME_PACKAGE      — pix-themes: the theme pack (Tokyo Night Storm +
+#                        One Dark Pro). Not bundled by pix-core but installed
+#                        unconditionally (it carries the distro's default look,
+#                        pix-tokyo-night, not an opt-in capability).
 #   OPTIN_PACKAGES     — standalone extensions NOT bundled by pix-core, each
 #                        carrying a setup cost or sensitive capability (API key,
 #                        root execution, power-user UI). README documents WHY
@@ -44,7 +45,7 @@ DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "ask_user
 #                        defaults to NO when it cannot prompt (non-interactive
 #                        `curl | sh`), keeping the default distro lean.
 CORE_PACKAGE="npm:@xynogen/pix-core"
-THEME_PACKAGE="npm:@xynogen/pix-tokyo-night"
+THEME_PACKAGE="npm:@xynogen/pix-themes"
 
 # Each entry: "<spec>|<why it's opt-in>". The reason is shown in the prompt so
 # the user can make an informed choice (sourced from README "Why it's opt-in").

@@ -15,7 +15,7 @@ packages/
   pix-optimizer/   # Caveman mode, RTK tool rewriting, jq/TOON JSON compression
   pix-pretty/      # Shared rendering lib (highlight, diff, icons, fff) + à-la-carte tool boot
   pix-skills/      # Agent skill loader + bundled skills
-  pix-tokyo-night/ # Tokyo Night Storm theme
+  pix-themes/      # Theme pack — Tokyo Night Storm + One Dark Pro
   # ── Standalone tool packages (independently installable) ────────────────
   pix-bash/        # Tool — bash shell execution with pretty output
   pix-read/        # Tool — file read with syntax highlight

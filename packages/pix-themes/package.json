@@ -1,7 +1,7 @@
 {
-	"name": "@xynogen/pix-tokyo-night",
-	"version": "1.0.1",
-	"description": "Tokyo Night Storm theme for Pi Coding Agent",
+	"name": "@xynogen/pix-themes",
+	"version": "1.0.0",
+	"description": "Theme pack for Pi Coding Agent (Tokyo Night Storm + One Dark Pro)",
 	"type": "module",
 	"scripts": {
 		"test": "bun test"
@@ -20,18 +20,19 @@
 		"pi",
 		"pi-package",
 		"pi-theme",
-		"tokyo-night",
 		"theme",
-		"dark"
+		"dark",
+		"tokyo-night",
+		"one-dark"
 	],
 	"author": "xynogen",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/xynogen/pix-mono.git",
-		"directory": "packages/pix-tokyo-night"
+		"directory": "packages/pix-themes"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-tokyo-night#readme",
+	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-themes#readme",
 	"bugs": {
 		"url": "https://github.com/xynogen/pix-mono/issues"
 	},
