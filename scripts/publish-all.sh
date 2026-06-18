@@ -44,9 +44,17 @@ for dir in packages/*/; do
 	fi
 
 	echo "→ publishing ${name}@${version}"
-	if (cd "$dir" && npm publish $publish_flags); then
+	publish_output=$(cd "$dir" && npm publish $publish_flags 2>&1)
+	publish_exit=$?
+	if [ $publish_exit -eq 0 ]; then
+		echo "$publish_output"
 		published=$((published + 1))
+	elif echo "$publish_output" | grep -q "cannot publish over\|EPUBLISHCONFLICT"; then
+		# Version already exists — treat as already-published (idempotent)
+		echo "↷ skip (already published, detected late): ${name}@${version}"
+		skipped=$((skipped + 1))
 	else
+		echo "$publish_output"
 		echo "✖ failed to publish ${name}@${version}"
 		failed=$((failed + 1))
 	fi
