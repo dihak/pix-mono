@@ -197,7 +197,7 @@ async function updateExtensions(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 ) {
-	ctx.ui.notify("Updating pix extensions via install.sh", "info");
+	ctx.ui.notify("Updating pix extensions from pix-mono setup", "info");
 	const result = await pi.exec("/bin/sh", ["-lc", PIX_INSTALL_COMMAND], {
 		timeout: 240_000,
 	});
