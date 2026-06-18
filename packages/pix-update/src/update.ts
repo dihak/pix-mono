@@ -6,6 +6,13 @@ import type {
 
 export const PACKAGE_NAME = "@earendil-works/pi-coding-agent";
 
+// Canonical pix-mono installer. Re-running it is idempotent (Pi install + opt-in
+// prompts), so it doubles as the extension updater: it refreshes every
+// @xynogen/pix-* package from npm.
+export const PIX_INSTALL_URL =
+	"https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh";
+export const PIX_INSTALL_COMMAND = `curl -fsSL ${PIX_INSTALL_URL} | sh`;
+
 const TRANSIENT_PATTERNS = [
 	/eai_again/i,
 	/etimedout/i,
@@ -190,12 +197,10 @@ async function updateExtensions(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 ) {
-	ctx.ui.notify("Updating Pi extensions from dotfiles setup", "info");
-	const result = await pi.exec(
-		"/bin/sh",
-		["-lc", '"$HOME/dotfiles/ai_config/pi/setup.sh"'],
-		{ timeout: 240_000 },
-	);
+	ctx.ui.notify("Updating pix extensions via install.sh", "info");
+	const result = await pi.exec("/bin/sh", ["-lc", PIX_INSTALL_COMMAND], {
+		timeout: 240_000,
+	});
 	const output = [result.stdout, result.stderr]
 		.filter(Boolean)
 		.join("\n")
@@ -247,13 +252,13 @@ export default function (pi: ExtensionAPI) {
 			registerFlag: (name: string, opts: unknown) => void;
 		}
 	).registerFlag("update", {
-		description: "Update Pi, dotfiles extensions, and pi packages",
+		description: "Update Pi, pix extensions, and pi packages",
 		type: "boolean",
 		default: false,
 	});
 
 	pi.registerCommand("update", {
-		description: "Update Pi, dotfiles extensions, and pi packages",
+		description: "Update Pi, pix extensions, and pi packages",
 		handler: async (_args, ctx) => {
 			await updateAll(pi, ctx);
 		},

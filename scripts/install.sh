@@ -34,17 +34,24 @@ DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "ask_user
 #                        and boots them in-process. Pi only needs the ONE
 #                        extension registered — installing bundled members
 #                        separately is redundant. So: install pix-core alone.
-#   EXTENSION_PACKAGES — packages NOT bundled by pix-core: the theme, the
-#                        9Router provider, and opt-in tools (sudo, toolbox).
-#                        Each registers its own extension/tool and must be
-#                        installed individually.
+#   THEME_PACKAGE      — pix-tokyo-night: the default theme. Not bundled by
+#                        pix-core but installed unconditionally (it is the
+#                        distro's default look, not an opt-in capability).
+#   OPTIN_PACKAGES     — standalone extensions NOT bundled by pix-core, each
+#                        carrying a setup cost or sensitive capability (API key,
+#                        root execution, power-user UI). README documents WHY
+#                        each is opt-in; the installer asks per package and
+#                        defaults to NO when it cannot prompt (non-interactive
+#                        `curl | sh`), keeping the default distro lean.
 CORE_PACKAGE="npm:@xynogen/pix-core"
+THEME_PACKAGE="npm:@xynogen/pix-tokyo-night"
 
-EXTENSION_PACKAGES="
-npm:@xynogen/pix-tokyo-night
-npm:@xynogen/pix-9router
-npm:@xynogen/pix-sudo
-npm:@xynogen/pix-toolbox
+# Each entry: "<spec>|<why it's opt-in>". The reason is shown in the prompt so
+# the user can make an informed choice (sourced from README "Why it's opt-in").
+OPTIN_PACKAGES="
+npm:@xynogen/pix-9router|9Router LLM provider + fetch/search tools — needs a 9Router API key, so only useful if you route through 9Router.
+npm:@xynogen/pix-sudo|sudo_run — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode).
+npm:@xynogen/pix-toolbox|/toolbox — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use.
 "
 
 # --- minimal logging helpers (no external lib dependency) ------------------
@@ -54,6 +61,41 @@ warn() { printf '\033[0;33m!\033[0m %s\n' "$*" >&2; }
 error() { printf '\033[0;31m✖\033[0m %s\n' "$*" >&2; }
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
+
+# Prompt a yes/no question on the controlling terminal. Returns 0 for yes.
+#
+# When piped (`curl ... | sh`) stdin is the script body, not a keyboard, so we
+# read from /dev/tty. If we can't reach a usable terminal (CI, fully
+# non-interactive), default to NO so opt-in packages are skipped, never
+# installed by surprise. $1 = question, $2 = reason shown before the prompt.
+ask_yes_no() {
+	question="$1"
+	reason="$2"
+
+	# Pick a readable input source: current stdin if it's a tty, else /dev/tty.
+	# A bare `-e /dev/tty` test is not enough — in sandboxes the node exists but
+	# open() fails (ENXIO), so probe by actually opening it.
+	if [ -t 0 ]; then
+		tty_in=0
+	elif { : </dev/tty; } 2>/dev/null; then
+		tty_in=tty
+	else
+		warn "Non-interactive shell — skipping: $question"
+		return 1
+	fi
+
+	printf '\033[0;34m›\033[0m %s\n' "$reason"
+	printf '\033[0;34m›\033[0m %s [y/N] ' "$question"
+	if [ "$tty_in" = tty ]; then
+		read -r answer </dev/tty || answer=""
+	else
+		read -r answer || answer=""
+	fi
+	case "$answer" in
+	[Yy] | [Yy][Ee][Ss]) return 0 ;;
+	*) return 1 ;;
+	esac
+}
 
 # --- 1. install / update Pi -------------------------------------------------
 # Prefer Bun; fall back to npm. JS_RUNTIME records which one is available so we
@@ -130,10 +172,30 @@ install_pi_pkg() {
 info "Installing Pix core module..."
 install_pi_pkg "$CORE_PACKAGE"
 
-info "Installing Pix extension module..."
-for spec in $EXTENSION_PACKAGES; do
-	install_pi_pkg "$spec"
+# Theme is the distro default — always installed.
+info "Installing Pix theme..."
+install_pi_pkg "$THEME_PACKAGE"
+
+# Opt-in extensions — ask per package, with the reason it's opt-in. Each line is
+# "<spec>|<reason>"; split on the first '|'. IFS swap keeps the loop POSIX.
+info "Optional extensions (each carries a setup cost or sensitive capability):"
+OLD_IFS=$IFS
+IFS='
+'
+for entry in $OPTIN_PACKAGES; do
+	IFS=$OLD_IFS
+	[ -z "$entry" ] && continue
+	spec=${entry%%|*}
+	reason=${entry#*|}
+	if ask_yes_no "Install ${spec#npm:@xynogen/}?" "$reason"; then
+		install_pi_pkg "$spec"
+	else
+		info "Skipped: $spec"
+	fi
+	IFS='
+'
 done
+IFS=$OLD_IFS
 
 mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/pi/fff"
 
