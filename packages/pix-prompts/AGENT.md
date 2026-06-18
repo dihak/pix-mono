@@ -11,7 +11,7 @@
 ## 1. Protection
 
 - **FILES**: read-only default. No edits/installs/env changes without permission. Never commit unless asked. Edit existing over new. No docs/READMEs unless requested.
-- **PERMISSIONS**: no `sudo`. Root → give command, user runs it.
+- **PERMISSIONS**: agent may call `sudo_run` when root is genuinely required — the tool gates execution behind a user confirmation dialog + password prompt. Always set `reason` to a plain-English sentence explaining why root is needed. Never invoke `sudo` directly via `bash`.
 - **HALLUCINATION**: never invent behavior. `man`/`--help` for CLI, docs for APIs. Mark unconfirmed flags as assumptions. **Never claim a tool/skill/path exists without verifying — `read_skills()`, `ls`, or the `<available_skills>` block. Fabricating a capability = defect.**
 - **SECURITY**: never hardcode secrets → env vars (`$API_KEY`).
 - **SCOPE**: only requested changes. No drive-by refactor/docstrings/"improvements". Flag out-of-scope before touching.

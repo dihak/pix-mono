@@ -6,13 +6,19 @@ Monorepo of [Pi Coding Agent](https://github.com/badlogic/pi-mono) extensions by
 
 ## Packages
 
-### Foundation
+### Libraries
+
+Shared dependencies pulled in automatically — install directly only if you need them standalone.
 
 | Package | Description |
 | --- | --- |
 | [`@xynogen/pix-data`](packages/pix-data) | Shared model data layer (models.dev + BenchLM), cached at `~/.cache/pi` |
 | [`@xynogen/pix-pretty`](packages/pix-pretty) | Enhanced tool output rendering — syntax highlighting, icons, tree views, FFF, paste chips |
-| [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skill` tool + 21 bundled skills) |
+
+### Theme
+
+| Package | Description |
+| --- | --- |
 | [`@xynogen/pix-tokyo-night`](packages/pix-tokyo-night) | Tokyo Night Storm theme |
 
 ### Providers
@@ -38,7 +44,9 @@ Drop-in replacements for Pi's built-in tools with pretty output via `pix-pretty`
 | [`@xynogen/pix-todo`](packages/pix-todo) | `todo` — durable execution checklist, survives context compaction |
 | [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` — root execution with PAM password overlay, blocked in non-interactive mode |
 
-### Extensions
+### Core extensions
+
+Bundled together by [`@xynogen/pix-core`](packages/pix-core) — install all of these in one command.
 
 | Package | Description |
 | --- | --- |
@@ -47,18 +55,20 @@ Drop-in replacements for Pi's built-in tools with pretty output via `pix-pretty`
 | [`@xynogen/pix-models`](packages/pix-models) | `/models` — enhanced model picker with BenchLM rank, context window, cost |
 | [`@xynogen/pix-update`](packages/pix-update) | `/update` — self-update Pi + all extensions, detects install method |
 | [`@xynogen/pix-commands`](packages/pix-commands) | `/diff` and `/clear` slash commands |
-| [`@xynogen/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search tool picker, enable/disable tools from prompt |
 | [`@xynogen/pix-nudge`](packages/pix-nudge) | Tools nudge + capability nudge hooks to steer model toward correct tools |
 | [`@xynogen/pix-diagnostics`](packages/pix-diagnostics) | Compact LSP diagnostic widget (errors + warnings across session files) |
 | [`@xynogen/pix-prompts`](packages/pix-prompts) | System-prompt injection — `AGENTS.md` baseline + repo directive files |
-| [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
-| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
+| [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skills` tool + 23 bundled skills) |
 
-### Bundle
+### Standalone extensions
+
+Independently installable — not included in `pix-core`.
 
 | Package | Description |
 | --- | --- |
-| [`@xynogen/pix-core`](packages/pix-core) | Meta-package — installs the full core UI/UX suite in one command |
+| [`@xynogen/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search tool picker, enable/disable tools from prompt |
+| [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
+| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
 
 ## Install
 

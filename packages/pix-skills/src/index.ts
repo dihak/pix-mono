@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import { once } from "./once.ts";
 
 // ─── Skill resolution ─────────────────────────────────────────────────────────
 
@@ -141,7 +142,7 @@ const ParamsSchema = Type.Object({
 	),
 });
 
-export default function registerSkillLoader(pi: ExtensionAPI): void {
+function registerSkillLoader(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "read_skills",
 		label: "Read Skills",
@@ -243,4 +244,8 @@ export default function registerSkillLoader(pi: ExtensionAPI): void {
 			return new Text(formatSkillSummary(text ?? "", theme), 0, 0);
 		},
 	});
+}
+
+export default function (pi: ExtensionAPI): void {
+	once("pix-skills", () => registerSkillLoader(pi));
 }
