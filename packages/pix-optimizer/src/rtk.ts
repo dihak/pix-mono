@@ -286,7 +286,14 @@ export function rtk(
 	// Keep the status indicator in sync across the agent lifecycle. Probe
 	// availability on session start so the icon reflects reality immediately.
 	pi.on("session_start", async (_event, ctx) => {
-		await checkRtkAvailability();
+		const probe = await checkRtkAvailability();
+		if (!probe.available && !warnedMissing) {
+			ctx.ui.notify(
+				"rtk not found — RTK rewriting disabled. Install: cargo install rtk-ai",
+				"warning",
+			);
+			warnedMissing = true;
+		}
 		syncStatus(ctx);
 	});
 	pi.on("agent_start", async (_event, ctx) => {
