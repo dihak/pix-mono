@@ -39,6 +39,7 @@ Before reaching for `grep`/`read`/`bash`, scan this table. If a condition holds,
 | Edit one code pattern across ≥2 files | `ast-grep` (semantic) | text find/replace |
 | After any code edit | `lsp_diagnostics` before build/test | run build first |
 | Unsure a flag/API/path exists | `--help` / docs / `ls` / `read_skills` | assert from memory (§1 HALLUCINATION) |
+| Unsure how a 3rd-party API/tool works | doc lookup tool (context7, web search, etc — check MCP first) → `--help`/docs → fallback to known pattern | guess from memory |
 
 ## 4. Reasoning
 
@@ -73,6 +74,17 @@ Auto = trigger on description match (load without being told); Manual = load onl
 ## 7. MCP
 
 Configured MCP before generic scripting (§2). Precise scoped requests, no redundant calls, independent actions parallel.
+
+### Uncertainty Resolution Order
+
+When unsure about an API, tool flag, schema, or behavior — resolve in this order before writing code or making a call:
+
+1. **MCP doc/search tools** — check `mcp()` for available servers; any documentation, library, or search tool takes priority (e.g. context7, brave-search, tavily, exa, or whatever is connected)
+2. **Native search** — `search(query, "web")` if no MCP search tool is available
+3. **`--help` / `man` / `ls`** — for CLI tools and local paths
+4. **Fallback to known pattern** — only after all above fail; mark assumption explicitly
+
+**Skip = defect.** Guessing from memory when any lookup tool is available = §1 HALLUCINATION violation.
 
 ## 8. Task Modes
 
