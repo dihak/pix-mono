@@ -230,39 +230,12 @@ export function json(
 	function syncStatus(ctx: Pick<ExtensionContext, "ui">) {
 		status.set(
 			"toon",
-			enabled && jqAvailable === true && toonAvailable === true,
+			enabled && jqAvailable !== false && toonAvailable !== false,
 			ctx,
 		);
 	}
 
-	async function probeTools(ctx: Pick<ExtensionContext, "ui">): Promise<void> {
-		const [jqResult, toonResult] = await Promise.all([
-			pi.exec("which", ["jq"], { timeout: 1000 }).catch(() => ({ code: 1 })),
-			pi.exec("which", ["toon"], { timeout: 1000 }).catch(() => ({ code: 1 })),
-		]);
-
-		const jqWasNull = jqAvailable === null;
-		const toonWasNull = toonAvailable === null;
-
-		jqAvailable = jqResult.code === 0;
-		toonAvailable = toonResult.code === 0;
-
-		if (jqWasNull && !jqAvailable) {
-			ctx.ui.notify(
-				"jq not found — JSON/TOON guidance disabled. Install: sudo apt install jq  or  brew install jq",
-				"warning",
-			);
-		}
-		if (toonWasNull && !toonAvailable) {
-			ctx.ui.notify(
-				"toon not found — JSON/TOON guidance disabled. Install: bun add -g @toon-format/cli  or  npm i -g @toon-format/cli",
-				"warning",
-			);
-		}
-	}
-
 	pi.on("session_start", async (_event, ctx) => {
-		await probeTools(ctx);
 		syncStatus(ctx);
 	});
 	pi.on("agent_start", async (_event, ctx) => {
@@ -280,11 +253,36 @@ export function json(
 
 	// Inject the JSON-handling nudge into the system prompt, but ONLY when the
 	// user prompt actually mentions JSON / a related token — otherwise it's dead
-	// weight in every turn.
-	pi.on("before_agent_start", async (event) => {
+	// weight in every turn. Probe jq/toon lazily here (not at session_start) so
+	// we don't add startup overhead for a workflow the user may never trigger.
+	pi.on("before_agent_start", async (event, ctx) => {
 		if (!enabled) return undefined;
-		if (jqAvailable === false || toonAvailable === false) return undefined;
 		if (!mentionsJson(event.prompt)) return undefined;
+
+		// Probe once on first JSON-relevant prompt.
+		if (jqAvailable === null || toonAvailable === null) {
+			const [jqRes, toonRes] = await Promise.all([
+				pi.exec("which", ["jq"], { timeout: 1000 }).catch(() => ({ code: 1 })),
+				pi
+					.exec("which", ["toon"], { timeout: 1000 })
+					.catch(() => ({ code: 1 })),
+			]);
+			jqAvailable = jqRes.code === 0;
+			toonAvailable = toonRes.code === 0;
+			if (!jqAvailable)
+				ctx.ui.notify(
+					"jq not found — JSON/TOON guidance disabled. Install: sudo apt install jq  or  brew install jq",
+					"warning",
+				);
+			if (!toonAvailable)
+				ctx.ui.notify(
+					"toon not found — JSON/TOON guidance disabled. Install: bun add -g @toon-format/cli  or  npm i -g @toon-format/cli",
+					"warning",
+				);
+			syncStatus(ctx);
+		}
+
+		if (jqAvailable === false || toonAvailable === false) return undefined;
 		const existing = event.systemPrompt ?? "";
 		return { systemPrompt: `${JSON_SYSTEM_PROMPT}\n\n${existing}` };
 	});

@@ -7,6 +7,7 @@ import {
 	renderCheck,
 	shortCwd,
 	statusIcon,
+	summariseSkills,
 	summariseTools,
 	type Theme,
 } from "./welcome.ts";
@@ -114,6 +115,35 @@ describe("summariseTools", () => {
 	it("treats missing sourceInfo as non-builtin", () => {
 		const r = summariseTools([{}, { sourceInfo: {} }]);
 		expect(r.detail).toBe("2 loaded (+2 ext)");
+	});
+});
+
+describe("summariseSkills", () => {
+	it("warns when no skills loaded", () => {
+		const r = summariseSkills([]);
+		expect(r.status).toBe("warn");
+		expect(r.detail).toBe("none loaded");
+	});
+
+	it("reports count when skills present", () => {
+		const r = summariseSkills([{}, {}, {}]);
+		expect(r.status).toBe("ok");
+		expect(r.detail).toBe("3 loaded");
+	});
+
+	it("excludes skills with disableModelInvocation", () => {
+		const r = summariseSkills([{}, { disableModelInvocation: true }, {}]);
+		expect(r.status).toBe("ok");
+		expect(r.detail).toBe("2 loaded");
+	});
+
+	it("warns when all skills are disabled", () => {
+		const r = summariseSkills([
+			{ disableModelInvocation: true },
+			{ disableModelInvocation: true },
+		]);
+		expect(r.status).toBe("warn");
+		expect(r.detail).toBe("none loaded");
 	});
 });
 

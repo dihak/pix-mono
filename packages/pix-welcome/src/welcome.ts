@@ -170,6 +170,17 @@ async function checkPiIgnore(
 	}
 }
 
+interface SkillInfo {
+	disableModelInvocation?: boolean;
+}
+
+export function summariseSkills(skills: SkillInfo[]): CheckResult {
+	const count = skills.filter((s) => !s.disableModelInvocation).length;
+	return count > 0
+		? { label: "Skills", status: "ok", detail: `${count} loaded` }
+		: { label: "Skills", status: "warn", detail: "none loaded" };
+}
+
 interface ToolInfo {
 	sourceInfo?: { source?: string };
 }
@@ -285,6 +296,7 @@ function buildCheckLines(theme: Theme, checks: CheckResult[]): string[] {
 export default function (pi: ExtensionAPI) {
 	let dismissed = false;
 	let requestRender: (() => void) | null = null;
+	let _updateSkills: ((r: CheckResult) => void) | null = null;
 
 	const dismiss = (ctx: ExtensionContext) => {
 		if (dismissed) return;
@@ -306,6 +318,7 @@ export default function (pi: ExtensionAPI) {
 			{ label: "Auth", status: "pending" },
 			{ label: "Models", status: "pending" },
 			{ label: "Tools", status: "pending" },
+			{ label: "Skills", status: "pending" },
 			{ label: "Ignore", status: "pending" },
 		];
 
@@ -344,8 +357,11 @@ export default function (pi: ExtensionAPI) {
 			requestRender?.();
 		};
 
+		// Expose skills updater so the before_agent_start handler can fill it in.
+		_updateSkills = (r: CheckResult) => update(4, r);
+
 		void checkPiVersion(pi).then((r) => update(0, r));
-		void checkPiIgnore(pi, ctx.cwd).then((r) => update(4, r));
+		void checkPiIgnore(pi, ctx.cwd).then((r) => update(5, r));
 		// auth already filled synchronously above; no async needed
 
 		// Tools register during session_start (incl. other extensions); read on
@@ -358,6 +374,23 @@ export default function (pi: ExtensionAPI) {
 				),
 			0,
 		);
+	});
+
+	// Skills count is only available once resources_discover has run, which
+	// happens after session_start. Grab it from the first before_agent_start
+	// (guaranteed to have skills in systemPromptOptions) and update the banner.
+	let skillsChecked = false;
+	pi.on("before_agent_start", (event) => {
+		if (skillsChecked) return;
+		skillsChecked = true;
+		const skills = event.systemPromptOptions?.skills ?? [];
+		const result = summariseSkills(skills);
+		// Banner may already be dismissed by the time the first prompt fires —
+		// update anyway so it's accurate if still visible.
+		requestRender?.();
+		// Reach into CHECKS via the closure captured above per session.
+		// We store the updater so each session's banner is independent.
+		_updateSkills?.(result);
 	});
 
 	pi.on("turn_start", (_event, ctx) => {
