@@ -1,10 +1,47 @@
 import { describe, expect, test } from "bun:test";
-import {
+import registerToolsNudge, {
 	classify,
 	classifyCompound,
 	nudgeReason,
 	splitSegments,
 } from "./tools.ts";
+
+/** Minimal fakes for the bits of ExtensionAPI / ctx the handler touches. */
+type ToolCallHandler = (
+	event: unknown,
+	ctx: { ui: { notify: (msg: string, type?: string) => void } },
+) => Promise<unknown> | unknown;
+
+function makeHandler(
+	activeTools: string[] = ["read", "ls", "grep", "find", "edit"],
+): ToolCallHandler {
+	let handler: ToolCallHandler | undefined;
+	const pi = {
+		on(eventName: string, h: ToolCallHandler) {
+			if (eventName === "tool_call") handler = h;
+		},
+		getActiveTools: () => activeTools,
+	};
+	registerToolsNudge(pi as unknown as Parameters<typeof registerToolsNudge>[0]);
+	if (!handler) throw new Error("handler not registered");
+	return handler;
+}
+
+function bashEvent(command: string) {
+	return { toolName: "bash", input: { command } };
+}
+
+function makeCtx() {
+	const notices: Array<{ msg: string; type?: string }> = [];
+	return {
+		ctx: {
+			ui: {
+				notify: (msg: string, type?: string) => notices.push({ msg, type }),
+			},
+		},
+		notices,
+	};
+}
 
 describe("classify", () => {
 	test("maps cat/head/tail/less to read", () => {
@@ -153,5 +190,54 @@ describe("nudgeReason", () => {
 		expect(msg).not.toContain("\n");
 		expect(msg).not.toContain("Available tools");
 		expect(msg.length).toBeLessThan(400);
+	});
+});
+
+describe("registerToolsNudge handler", () => {
+	test("warns yellow and does NOT block the command", async () => {
+		const handler = makeHandler();
+		const { ctx, notices } = makeCtx();
+
+		const result = await handler(bashEvent("cat foo.ts"), ctx);
+
+		// Non-blocking: returns nothing, so the command proceeds.
+		expect(result).toBeUndefined();
+		// Surfaced as a single yellow warning.
+		expect(notices).toHaveLength(1);
+		expect(notices[0].type).toBe("warning");
+		expect(notices[0].msg).toContain("Use `read` instead");
+	});
+
+	test("warns once per category, silent thereafter", async () => {
+		const handler = makeHandler();
+		const { ctx, notices } = makeCtx();
+
+		await handler(bashEvent("cat a"), ctx);
+		await handler(bashEvent("head b"), ctx); // same `read` category
+		expect(notices).toHaveLength(1);
+
+		await handler(bashEvent("grep x y"), ctx); // new category → new warning
+		expect(notices).toHaveLength(2);
+		expect(notices[1].msg).toContain("Use `grep` instead");
+	});
+
+	test("ignores commands with no tool stand-in", async () => {
+		const handler = makeHandler();
+		const { ctx, notices } = makeCtx();
+
+		await handler(bashEvent("git status"), ctx);
+		await handler(bashEvent("cat a | grep b"), ctx); // compound — real shell work
+		expect(notices).toHaveLength(0);
+	});
+
+	test("gated tool routes through toolbox enable, still non-blocking", async () => {
+		const handler = makeHandler([]); // nothing active → all gated
+		const { ctx, notices } = makeCtx();
+
+		const result = await handler(bashEvent("ls -la"), ctx);
+
+		expect(result).toBeUndefined();
+		expect(notices[0].type).toBe("warning");
+		expect(notices[0].msg).toContain('toolbox(action:"enable", name:"ls")');
 	});
 });

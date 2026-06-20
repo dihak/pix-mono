@@ -2,12 +2,13 @@
  * tools-nudge.ts — nudge the model toward dedicated tools over raw bash
  *
  * Hooks `tool_call` for the built-in `bash` tool. When a bash command merely
- * reimplements a first-class tool (read/ls/grep/find/edit/write), it blocks the
- * call ONCE per command-category per session with a guidance reason. The model
- * retries using the proper tool — improving token usage and enforcing stricter,
- * more predictable behavior. After the first nudge for a category, subsequent
- * bash calls in that category are allowed (no nag loop). Bash stays available
- * for everything else (pipes, compound commands, real shell work).
+ * reimplements a first-class tool (read/ls/grep/find/edit/write), it emits a
+ * YELLOW warning notification ONCE per command-category per session — the
+ * command still runs. The nudge teaches the model to prefer the dedicated tool
+ * next time (better token usage, stricter behavior) WITHOUT blocking: blocking
+ * rendered red and forced a failed retry that wasted a turn. After the first
+ * nudge for a category, subsequent bash calls in that category are silent (no
+ * nag loop). Bash stays available for everything (pipes, compound, real work).
  *
  * IMPORTANT: some target tools (e.g. `ls`, `find`) are GATED from the system
  * prompt — registered but prompt-hidden until the model discovers them via
@@ -176,7 +177,7 @@ export function nudgeReason(
 }
 
 export default function registerToolsNudge(pi: ExtensionAPI): void {
-	// Categories already nudged this session — block once, then allow.
+	// Categories already nudged this session — warn once, then stay silent.
 	const nudged = new Set<Category>();
 
 	/** Is `name` in the host's current active set (i.e. callable right now)? */
@@ -190,7 +191,7 @@ export default function registerToolsNudge(pi: ExtensionAPI): void {
 		}
 	}
 
-	pi.on("tool_call", async (event) => {
+	pi.on("tool_call", async (event, ctx) => {
 		if (!isToolCallEventType("bash", event)) return;
 		const command = event.input.command;
 		if (typeof command !== "string") return;
@@ -204,9 +205,12 @@ export default function registerToolsNudge(pi: ExtensionAPI): void {
 		// One short, targeted line: name only the tool that maps to THIS command,
 		// and route through toolbox when it's gated rather than implying it's
 		// callable now. No full-inventory dump — that's what confused the model.
-		return {
-			block: true,
-			reason: nudgeReason(rule.reason, rule.tool, isActive(rule.tool)),
-		};
+		const reason = nudgeReason(rule.reason, rule.tool, isActive(rule.tool));
+
+		// Surface the guidance as a YELLOW warning notification — non-blocking.
+		// Blocking the call rendered red AND forced a failed retry through the
+		// proper tool, wasting a turn. This nudge is corrective guidance, not a
+		// failure: let the command proceed and just teach for next time.
+		ctx.ui.notify(reason, "warning");
 	});
 }
