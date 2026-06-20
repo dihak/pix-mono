@@ -12,6 +12,19 @@ Intercepts every `bash` tool call and classifies the command against a set of se
 pi install npm:@xynogen/pix-gate
 ```
 
+## Reusable exports
+
+The gate is split into a pure rule engine and the interactive prompt, so the
+classification logic can be reused without the TUI:
+
+- `@xynogen/pix-gate/lib` — pure rules: `DEFAULT_RULES`, `buildRules`,
+  `classify`, `loadUserConfig`, `isSudoCommand`. No Pi/TUI dependency.
+- `@xynogen/pix-gate/prompt` — `promptGateDecision()`, the confirm/deny dialog
+  (depends on `pi-tui`).
+
+`pix-skills` imports `./lib` to gate skill `` !`cmd` `` directives with the same
+rules as the bash tool (auto-deny on match, no prompt).
+
 ## Configuration
 
 `~/.pi/agent/pix-gate.json`:
