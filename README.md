@@ -45,6 +45,7 @@ Shared dependencies pulled in automatically — install directly only if you nee
 | --- | --- |
 | [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression + ponytail lazy-dev mode (`/opt`) |
 | [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
+| [`@xynogen/pix-subagent`](packages/pix-subagent) | Sub-agent spawning — 3 tools (`agent`, `agent_result`, `agent_steer`), live model widget, work-splitting |
 
 ### Tool suite
 
@@ -71,7 +72,6 @@ Not bundled by `pix-core` — install each only if you want it. These are delibe
 | [`@xynogen/pix-9router`](packages/pix-9router) | 9Router LLM provider + `fetch`/`search` tools — needs a 9Router API key, so only useful if you route through 9Router |
 | [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode) |
 | [`@xynogen/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use |
-| [`@xynogen/pix-subagent`](packages/pix-subagent) | Sub-agent spawning — 3 tools (`agent`, `agent_result`, `agent_steer`), live model widget, work-splitting; ported from [tintinweb/pi-subagents](https://github.com/tintinweb/pi-subagents) (MIT) |
 
 ### Roadmap — third-party extensions
 

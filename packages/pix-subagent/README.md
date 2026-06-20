@@ -4,11 +4,15 @@ Pi extension — planner-driven sub-agents with 3 tools, live widget (model alwa
 
 ## Install
 
-**Opt-in — not bundled by `pix-core`.** Install manually:
-
 ```bash
 pi install npm:@xynogen/pix-subagent
 ```
+
+> Also included in [`@xynogen/pix-core`](https://github.com/xynogen/pix-mono/tree/main/packages/pix-core):
+>
+> ```bash
+> pi install npm:@xynogen/pix-core
+> ```
 
 ## What it does
 
