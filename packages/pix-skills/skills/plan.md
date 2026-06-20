@@ -63,6 +63,6 @@ Expected: PASS
 
 ### Save and Handoff
 
-- Save plan to `docs/plans/YYYY-MM-DD-<feature-name>.md`
+- Save plan to `.pi/plans/YYYY-MM-DD-<feature-name>.md`
 - Commit plan document
 - Announce: "Plan complete. Ready to execute via `/task`."
