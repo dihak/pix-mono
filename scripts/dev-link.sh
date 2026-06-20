@@ -41,6 +41,43 @@ unregistered=0
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+# Resolve pix-core's full transitive @xynogen/* dependency closure (members +
+# shared libs like pix-pretty/pix-data they pull in). These are all booted in
+# process by pix-core's aggregator, so none may be registered independently —
+# doing so double-registers their tools/extensions and triggers Pi conflicts.
+# Printed once, newline-separated, into CORE_CLOSURE.
+CORE_CLOSURE=""
+compute_core_closure() {
+	CORE_CLOSURE=$(node -e "
+const fs = require('fs');
+const path = require('path');
+const pkgDir = '${packages_dir}';
+const readDeps = (name) => {
+  const short = name.replace(/^@xynogen\//, '');
+  const pj = path.join(pkgDir, short, 'package.json');
+  try { return Object.keys(JSON.parse(fs.readFileSync(pj, 'utf8')).dependencies || {}); }
+  catch { return []; }
+};
+const seen = new Set();
+const stack = readDeps('@xynogen/pix-core').filter((d) => d.startsWith('@xynogen/'));
+while (stack.length) {
+  const d = stack.pop();
+  if (seen.has(d)) continue;
+  seen.add(d);
+  for (const next of readDeps(d)) if (next.startsWith('@xynogen/')) stack.push(next);
+}
+process.stdout.write([...seen].join('\n'));
+" 2>/dev/null)
+}
+
+# Returns 0 if the package is in pix-core's transitive closure.
+# pix-core is always the aggregator when dev-link runs, so we don't gate on
+# whether it's already in settings.json — it will be registered this run.
+is_aggregated_by_core() {
+	local pkg_name="$1"
+	printf '%s\n' "$CORE_CLOSURE" | grep -qx "$pkg_name"
+}
+
 # Returns 0 if package.json has pi.extensions OR pi.themes (needs settings.json entry).
 has_pi_extensions() {
 	node -e "
@@ -90,6 +127,8 @@ process.exit(1);
 
 # ── main loop ─────────────────────────────────────────────────────────────────
 
+compute_core_closure
+
 for dir in "$packages_dir"/*/; do
 	pkg_json="${dir}package.json"
 	[ -f "$pkg_json" ] || continue
@@ -124,9 +163,19 @@ for dir in "$packages_dir"/*/; do
 	echo "→ linked ${name} → ${dir%/}"
 	linked=$((linked + 1))
 
-	# Register in settings.json if the package has extension entries.
+	# Register in settings.json if the package has extension entries,
+	# but skip packages already loaded transitively via pix-core aggregator.
 	if [ "$needs_registration" = true ]; then
-		if settings_add "$name"; then
+		if is_aggregated_by_core "$name"; then
+			# A prior run may have wrongly registered this member — purge it so
+			# pix-core's in-process boot is the only loader (no tool conflict).
+			if settings_remove "$name"; then
+				echo "  ✖ unregistered ${name} (loaded by pix-core)"
+				unregistered=$((unregistered + 1))
+			else
+				echo "  ↷ skipped ${name} (loaded by pix-core)"
+			fi
+		elif settings_add "$name"; then
 			echo "  ✔ registered ${name} in settings.json"
 			registered=$((registered + 1))
 		fi

@@ -99,12 +99,9 @@ ask_yes_no() {
 }
 
 # --- 1. install / update Pi -------------------------------------------------
-# Prefer Bun; fall back to npm. JS_RUNTIME records which one is available so we
-# can reuse it later for the settings.json merge (no python needed).
 info "Setting up Pi Coding Agent..."
 
 if command_exists bun; then
-	JS_RUNTIME="bun"
 	info "Installing @earendil-works/pi-coding-agent globally (bun)..."
 	if bun add -g --ignore-scripts @earendil-works/pi-coding-agent; then
 		success "Pi Coding Agent installed/updated."
@@ -113,7 +110,6 @@ if command_exists bun; then
 		exit 1
 	fi
 elif command_exists npm; then
-	JS_RUNTIME="node"
 	warn "Bun not found — falling back to npm."
 	info "Installing @earendil-works/pi-coding-agent globally (npm)..."
 	if npm install -g --ignore-scripts @earendil-works/pi-coding-agent; then
@@ -133,20 +129,19 @@ if ! command_exists pi; then
 fi
 
 # --- 2. configure theme + tools --------------------------------------------
-# Merge theme/tools into settings.json using the same JS runtime that installed
-# Pi (bun or node) — no python dependency.
+# Merge theme + tools into settings.json. Reads existing settings first so
+# other keys (auth tokens, model prefs) are preserved.
 info "Configuring Pi environment..."
 mkdir -p "$PI_ROOT"
 
 info "Configuring tools/theme..."
-"$JS_RUNTIME" -e '
-const fs = require("fs");
-const [file, theme, tools] = [process.argv[1], process.argv[2], JSON.parse(process.argv[3])];
-let settings = {};
-try { settings = JSON.parse(fs.readFileSync(file, "utf8")); } catch {}
-settings.tools = tools;
-settings.theme = theme;
-fs.writeFileSync(file, JSON.stringify(settings, null, 2) + "\n");
+# Use whichever runtime is available — both are CJS-compatible.
+if command_exists bun; then _rt=bun; else _rt=node; fi
+"$_rt" -e '
+  const fs = require("fs"), f = process.argv[1], t = process.argv[2], tools = JSON.parse(process.argv[3]);
+  let s = {}; try { s = JSON.parse(fs.readFileSync(f, "utf8")); } catch {}
+  s.theme = t; s.tools = tools;
+  fs.writeFileSync(f, JSON.stringify(s, null, 2) + "\n");
 ' "$SETTINGS_FILE" "$PI_THEME" "$DEFAULT_TOOLS"
 
 # --- 3. install the pix distro ---------------------------------------------
@@ -167,15 +162,20 @@ install_pi_pkg() {
 	fi
 }
 
-# pix-core alone — npm resolves its dependency tree (all core members +
-# pix-data); the aggregator extension boots them in-process. No per-member
-# install needed.
-info "Installing Pix core module..."
-install_pi_pkg "$CORE_PACKAGE"
+# Run install_pi_pkg jobs in parallel, then wait for all to finish.
+# $@ = list of specs to install concurrently.
+install_pi_pkgs_parallel() {
+	for spec in "$@"; do
+		install_pi_pkg "$spec" &
+	done
+	wait
+}
 
-# Theme is the distro default — always installed.
-info "Installing Pix theme..."
-install_pi_pkg "$THEME_PACKAGE"
+# pix-core and pix-themes are independent — install both in parallel.
+# pix-core: npm resolves its dependency tree (all core members + pix-data);
+# the aggregator extension boots them in-process. No per-member install needed.
+info "Installing Pix core + theme modules in parallel..."
+install_pi_pkgs_parallel "$CORE_PACKAGE" "$THEME_PACKAGE"
 
 # Opt-in extensions — ask per package, with the reason it's opt-in. Each line is
 # "<spec>|<reason>"; split on the first '|'. IFS swap keeps the loop POSIX.

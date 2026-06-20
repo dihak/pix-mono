@@ -75,92 +75,83 @@ fi
 # the same host-resolution strategy and placing /model back as the first entry
 # in BUILTIN_SLASH_COMMANDS, its original stock position. This exactly counters
 # the strip in patch-builtin.ts. Idempotent: a no-op if the line is already present.
+# Restore Pi's built-in /model slash command.
+#
+# pix-models strips the `/model` line from Pi's compiled slash-commands.js.
+# On uninstall we re-insert it. Uses sed — no JS runtime required.
+# Idempotent: no-op if the line is already present or the file is missing.
 restore_builtin_model_command() {
-	runtime=""
-	if command -v bun >/dev/null 2>&1; then
-		runtime="bun"
-	elif command -v node >/dev/null 2>&1; then
-		runtime="node"
-	else
-		warn "No bun/node runtime found — cannot restore built-in /model command."
+	# Locate slash-commands.js via the running pi binary.
+	pi_bin=$(command -v pi 2>/dev/null) || true
+	pi_real=$(realpath "$pi_bin" 2>/dev/null) || true
+	slash_cmd_file=""
+	if [ -n "$pi_real" ]; then
+		candidate=$(dirname "$pi_real")/core/slash-commands.js
+		[ -f "$candidate" ] && slash_cmd_file="$candidate"
+	fi
+	# Fallback: well-known global install locations.
+	if [ -z "$slash_cmd_file" ]; then
+		for root in \
+			"$HOME/.bun/install/global/node_modules" \
+			"$HOME/.npm-global/lib/node_modules" \
+			"/usr/local/lib/node_modules" \
+			"/usr/lib/node_modules"; do
+			candidate="$root/@earendil-works/pi-coding-agent/dist/core/slash-commands.js"
+			if [ -f "$candidate" ]; then
+				slash_cmd_file="$candidate"
+				break
+			fi
+		done
+	fi
+
+	if [ -z "$slash_cmd_file" ]; then
+		warn "Could not locate slash-commands.js — skipping /model restore."
+		return 0
+	fi
+
+	# Already present — nothing to do.
+	if grep -qF '{ name: "model"' "$slash_cmd_file" 2>/dev/null; then
 		return 0
 	fi
 
 	info "Restoring Pi's built-in /model command..."
-	"$runtime" -e '
-const { execSync } = require("node:child_process");
-const { existsSync, readFileSync, writeFileSync } = require("node:fs");
-const { createRequire } = require("node:module");
-const { homedir } = require("node:os");
-const { dirname, join, resolve } = require("node:path");
-
-// Anchor on the array opening so /model is restored as the first entry,
-// matching stock Pi and inverting the position-agnostic strip in patch-builtin.
-const ARRAY_OPEN_RE = /(export const BUILTIN_SLASH_COMMANDS = \[\n)([ \t]*)/m;
-
-function candidatePaths() {
-  const paths = [];
-  try {
-    const piReal = execSync("realpath $(which pi)", { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
-    if (piReal) paths.push(join(resolve(dirname(piReal), "core"), "slash-commands.js"));
-  } catch {}
-  const home = homedir();
-  for (const root of [
-    join(home, ".bun", "install", "global", "node_modules"),
-    join(home, ".npm-global", "lib", "node_modules"),
-    "/usr/local/lib/node_modules",
-    "/usr/lib/node_modules",
-  ]) {
-    paths.push(join(root, "@earendil-works", "pi-coding-agent", "dist", "core", "slash-commands.js"));
-  }
-  try {
-    const req = createRequire(`${process.cwd()}/`);
-    const entry = req.resolve("@earendil-works/pi-coding-agent");
-    paths.push(resolve(dirname(entry), "core", "slash-commands.js"));
-  } catch {}
-  return paths;
+	# Insert /model as first item in BUILTIN_SLASH_COMMANDS.
+	# Use a temp file to avoid sed -i portability issues (macOS vs Linux).
+	model_line='  { name: "model", description: "Select model (opens selector UI)" },'
+	tmp=$(mktemp) || {
+		warn "mktemp failed — skipping /model restore."
+		return 0
+	}
+	if sed "s|export const BUILTIN_SLASH_COMMANDS = \[|export const BUILTIN_SLASH_COMMANDS = [\n${model_line}|" \
+		"$slash_cmd_file" >"$tmp" 2>/dev/null && mv "$tmp" "$slash_cmd_file" 2>/dev/null; then
+		success "Built-in /model command restored."
+	else
+		rm -f "$tmp"
+		warn "Could not restore /model (read-only install?)."
+	fi
 }
 
-const file = candidatePaths().find((p) => existsSync(p));
-if (!file) process.exit(0);
-let source;
-try { source = readFileSync(file, "utf8"); } catch { process.exit(0); }
-if (source.includes(`{ name: "model", description:`)) process.exit(0);
-const m = source.match(ARRAY_OPEN_RE);
-if (!m) process.exit(0);
-const indent = m[2];
-const line = `${indent}{ name: "model", description: "Select model (opens selector UI)" },\n`;
-const patched = source.replace(ARRAY_OPEN_RE, `${m[1]}${line}${indent}`);
-if (patched === source) process.exit(0);
-try { writeFileSync(file, patched, "utf8"); } catch {}
-' && success "Built-in /model command restored." || warn "Could not restore /model (read-only install?)."
-}
+# Snapshot installed packages once, then skip any not in the list.
+INSTALLED=$(pi list 2>&1)
 
-# `pi remove` is itself idempotent: on an absent package it exits 0 and prints
-# "No matching package found". We must NOT pre-guard with `pi list | grep`,
-# because `pi list` emits a TTY-dependent listing — piped (no TTY) it omits the
-# extension packages entirely, so the grep would always miss and skip every
-# removal. Call `pi remove` unconditionally and classify by its output instead.
 remove_pi_pkg() {
 	spec="$1"
+	if ! printf '%s' "$INSTALLED" | grep -qF "$spec"; then
+		info "Not installed, skipping: $spec"
+		return 0
+	fi
 	info "Removing pi pkg: $spec"
 	out=$(pi remove "$spec" 2>&1) || true
-	if printf '%s' "$out" | grep -qiF 'no matching package'; then
-		info "Not installed, skipping: $spec"
-	elif printf '%s' "$out" | grep -qiF 'removed'; then
+	if printf '%s' "$out" | grep -qiF 'removed'; then
 		success "Removed: $spec"
 	else
 		warn "Could not confirm removal of: $spec"
 	fi
 }
 
-info "Uninstalling Pix core module..."
-for spec in $CORE_PACKAGES; do
-	remove_pi_pkg "$spec"
-done
-
-info "Uninstalling Pix extension module..."
-for spec in $EXTENSION_PACKAGES; do
+# Remove all packages sequentially to avoid npm lock conflicts.
+info "Uninstalling Pix core + extension modules..."
+for spec in $CORE_PACKAGES $EXTENSION_PACKAGES; do
 	remove_pi_pkg "$spec"
 done
 
