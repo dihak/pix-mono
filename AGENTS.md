@@ -140,6 +140,19 @@ TAG="release-$(date +%Y%m%d-%H%M)" && git tag "$TAG" && git push origin "$TAG"
 bun run publish:dry
 ```
 
+### Agent runbook — when the user says "publish"
+
+"publish" (alone) means: run this exact sequence, no re-asking which packages.
+
+1. **Verify clean gate** — `bun run check && bun run typecheck && bun test`. Red → STOP, do not publish.
+2. **Confirm bumps landed** — every changed package's `package.json` version is ahead of npm. Unbumped → no publish for that package (the tag ships nothing). Match type → semver: `feat`→minor, `fix`/`perf`→patch, breaking→major.
+3. **Commit + push to `main`** — `rtk git add … && rtk git commit -m "…" && rtk git push`. Push to `main` is shared-state: confirm via `ask_user` first.
+4. **Dry-run** — `bun run publish:dry`. Read the "Publishing N package(s)" list; that is exactly what the tag will ship.
+5. **Confirm the publish (irreversible §1 gate)** — state the precise list (`name@version`) the dry-run reported, then `ask_user` Confirm/Cancel. A prior approval never carries forward.
+6. **Tag + push** — `TAG="release-$(date +%Y%m%d-%H%M)" && git tag "$TAG" && git push origin "$TAG"`. This triggers the Publish workflow (re-runs CI, skips already-published versions).
+
+The tag, not the commit, triggers publishing. Only packages with a new version ship — everything else is skipped idempotently.
+
 ---
 
 ## Package Independence
