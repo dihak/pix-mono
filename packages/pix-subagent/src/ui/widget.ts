@@ -12,12 +12,22 @@ import { truncateToWidth } from "@earendil-works/pi-tui";
 import type { AgentManager } from "../agent-manager.ts";
 import { getConfig } from "../agent-types.ts";
 import type { AgentActivity, AgentDetails, Theme } from "../tools.ts";
-import { formatMs, formatTokens, formatTurns, SPINNER } from "../tools.ts";
+import {
+	formatMs,
+	formatSpeed,
+	formatTokens,
+	formatTurns,
+	SPINNER,
+} from "../tools.ts";
 import type { AgentInvocation, SubagentType } from "../types.ts";
-import { getLifetimeTotal, getSessionContextPercent } from "../usage.ts";
+import {
+	getLifetimeTotal,
+	getSessionContextPercent,
+	type SessionLike,
+} from "../usage.ts";
 
 export type { AgentActivity, AgentDetails, Theme };
-export { formatMs, formatTokens, formatTurns, SPINNER };
+export { formatMs, formatSpeed, formatTokens, formatTurns, SPINNER };
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -97,14 +107,16 @@ export function buildInvocationTags(invocation: AgentInvocation | undefined): {
 	return { modelName: invocation.modelName, tags };
 }
 
-function truncateLine(text: string, len = 60): string {
-	const line =
-		text
-			.split("\n")
-			.find((l) => l.trim())
-			?.trim() ?? "";
+/**
+ * Live tail of agent output: latest non-empty line, tail-anchored to `len`
+ * chars (keeps the moving edge, not the stale first line). Leading … marks
+ * the clip. e.g. "…ting batch 6".
+ */
+function truncateLine(text: string, len = 16): string {
+	const lines = text.split("\n").filter((l) => l.trim());
+	const line = lines.length ? lines[lines.length - 1].trim() : "";
 	if (line.length <= len) return line;
-	return `${line.slice(0, len)}…`;
+	return `…${line.slice(-len)}`;
 }
 
 export function describeActivity(
@@ -184,12 +196,18 @@ export class AgentWidget {
 			completedAt?: number;
 			error?: string;
 			invocation?: AgentInvocation;
+			lifetimeUsage?: { input: number; output: number; cacheWrite: number };
+			session?: unknown;
+			compactionCount?: number;
+			turnCount?: number;
+			maxTurns?: number;
 		},
 		theme: Theme,
 	): string {
 		const name = getDisplayName(a.type);
 		const modeLabel = getPromptModeLabel(a.type);
-		const duration = formatMs((a.completedAt ?? Date.now()) - a.startedAt);
+		const durationMs = (a.completedAt ?? Date.now()) - a.startedAt;
+		const duration = formatMs(durationMs);
 
 		// model label (the pix twist — always shown)
 		const modelLabel = a.invocation?.modelName
@@ -218,12 +236,31 @@ export class AgentWidget {
 		}
 
 		const parts: string[] = [];
-		const activity = this.agentActivity.get(a.id);
-		if (activity)
-			parts.push(formatTurns(activity.turnCount, activity.maxTurns));
+		// Turns read from the record (a.*), not agentActivity — onComplete deletes
+		// the activity entry before this line renders, which had dropped ↻N.
+		if (a.turnCount != null && a.turnCount > 0)
+			parts.push(formatTurns(a.turnCount, a.maxTurns));
 		if (a.toolUses > 0)
 			parts.push(`${a.toolUses} tool use${a.toolUses === 1 ? "" : "s"}`);
+		// Token + context% + speed read from the record (survives the
+		// agentActivity delete that fires in onComplete before this renders).
+		const tokens = getLifetimeTotal(a.lifetimeUsage);
+		if (tokens > 0) {
+			const contextPercent = a.session
+				? getSessionContextPercent(a.session as SessionLike)
+				: null;
+			parts.push(
+				formatSessionTokens(
+					tokens,
+					contextPercent,
+					theme,
+					a.compactionCount ?? 0,
+				),
+			);
+		}
 		parts.push(duration);
+		const speed = formatSpeed(a.lifetimeUsage?.output ?? 0, durationMs);
+		if (speed) parts.push(speed);
 
 		return `${icon} ${theme.fg("dim", name)}${modelLabel}${modeTag}  ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`;
 	}
@@ -250,7 +287,8 @@ export class AgentWidget {
 		const truncate = (line: string) => truncateToWidth(line, w);
 		const hasActive = running.length > 0 || queued.length > 0;
 		const headingColor = hasActive ? "accent" : "dim";
-		const headingIcon = hasActive ? "●" : "○";
+		// ○ hollow = incomplete (still running), ● filled disk = complete (all done).
+		const headingIcon = hasActive ? "○" : "●";
 		const frame = SPINNER[this.widgetFrame % SPINNER.length];
 
 		const finishedLines: string[] = [];
@@ -262,7 +300,7 @@ export class AgentWidget {
 			);
 		}
 
-		const runningLines: string[][] = [];
+		const runningLines: string[] = [];
 		for (const a of running) {
 			const name = getDisplayName(a.type);
 			const modeLabel = getPromptModeLabel(a.type);
@@ -297,19 +335,26 @@ export class AgentWidget {
 				parts.push(`${toolUses} tool use${toolUses === 1 ? "" : "s"}`);
 			if (tokenText) parts.push(tokenText);
 			parts.push(elapsed);
+			const liveSpeed = formatSpeed(
+				bg?.lifetimeUsage.output ?? 0,
+				Date.now() - a.startedAt,
+			);
+			if (liveSpeed) parts.push(liveSpeed);
 			const statsText = parts.join(" · ");
 
+			// Activity leads (next to the spinner — the moving part by the moving
+			// part), then static identity + cumulative stats. One line per agent so
+			// many concurrent workers stay readable instead of doubling the height.
 			const activity = bg
 				? describeActivity(bg.activeTools, bg.responseText)
 				: "thinking…";
 
-			runningLines.push([
+			runningLines.push(
 				truncate(
 					theme.fg("dim", "├─") +
-						` ${theme.fg("accent", frame)} ${theme.bold(name)}${modelLabel}${modeTag}  ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)}`,
+						` ${theme.fg("accent", frame)} ${theme.fg("dim", activity)} ${theme.fg("dim", "·")} ${theme.bold(name)}${modelLabel}${modeTag}  ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)}`,
 				),
-				truncate(theme.fg("dim", "│  ") + theme.fg("dim", `  ⎿  ${activity}`)),
-			]);
+			);
 		}
 
 		const queuedLine =
@@ -322,7 +367,7 @@ export class AgentWidget {
 
 		const maxBody = MAX_WIDGET_LINES - 1;
 		const totalBody =
-			finishedLines.length + runningLines.length * 2 + (queuedLine ? 1 : 0);
+			finishedLines.length + runningLines.length + (queuedLine ? 1 : 0);
 
 		const lines: string[] = [
 			truncate(
@@ -334,27 +379,23 @@ export class AgentWidget {
 
 		if (totalBody <= maxBody) {
 			lines.push(...finishedLines);
-			for (const pair of runningLines) lines.push(...pair);
+			lines.push(...runningLines);
 			if (queuedLine) lines.push(queuedLine);
 
 			// Fix last connector ├─ → └─
 			if (lines.length > 1) {
 				const last = lines.length - 1;
 				lines[last] = lines[last].replace("├─", "└─");
-				if (runningLines.length > 0 && !queuedLine && last >= 2) {
-					lines[last - 1] = lines[last - 1].replace("├─", "└─");
-					lines[last] = lines[last].replace("│  ", "   ");
-				}
 			}
 		} else {
 			let budget = maxBody - 1;
 			let hiddenRunning = 0;
 			let hiddenFinished = 0;
 
-			for (const pair of runningLines) {
-				if (budget >= 2) {
-					lines.push(...pair);
-					budget -= 2;
+			for (const line of runningLines) {
+				if (budget >= 1) {
+					lines.push(line);
+					budget--;
 				} else {
 					hiddenRunning++;
 				}

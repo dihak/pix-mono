@@ -180,6 +180,8 @@ export class AgentManager {
 			abortController,
 			lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
 			compactionCount: 0,
+			turnCount: 0,
+			maxTurns: options.maxTurns,
 			invocation: options.invocation,
 		};
 		this.agents.set(id, record);
@@ -258,7 +260,10 @@ export class AgentManager {
 				if (activity.type === "end") record.toolUses++;
 				options.onToolActivity?.(activity);
 			},
-			onTurnEnd: options.onTurnEnd,
+			onTurnEnd: (turnCount) => {
+				record.turnCount = turnCount;
+				options.onTurnEnd?.(turnCount);
+			},
 			onTextDelta: options.onTextDelta,
 			onAssistantUsage: (usage) => {
 				addUsage(record.lifetimeUsage, usage);

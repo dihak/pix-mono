@@ -135,8 +135,11 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 			widget.update();
 		},
 		4, // maxConcurrent
-		// onStart
+		// onStart — re-arm the 80ms spinner loop. update() clears the timer when
+		// the last agent finishes; a fresh spawn mid-turn (no new turn_start) must
+		// restart it or the spinner freezes on one frame.
 		(_record) => {
+			widget.ensureTimer();
 			widget.update();
 		},
 	);

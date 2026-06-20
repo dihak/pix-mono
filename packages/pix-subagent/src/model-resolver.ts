@@ -2,6 +2,8 @@
  * Model resolution: exact match ("provider/modelId") with fuzzy fallback.
  */
 
+import { lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
+
 export interface ModelEntry {
 	id: string;
 	name: string;
@@ -91,8 +93,71 @@ export function resolveModel(
 	return `Model not found: "${input}".\n\nAvailable models:\n${modelList}`;
 }
 
-/** List available models as "provider/id" strings (for tool-description injection). */
+// ── Enrichment for orchestrator model choice ────────────────────────────────
+// The orchestrator picks a worker model from the `agent` tool description. Bare
+// ids carry no signal, so each line is annotated with bench score, context,
+// price, and a coarse tier — sourced from pix-data (the shared data layer).
+
+const SCORE_FRONTIER = 88;
+const SCORE_STRONG = 75;
+const CHEAP_OUTPUT_PRICE = 3; // $/M output tokens — below this counts as cheap
+
+/** Context window → compact "200k" / "1M". */
+function fmtCtx(n: number | undefined): string {
+	if (!n || n < 1_000) return n ? `${n}` : "";
+	if (n >= 1_000_000) {
+		const m = n / 1_000_000;
+		return `${Number.isInteger(m) ? m : m.toFixed(1).replace(/\.0$/, "")}M ctx`;
+	}
+	return `${Math.round(n / 1_000)}k ctx`;
+}
+
+/** Cost → "$3/$15" (input/output per Mtok), "free", or "" when unknown. */
+function fmtCost(input?: number, output?: number): string {
+	if (input == null && output == null) return "";
+	const i = input ?? 0;
+	const o = output ?? 0;
+	if (i === 0 && o === 0) return "free";
+	return `$${i}/$${o}`;
+}
+
+/** Coarse decision tier from score + output price. */
+function tier(score: number | null | undefined, output?: number): string {
+	if (typeof score !== "number") return "";
+	if (score >= SCORE_FRONTIER) return "frontier";
+	if (score >= SCORE_STRONG) return "strong";
+	if (output != null && output <= CHEAP_OUTPUT_PRICE) return "fast-cheap";
+	return "basic";
+}
+
+/** One enriched line: "provider/id  — ⚡95 · 200k ctx · $3/$15 · frontier". */
+function annotate(m: ModelEntry): { line: string; score: number } {
+	const dev = lookupModelsDev(m.provider, m.id);
+	const bench = lookupBenchmark(m.name ?? m.id);
+	const score = bench?.overallScore ?? null;
+	const out = bench?.outputPrice ?? dev?.cost?.output;
+	const segs = [
+		typeof score === "number" ? `⚡${score}` : "",
+		fmtCtx(dev?.limit?.context),
+		fmtCost(bench?.inputPrice ?? dev?.cost?.input, out),
+		tier(score, out),
+	].filter(Boolean);
+	const id = `${m.provider}/${m.id}`;
+	return {
+		line: segs.length ? `${id}  — ${segs.join(" · ")}` : id,
+		score: score ?? -1,
+	};
+}
+
+/**
+ * List available models, enriched + ranked for orchestrator decisions.
+ * Sorted by bench score desc (best first); unscored fall to the bottom
+ * alphabetically (preserved by the stable id tiebreak).
+ */
 export function listAvailable(registry: ModelRegistry): string[] {
 	const all = (registry.getAvailable?.() ?? registry.getAll()) as ModelEntry[];
-	return all.map((m) => `${m.provider}/${m.id}`).sort();
+	return all
+		.map((m) => ({ ...annotate(m), id: `${m.provider}/${m.id}` }))
+		.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+		.map((r) => r.line);
 }

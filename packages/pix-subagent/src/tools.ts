@@ -29,7 +29,11 @@ import {
 import { resolveAgentInvocationConfig } from "./invocation-config.ts";
 import { resolveModel } from "./model-resolver.ts";
 import type { AgentInvocation, LifetimeUsage } from "./types.ts";
-import { getLifetimeTotal } from "./usage.ts";
+import {
+	getLifetimeTotal,
+	getSessionContextPercent,
+	type SessionLike,
+} from "./usage.ts";
 
 // ── Types shared with ui/widget.ts (widget imports from here to avoid circular) ─
 
@@ -54,6 +58,10 @@ export interface AgentDetails {
 	subagentType: string;
 	toolUses: number;
 	tokens: string;
+	/** Context-window utilization 0–100, or null/undefined when unavailable. */
+	contextPercent?: number | null;
+	/** Raw output tokens — for t/s = outputTokens / durationMs. */
+	outputTokens?: number;
 	durationMs: number;
 	status:
 		| "queued"
@@ -106,6 +114,15 @@ export function formatMs(ms: number): string {
 	return `${(ms / 1000).toFixed(1)}s`;
 }
 
+/**
+ * Output tokens per second over a duration. "" when either input is
+ * non-positive (no work / zero elapsed) so callers can skip the segment.
+ */
+export function formatSpeed(outputTokens: number, durationMs: number): string {
+	if (outputTokens <= 0 || durationMs <= 0) return "";
+	return `${Math.round(outputTokens / (durationMs / 1000))} t/s`;
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function textResult(msg: string, details?: AgentDetails) {
@@ -137,7 +154,13 @@ function buildStats(d: AgentDetails, theme: Theme): string {
 		parts.push(
 			theme.fg("dim", `${d.toolUses} tool use${d.toolUses === 1 ? "" : "s"}`),
 		);
-	if (d.tokens) parts.push(theme.fg("dim", d.tokens));
+	if (d.tokens) {
+		const pct =
+			d.contextPercent != null
+				? ` ${theme.fg("dim", `(${Math.round(d.contextPercent)}%)`)}`
+				: "";
+		parts.push(theme.fg("dim", d.tokens) + pct);
+	}
 	return parts.join(` ${theme.fg("dim", "·")} `);
 }
 
@@ -314,21 +337,34 @@ export function createAgentTool(
 				);
 			}
 
-			// Completed / steered
+			// Completed / steered. Collapsed view stays empty — the ● Agents widget
+			// carries the full finished line, so the inline transcript doesn't echo
+			// it (caller shouldn't output the result). Expanded view still shows the
+			// summary + full output on demand.
 			if (details.status === "completed" || details.status === "steered") {
+				if (!expanded) return new Text("", 0, 0);
 				const duration = formatMs(details.durationMs);
 				const isSteered = details.status === "steered";
 				const icon = isSteered
 					? theme.fg("warning", "✓")
 					: theme.fg("success", "✓");
+				const speed = formatSpeed(
+					details.outputTokens ?? 0,
+					details.durationMs,
+				);
 				let line =
 					icon +
 					(stats ? ` ${stats}` : "") +
 					" " +
 					theme.fg("dim", "·") +
 					" " +
-					theme.fg("dim", duration);
+					theme.fg("dim", duration) +
+					(speed ? ` ${theme.fg("dim", "·")} ${theme.fg("dim", speed)}` : "") +
+					// Steered = stopped at turn limit; keep that note inline since the
+					// stats alone don't say why it ended.
+					(isSteered ? ` ${theme.fg("warning", "(turn limit)")}` : "");
 
+				// Expanded view appends the full result below the one-line summary.
 				if (expanded) {
 					const resultText =
 						result.content[0]?.type === "text" ? result.content[0].text : "";
@@ -343,13 +379,6 @@ export function createAgentTool(
 									"  … (use agent_result with verbose for full output)",
 								);
 					}
-				} else {
-					line +=
-						"\n" +
-						theme.fg(
-							"dim",
-							`  ⎿  ${isSteered ? "Wrapped up (turn limit)" : "Done"}`,
-						);
 				}
 				return new Text(line, 0, 0);
 			}
@@ -804,10 +833,15 @@ function buildDetails(
 	activity?: AgentActivity & { durationMs?: number },
 ): AgentDetails {
 	const totalTokens = getLifetimeTotal(record.lifetimeUsage);
+	const contextPercent = activity?.session
+		? getSessionContextPercent(activity.session as SessionLike)
+		: null;
 	return {
 		...base,
 		toolUses: record.toolUses,
 		tokens: totalTokens > 0 ? formatTokens(totalTokens) : "",
+		contextPercent,
+		outputTokens: record.lifetimeUsage.output,
 		turnCount: activity?.turnCount,
 		maxTurns: activity?.maxTurns,
 		durationMs:

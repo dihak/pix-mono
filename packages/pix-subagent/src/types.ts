@@ -89,6 +89,11 @@ export interface AgentRecord {
 	lifetimeUsage: LifetimeUsage;
 	/** Number of times this agent's session has compacted. */
 	compactionCount: number;
+	/** Cumulative agentic turns. Persisted on the record so the finished widget
+	 * line stays full after agentActivity is cleared on completion. */
+	turnCount: number;
+	/** Turn cap, if any — for the ↻N≤M display. */
+	maxTurns?: number;
 	/** Resolved spawn params, captured for UI display. */
 	invocation?: AgentInvocation;
 }
