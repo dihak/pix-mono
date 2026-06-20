@@ -15,6 +15,9 @@ import { Type } from "typebox";
 
 import { once } from "./once.ts";
 
+/** Seconds before a todo card collapses to a one-line dim summary. */
+const COLLAPSE_AFTER_SEC = 10;
+
 export type TodoStatus = "pending" | "in_progress" | "done" | "blocked";
 
 export interface TodoItem {
@@ -42,6 +45,16 @@ export type TodoTheme = {
 	fg: (color: string, text: string) => string;
 	bold: (text: string) => string;
 };
+
+/** One-line dim summary used once a card has collapsed. */
+export function renderTodoSummaryLine(
+	items: TodoItem[],
+	theme: TodoTheme,
+): string {
+	if (!items.length) return theme.fg("muted", "(no todos)");
+	const done = items.filter((t) => t.status === "done").length;
+	return theme.fg("muted", `Todos ${done}/${items.length} done ✓`);
+}
 
 /** Colored checklist for the TUI: glyphs tinted by status, active row bold. */
 export function renderTodoLines(items: TodoItem[], theme: TodoTheme): string {
@@ -98,7 +111,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				"todo(action, items?, id?, status?, text?) — action: list|set|add|update|clear. Use to track implementation progress, especially when executing a plan.",
 			promptGuidelines: [
 				"When you start executing a multi-step plan in BUILD mode, seed the todo list with `todo(action:'set', items: <plan Implementation Phases>)`.",
-				"Mark each item in_progress before working it and done when finished via `todo(action:'update', id, status)`.",
+				"Mark each item in_progress before working it via `todo(action:'update', id, status)`; opening one auto-closes the previous in_progress item, so just open the next.",
 				"Call `todo(action:'list')` to recover your place after long runs or context compaction.",
 			],
 			parameters: Type.Object({
@@ -138,8 +151,26 @@ export default function registerTodo(pi: ExtensionAPI): void {
 					}),
 				),
 			}),
-			renderResult(_result, _options, theme) {
-				return new Text(renderTodoLines(todos, theme as TodoTheme), 0, 0);
+			renderResult(_result, _options, theme, context) {
+				// Snapshot this row's todos once (live `todos` mutate across calls;
+				// a card should keep the state it was created with).
+				const state = context.state as {
+					snapshot?: TodoItem[];
+					collapsed?: boolean;
+					timer?: ReturnType<typeof setTimeout>;
+				};
+				if (!state.snapshot) state.snapshot = todos.map((t) => ({ ...t }));
+				// Start the collapse timer once per row; invalidate() triggers rerender.
+				if (!state.collapsed && !state.timer) {
+					state.timer = setTimeout(() => {
+						state.collapsed = true;
+						context.invalidate();
+					}, COLLAPSE_AFTER_SEC * 1000);
+				}
+				const render = state.collapsed
+					? renderTodoSummaryLine
+					: renderTodoLines;
+				return new Text(render(state.snapshot, theme as TodoTheme), 0, 0);
 			},
 
 			async execute(_id, params) {
@@ -183,7 +214,15 @@ export default function registerTodo(pi: ExtensionAPI): void {
 					case "update": {
 						const t = todos.find((x) => x.id === params.id);
 						if (!t) return fail(`No todo with id ${params.id}.`);
-						if (params.status) t.status = params.status;
+						if (params.status) {
+							// Single-active invariant: opening a new task closes any other
+							// in_progress one, so the checklist always shows one focus.
+							if (params.status === "in_progress")
+								for (const other of todos)
+									if (other.id !== t.id && other.status === "in_progress")
+										other.status = "done";
+							t.status = params.status;
+						}
 						if (params.text) t.text = params.text;
 						persistTodos();
 						return ok(todoSummary());

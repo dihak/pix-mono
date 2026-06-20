@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import registerTodo, { renderTodoLines, type TodoItem } from "./todo.ts";
+import registerTodo, {
+	renderTodoLines,
+	renderTodoSummaryLine,
+	type TodoItem,
+} from "./todo.ts";
 
 // registerTodo wraps its body in once(pi, "pix-todo") — a per-instance
 // WeakMap guard that dedupes activation across pix-core + a standalone install.
@@ -41,9 +45,23 @@ function makeHost(
 		Array<(event: unknown, ctx?: unknown) => unknown>
 	> = {};
 
+	let capturedRender:
+		| ((
+				result: unknown,
+				options: unknown,
+				theme: unknown,
+				context: unknown,
+		  ) => { render(width: number): string[] })
+		| null = null;
+
 	const pi = {
-		registerTool(def: { name: string; execute: typeof capturedExecute }) {
+		registerTool(def: {
+			name: string;
+			execute: typeof capturedExecute;
+			renderResult?: typeof capturedRender;
+		}) {
 			capturedExecute = def.execute;
+			if (def.renderResult) capturedRender = def.renderResult;
 		},
 		appendEntry(type: string, data: unknown) {
 			appendCalls.push({ type, data });
@@ -67,6 +85,9 @@ function makeHost(
 		sessionManager,
 		get execute() {
 			return capturedExecute!;
+		},
+		get render() {
+			return capturedRender!;
 		},
 		appendCalls,
 		async emit(ev: string, event?: unknown, ctx?: unknown) {
@@ -312,6 +333,28 @@ describe("todo actions", () => {
 		const out = text(result);
 		expect(out).toContain("⊘ 1. alpha (waiting)");
 		expect(out).toContain("Todos 0/1 done");
+	});
+
+	test("opening a new in_progress closes the previous one", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit(
+			"session_start",
+			{},
+			{ sessionManager: host.sessionManager },
+		);
+		await run(host.execute, { action: "set", items: "a\nb\nc" });
+		await run(host.execute, { action: "update", id: 1, status: "in_progress" });
+		const result = await run(host.execute, {
+			action: "update",
+			id: 2,
+			status: "in_progress",
+		});
+		const out = text(result);
+		expect(out).toContain("● 1. a"); // auto-closed to done
+		expect(out).toContain("◐ 2. b"); // now active
+		expect(out).toContain("○ 3. c");
+		expect(out).toContain("Todos 1/3 done");
 	});
 
 	test("update unknown id returns error", async () => {
@@ -650,5 +693,53 @@ describe("renderTodoLines (colored TUI render)", () => {
 	test("shows the done/total count header", () => {
 		const out = renderTodoLines(items, tagTheme);
 		expect(out).toContain("[muted]Todos 1/4 done:[/]");
+	});
+});
+
+describe("renderResult snapshot isolation", () => {
+	// The card snapshots `todos` on first render; later execute() mutations must
+	// NOT bleed into an already-rendered card. Guards the invariant the inline
+	// comment defends.
+	test("a rendered card keeps its state after todos mutate", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit(
+			"session_start",
+			{},
+			{ sessionManager: host.sessionManager },
+		);
+		await run(host.execute, { action: "set", items: "alpha\nbravo" });
+
+		// Render once with a per-row state bag; snapshot is taken here.
+		const state: Record<string, unknown> = {};
+		const ctx = { state, invalidate: () => {} };
+		const first = host.render({}, {}, tagTheme, ctx).render(80).join("\n");
+		expect(first).toContain("1. alpha");
+		expect(first).toContain("2. bravo");
+
+		// Mutate underlying todos via a new execute call.
+		await run(host.execute, { action: "set", items: "changed" });
+
+		// Re-render the SAME row (same state bag) — must still show the snapshot.
+		const second = host.render({}, {}, tagTheme, ctx).render(80).join("\n");
+		expect(second).toContain("1. alpha");
+		expect(second).toContain("2. bravo");
+		expect(second).not.toContain("changed");
+	});
+});
+
+describe("renderTodoSummaryLine (collapsed one-liner)", () => {
+	test("empty list renders muted placeholder", () => {
+		expect(renderTodoSummaryLine([], tagTheme)).toBe("[muted](no todos)[/]");
+	});
+
+	test("renders single dim done/total line with check", () => {
+		const items: TodoItem[] = [
+			{ id: 1, text: "a", status: "done" },
+			{ id: 2, text: "b", status: "pending" },
+		];
+		expect(renderTodoSummaryLine(items, tagTheme)).toBe(
+			"[muted]Todos 1/2 done ✓[/]",
+		);
 	});
 });
