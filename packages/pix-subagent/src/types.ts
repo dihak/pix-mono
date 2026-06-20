@@ -9,6 +9,8 @@ import type { ThinkingLevel } from "@earendil-works/pi-ai";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { LifetimeUsage } from "./usage.ts";
 
+export type { LifetimeUsage };
+
 export type { ThinkingLevel };
 
 /** Agent type: any string name (built-in defaults or user-defined). */
