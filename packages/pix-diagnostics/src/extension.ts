@@ -3,5 +3,5 @@ import registerDiagnostics from "./diagnostics.ts";
 import { once } from "./once.ts";
 
 export default function (pi: ExtensionAPI): void {
-	once("pix-diagnostics", () => registerDiagnostics(pi));
+	once(pi, "pix-diagnostics", () => registerDiagnostics(pi));
 }

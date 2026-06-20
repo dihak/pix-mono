@@ -3,5 +3,5 @@ import { once } from "./once.ts";
 import registerUpdate from "./update.ts";
 
 export default function (pi: ExtensionAPI): void {
-	once("pix-update", () => registerUpdate(pi));
+	once(pi, "pix-update", () => registerUpdate(pi));
 }

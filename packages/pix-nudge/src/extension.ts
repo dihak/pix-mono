@@ -4,7 +4,7 @@ import { once } from "./once.ts";
 import registerToolsNudge from "./tools.ts";
 
 export default function (pi: ExtensionAPI): void {
-	once("pix-nudge", () => {
+	once(pi, "pix-nudge", () => {
 		registerToolsNudge(pi);
 		registerCapabilityNudge(pi);
 	});

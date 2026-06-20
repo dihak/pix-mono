@@ -3,5 +3,5 @@ import registerFooter from "./footer.ts";
 import { once } from "./once.ts";
 
 export default function (pi: ExtensionAPI): void {
-	once("pix-footer", () => registerFooter(pi));
+	once(pi, "pix-footer", () => registerFooter(pi));
 }

@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-footer",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Pi extension — status bar footer (model, tokens, git, TPS)",
 	"type": "module",
 	"main": "src/index.ts",

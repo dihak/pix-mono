@@ -1,15 +1,25 @@
 /**
- * Idempotency guard for extension activation.
+ * Per-instance idempotency guard for extension activation.
  *
- * pix-core (the meta-package) invokes this package's factory in addition to a
- * possible direct install. Pi's loader uses jiti with `moduleCache: false`, so
- * each load pass re-evaluates modules — a plain module-level flag would not be
- * shared. The dedupe key therefore lives on `globalThis`, which persists for
- * the lifetime of the process across all load passes.
+ * pix-core (the meta-package) invokes this package's factory, and a standalone
+ * install makes Pi invoke it again — sometimes against the SAME `pi`. We must
+ * dedupe that. But Pi rebuilds the extension runtime on /new, /resume, /fork,
+ * and /reload, handing the factory a BRAND-NEW `pi`; that must re-register.
+ *
+ * Keying the registry on the `pi` instance satisfies both: same instance =>
+ * skip, new instance => run. The registry lives on globalThis because jiti
+ * (`moduleCache: false`) re-evaluates this module on every load pass, so a
+ * module-scoped WeakMap would not be shared between the aggregator pass and the
+ * standalone pass within a single session.
  */
-export function once(key: string, fn: () => void): void {
-	const g = globalThis as { __pixLoaded?: Set<string> };
-	const loaded = (g.__pixLoaded ??= new Set<string>());
+export function once(pi: object, key: string, fn: () => void): void {
+	const g = globalThis as { __pixOnce?: WeakMap<object, Set<string>> };
+	const registry = (g.__pixOnce ??= new WeakMap<object, Set<string>>());
+	let loaded = registry.get(pi);
+	if (!loaded) {
+		loaded = new Set<string>();
+		registry.set(pi, loaded);
+	}
 	if (loaded.has(key)) return;
 	loaded.add(key);
 	fn();

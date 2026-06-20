@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-commands",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Pi extension — /diff and /clear commands",
 	"type": "module",
 	"main": "src/index.ts",

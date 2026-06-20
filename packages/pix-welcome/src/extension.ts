@@ -3,5 +3,5 @@ import { once } from "./once.ts";
 import registerWelcome from "./welcome.ts";
 
 export default function (pi: ExtensionAPI): void {
-	once("pix-welcome", () => registerWelcome(pi));
+	once(pi, "pix-welcome", () => registerWelcome(pi));
 }

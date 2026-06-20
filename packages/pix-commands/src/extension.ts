@@ -4,7 +4,7 @@ import registerDiff from "./diff.ts";
 import { once } from "./once.ts";
 
 export default function (pi: ExtensionAPI): void {
-	once("pix-commands", () => {
+	once(pi, "pix-commands", () => {
 		registerDiff(pi);
 		registerClear(pi);
 	});
