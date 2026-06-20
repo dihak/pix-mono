@@ -11,26 +11,36 @@ const tag = (c: string, t: string) => `<${c}>${t}</${c}>`;
 
 describe("renderStatus", () => {
 	it("shows ALL icons in order, accent when enabled", () => {
-		expect(renderStatus({ caveman: true, rtk: true, toon: true }, tag)).toBe(
-			`<accent>${TOOL_ICONS.caveman}</accent>  <accent>${TOOL_ICONS.rtk}</accent>  <accent>${TOOL_ICONS.toon}</accent> `,
+		expect(
+			renderStatus(
+				{ caveman: true, rtk: true, toon: true, ponytail: true },
+				tag,
+			),
+		).toBe(
+			`<accent>${TOOL_ICONS.caveman}</accent>  <accent>${TOOL_ICONS.rtk}</accent>  <accent>${TOOL_ICONS.toon}</accent>  <accent>${TOOL_ICONS.ponytail}</accent> `,
 		);
 	});
 
 	it("dims disabled tools but still shows them", () => {
-		expect(renderStatus({ caveman: false, rtk: true, toon: true }, tag)).toBe(
-			`<dim>${TOOL_ICONS.caveman}</dim>  <accent>${TOOL_ICONS.rtk}</accent>  <accent>${TOOL_ICONS.toon}</accent> `,
+		expect(
+			renderStatus(
+				{ caveman: false, rtk: true, toon: true, ponytail: true },
+				tag,
+			),
+		).toBe(
+			`<dim>${TOOL_ICONS.caveman}</dim>  <accent>${TOOL_ICONS.rtk}</accent>  <accent>${TOOL_ICONS.toon}</accent>  <accent>${TOOL_ICONS.ponytail}</accent> `,
 		);
 	});
 
 	it("all dim when nothing enabled (cell never empty)", () => {
 		expect(renderStatus({}, tag)).toBe(
-			`<dim>${TOOL_ICONS.caveman}</dim>  <dim>${TOOL_ICONS.rtk}</dim>  <dim>${TOOL_ICONS.toon}</dim> `,
+			`<dim>${TOOL_ICONS.caveman}</dim>  <dim>${TOOL_ICONS.rtk}</dim>  <dim>${TOOL_ICONS.toon}</dim>  <dim>${TOOL_ICONS.ponytail}</dim> `,
 		);
 	});
 
 	it("preserves fixed order regardless of insertion order", () => {
 		expect(renderStatus({ toon: true, caveman: true }, tag)).toBe(
-			`<accent>${TOOL_ICONS.caveman}</accent>  <dim>${TOOL_ICONS.rtk}</dim>  <accent>${TOOL_ICONS.toon}</accent> `,
+			`<accent>${TOOL_ICONS.caveman}</accent>  <dim>${TOOL_ICONS.rtk}</dim>  <accent>${TOOL_ICONS.toon}</accent>  <dim>${TOOL_ICONS.ponytail}</dim> `,
 		);
 	});
 });
@@ -55,9 +65,9 @@ describe("OptimizerStatus", () => {
 		status.set("rtk", true, ctx as never);
 		const last = ctx.calls.at(-1)!;
 		expect(last.key).toBe(STATUS_KEY);
-		// caveman + toon still unset (dim), rtk accent.
+		// caveman + toon + ponytail still unset (dim), rtk accent.
 		expect(last.text).toBe(
-			`<dim>${TOOL_ICONS.caveman}</dim>  <accent>${TOOL_ICONS.rtk}</accent>  <dim>${TOOL_ICONS.toon}</dim> `,
+			`<dim>${TOOL_ICONS.caveman}</dim>  <accent>${TOOL_ICONS.rtk}</accent>  <dim>${TOOL_ICONS.toon}</dim>  <dim>${TOOL_ICONS.ponytail}</dim> `,
 		);
 	});
 
@@ -68,7 +78,7 @@ describe("OptimizerStatus", () => {
 		status.set("toon", true, ctx as never);
 		const last = ctx.calls.at(-1)!;
 		expect(last.text).toBe(
-			`<accent>${TOOL_ICONS.caveman}</accent>  <dim>${TOOL_ICONS.rtk}</dim>  <accent>${TOOL_ICONS.toon}</accent> `,
+			`<accent>${TOOL_ICONS.caveman}</accent>  <dim>${TOOL_ICONS.rtk}</dim>  <accent>${TOOL_ICONS.toon}</accent>  <dim>${TOOL_ICONS.ponytail}</dim> `,
 		);
 	});
 
@@ -79,7 +89,7 @@ describe("OptimizerStatus", () => {
 		status.set("rtk", false, ctx as never);
 		const last = ctx.calls.at(-1)!;
 		expect(last.text).toBe(
-			`<dim>${TOOL_ICONS.caveman}</dim>  <dim>${TOOL_ICONS.rtk}</dim>  <dim>${TOOL_ICONS.toon}</dim> `,
+			`<dim>${TOOL_ICONS.caveman}</dim>  <dim>${TOOL_ICONS.rtk}</dim>  <dim>${TOOL_ICONS.toon}</dim>  <dim>${TOOL_ICONS.ponytail}</dim> `,
 		);
 	});
 });

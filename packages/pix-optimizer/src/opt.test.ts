@@ -13,7 +13,12 @@ function fakeHandles(): Record<OptimizerTool, OptimizerHandle> {
 				.filter((v) => v.startsWith(prefix.trim().toLowerCase()))
 				.map((v) => ({ value: v, label: v, description: v })),
 	});
-	return { caveman: mk("caveman"), rtk: mk("rtk"), toon: mk("toon") };
+	return {
+		caveman: mk("caveman"),
+		rtk: mk("rtk"),
+		toon: mk("toon"),
+		ponytail: mk("ponytail"),
+	};
 }
 
 describe("parseInvocation", () => {
@@ -49,7 +54,12 @@ describe("completeInvocation", () => {
 	it("returns all tool names for empty prefix", () => {
 		const handles = fakeHandles();
 		const out = completeInvocation("", handles);
-		expect(out?.map((i) => i.value)).toEqual(["caveman", "rtk", "toon"]);
+		expect(out?.map((i) => i.value)).toEqual([
+			"caveman",
+			"rtk",
+			"toon",
+			"ponytail",
+		]);
 	});
 
 	it("delegates to the tool completer after the name", () => {
@@ -70,6 +80,7 @@ describe("buildOptHelp", () => {
 		expect(help).toContain("/opt caveman help");
 		expect(help).toContain("/opt rtk help");
 		expect(help).toContain("/opt toon help");
+		expect(help).toContain("/opt ponytail help");
 		expect(help).toContain("Usage: /opt <tool> [args]");
 	});
 });

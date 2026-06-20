@@ -2,11 +2,12 @@
  * pix-optimizer — token-optimization suite for Pi Coding Agent.
  *
  * Three tools, combined into one extension + one command:
- *   - caveman: terse-output system prompt
- *   - rtk:     prefixes shell commands with `rtk` + injects RTK prompt
- *   - toon:    jq + TOON guidance for dense JSON (+ bundled skill)
+ *   - caveman:  terse-output system prompt
+ *   - rtk:      prefixes shell commands with `rtk` + injects RTK prompt
+ *   - toon:     jq + TOON guidance for dense JSON (+ bundled skill)
+ *   - ponytail: lazy-senior-dev system prompt (minimal code, YAGNI)
  *
- * They share ONE status-bar cell (⛏ ⚔ ✂, only enabled tools shown) and ONE
+ * They share ONE status-bar cell (󰜐 󰓥 󰗀 󰆐, only enabled tools shown) and ONE
  * command (/opt <tool> [args]). index.ts wires lifecycle hooks via each
  * module, then registers the merged command from their handles.
  */
@@ -15,6 +16,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { caveman } from "./caveman.ts";
 import { json } from "./json.ts";
 import { registerOptCommand } from "./opt.ts";
+import { ponytail } from "./ponytail.ts";
 import { rtk } from "./rtk.ts";
 import {
 	type OptimizerHandle,
@@ -32,6 +34,7 @@ export default function optimizer(pi: ExtensionAPI) {
 		caveman: caveman(pi, status),
 		rtk: rtk(pi, status),
 		toon: json(pi, status),
+		ponytail: ponytail(pi, status),
 	};
 
 	registerOptCommand(pi, handles);

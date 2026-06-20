@@ -81,7 +81,7 @@ export function registerOptCommand(
 	handles: Record<OptimizerTool, OptimizerHandle>,
 ): void {
 	pi.registerCommand("opt", {
-		description: "pix-optimizer: caveman / rtk / toon token tools",
+		description: "pix-optimizer: caveman / rtk / toon / ponytail tools",
 		getArgumentCompletions: (prefix: string) =>
 			completeInvocation(prefix, handles),
 		handler: async (args, ctx) => {

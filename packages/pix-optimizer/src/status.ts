@@ -7,8 +7,8 @@
  * the cell renders only the icons whose tool is currently enabled, in a fixed
  * order, accent-colored. When everything is off the cell is empty.
  *
- *   all on:        ⛏ ⚔ ✂
- *   caveman off:   ⚔ ✂
+ *   all on:        󰜐 󰓥 󰗀 󰆐
+ *   caveman off:   󰓥 󰗀 󰆐
  *   all off:       (empty)
  */
 
@@ -44,16 +44,22 @@ export interface OptimizerHandle {
 export const STATUS_KEY = "pix-optimizer";
 
 /** Tools that participate in the shared indicator, in render order. */
-export type OptimizerTool = "caveman" | "rtk" | "toon";
+export type OptimizerTool = "caveman" | "rtk" | "toon" | "ponytail";
 
 export const TOOL_ICONS: Record<OptimizerTool, string> = {
-	caveman: "⛏",
-	rtk: "⚔",
-	toon: "✂",
+	caveman: "󰜐",
+	rtk: "󰓥",
+	toon: "󰗀",
+	ponytail: "󰆐",
 };
 
 /** Fixed left-to-right order of icons in the cell. */
-const TOOL_ORDER: readonly OptimizerTool[] = ["caveman", "rtk", "toon"];
+const TOOL_ORDER: readonly OptimizerTool[] = [
+	"caveman",
+	"rtk",
+	"toon",
+	"ponytail",
+];
 
 /** Theme color for enabled icons. */
 const ENABLED_COLOR: ThemeColor = "accent";

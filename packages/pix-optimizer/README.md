@@ -4,9 +4,10 @@ Token-optimization suite for Pi Coding Agent. Three tools wired into one
 extension via `src/index.ts`, fronted by a single `/opt` command and one
 shared status-bar cell:
 
-- **Caveman** (`⛏`) — terse-output system prompt
-- **RTK** (`⚔`) — prefixes shell commands with `rtk` + injects RTK prompt
-- **TOON** (`✂`) — jq + TOON guidance for dense JSON (skill lives in pix-skills)
+- **Caveman** (`󰜐`) — terse-output system prompt
+- **RTK** (`󰓥`) — prefixes shell commands with `rtk` + injects RTK prompt
+- **TOON** (`󰗀`) — jq + TOON guidance for dense JSON (skill lives in pix-skills)
+- **Ponytail** (`󰆐`) — lazy-senior-dev system prompt (minimal code, YAGNI)
 
 ## Command
 
@@ -17,16 +18,17 @@ One command routes to every tool:
 /opt caveman <level>  → set caveman level (1/2/3/lite/full/ultra/micro/off/config)
 /opt rtk [on|off]     → toggle RTK rewriting
 /opt toon [on|off]    → toggle jq+TOON guidance
+/opt ponytail <level> → set ponytail level (1/2/3/lite/full/ultra/off/config)
 ```
 
 ## Status bar
 
-A single cell always shows all three icons in a fixed order (`⛏ ⚔ ✂`), color-
+A single cell always shows the enabled icons in a fixed order (`󰜐 󰓥 󰗀 󰆐`), color-
 coded by state: **accent** when the tool is enabled, **dim** when disabled.
 
 ## Features
 
-### Caveman Mode (`⛏`)
+### Caveman Mode (`󰜐`)
 
 Cuts ~75% of output tokens while keeping full technical accuracy.
 
@@ -40,7 +42,7 @@ Cuts ~75% of output tokens while keeping full technical accuracy.
 `/opt caveman config` opens a settings dialog. Default level for new sessions
 and status-bar visibility are saved to `~/.pi/agent/caveman.json`.
 
-### RTK Tool Rewriting (`⚔`)
+### RTK Tool Rewriting (`󰓥`)
 
 Two layers, both active automatically:
 
@@ -61,7 +63,7 @@ Two layers, both active automatically:
 cargo install rtk-ai
 ```
 
-### TOON / JSON Compression (`✂`)
+### TOON / JSON Compression (`󰗀`)
 
 Guidance for handling information-dense JSON via `jq` (query/reshape) and
 `toon` (compress). The system-prompt nudge is injected **only when the user
@@ -78,6 +80,26 @@ The `toon-json` skill (full workflow + when-NOT-to-use guidance) is bundled in
 npm i -g @toon-format/cli
 ```
 
+### Ponytail Mode (`󰆐`)
+
+"Lazy senior dev" mode. Governs **what** the agent builds (minimal code,
+YAGNI), orthogonal to Caveman which governs **how** it talks — they pair. Before
+writing code the agent stops at the first rung that holds: does this need to
+exist → stdlib → native platform → installed dep → one line → minimum that
+works. Validation, error handling, security, and accessibility are never cut.
+
+| # | Name  | Description                          |
+|---|-------|--------------------------------------|
+| 1 | lite  | Name the lazier alternative, you pick |
+| 2 | full  | The ladder enforced (default)        |
+| 3 | ultra | YAGNI extremist                      |
+
+`/opt ponytail config` opens a settings dialog. Default level for new sessions
+and status-bar visibility are saved to `~/.pi/agent/ponytail.json`.
+
+**No install required** — pure prompt injection, no external binary or PATH
+dependency (unlike RTK and TOON).
+
 ## Installation
 
 ```bash
@@ -88,15 +110,16 @@ pi install npm:@xynogen/pix-optimizer
 
 | File              | Role                                                      |
 |-------------------|-----------------------------------------------------------|
-| `src/index.ts`    | Wires the three tools + shared status, registers `/opt`   |
+| `src/index.ts`    | Wires the four tools + shared status, registers `/opt`    |
 | `src/opt.ts`      | The `/opt` router: parse, complete, dispatch              |
 | `src/status.ts`   | Shared status-bar cell + `OptimizerHandle` contract       |
 | `src/caveman.ts`  | Caveman logic, levels, prompt, settings dialog            |
 | `src/rtk.ts`      | RTK prompt + bash command rewriting                       |
 | `src/json.ts`     | jq+TOON guidance, heuristics, system-prompt injection     |
+| `src/ponytail.ts` | Ponytail logic, levels, prompt, settings dialog           |
 
 Each tool registers its own lifecycle hooks and exposes an `OptimizerHandle`
-that `/opt` dispatches to. All three share one `OptimizerStatus`.
+that `/opt` dispatches to. All four share one `OptimizerStatus`.
 
 ## Development
 
@@ -116,9 +139,14 @@ This package was built by merging two upstream Pi community packages:
   approach: prompt injection + live bash command rewriting that handles chained commands
   (`&&`, `||`, `;`, `|`).
 
-Both upstreams are MIT licensed. Neither codebase was copied directly — the logic was
+- **Ponytail mode** — ruleset adapted from [`git:github.com/DietrichGebert/ponytail`](https://github.com/DietrichGebert/ponytail),
+  the "lazy senior dev" skill. Reimplemented here as a native `/opt` tool with three intensity
+  levels, a settings dialog, and per-session persistence — no external hooks or files. The
+  ruleset (the YAGNI ladder + safety carve-outs) is rewritten as a system-prompt fragment.
+
+All upstreams are MIT licensed. No codebase was copied directly — the logic was
 rewritten and combined into a single extension with a unified `/opt` command and shared status bar.
-This package does not sync back to either upstream.
+This package does not sync back to any upstream.
 
 ## Full distro
 
