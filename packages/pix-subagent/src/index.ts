@@ -191,9 +191,9 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 		}
 	});
 
-	pi.on("tool_execution_start", (_event, ctx) => {
-		widget.setUICtx(ctx.ui as Parameters<typeof widget.setUICtx>[0]);
+	pi.on("turn_start", (_event, ctx) => {
 		widget.onTurnStart();
+		widget.setUICtx(ctx.ui as Parameters<typeof widget.setUICtx>[0]);
 		widget.ensureTimer();
 	});
 

@@ -180,10 +180,10 @@ If the target is already known, use a direct tool — \`read\` for a known path,
 
 ## Usage notes
 - Always include a short (3-5 word) description summarizing what the agent will do (shown in UI).
-- When you launch multiple agents for independent work, send them in a single message with multiple tool uses, with run_in_background: true on each, so they run concurrently.
+- When you launch multiple agents for independent work, send them in a single message with multiple tool uses, so they run concurrently.
 - When the agent is done, it returns a single message. The result is not visible to the user — to show the user, send a text message with a concise summary.
 - Trust but verify: an agent's summary describes what it intended to do, not what it did. When an agent writes or edits code, check the actual changes before reporting work as done.
-- Use run_in_background for work you don't need immediately. You will be notified when it completes — do NOT poll or sleep waiting for it.
+- Use run_in_background: true only when you explicitly do not need to see the output inline (e.g. fire-and-forget background tasks). Default is foreground — the agent streams inline and you see its work as it runs.
 - Use resume with an agent ID to continue a previous agent's work.
 - Use agent_steer to send mid-run messages to a running background agent.
 - Use model to specify a model from the available models list above (provider/id or fuzzy e.g. "haiku").
