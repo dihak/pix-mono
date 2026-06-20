@@ -11,10 +11,10 @@
 import { truncateToWidth } from "@earendil-works/pi-tui";
 import type { AgentManager } from "../agent-manager.ts";
 import { getConfig } from "../agent-types.ts";
-import type { AgentInvocation, SubagentType } from "../types.ts";
-import { getLifetimeTotal, getSessionContextPercent } from "../usage.ts";
 import type { AgentActivity, AgentDetails, Theme } from "../tools.ts";
 import { formatMs, formatTokens, formatTurns, SPINNER } from "../tools.ts";
+import type { AgentInvocation, SubagentType } from "../types.ts";
+import { getLifetimeTotal, getSessionContextPercent } from "../usage.ts";
 
 export type { AgentActivity, AgentDetails, Theme };
 export { formatMs, formatTokens, formatTurns, SPINNER };
@@ -23,7 +23,12 @@ export { formatMs, formatTokens, formatTurns, SPINNER };
 
 const MAX_WIDGET_LINES = 12;
 
-export const ERROR_STATUSES = new Set(["error", "aborted", "steered", "stopped"]);
+export const ERROR_STATUSES = new Set([
+	"error",
+	"aborted",
+	"steered",
+	"stopped",
+]);
 
 const TOOL_DISPLAY: Record<string, string> = {
 	read: "reading",
@@ -41,7 +46,12 @@ export type UICtx = {
 	setStatus(key: string, text: string | undefined): void;
 	setWidget(
 		key: string,
-		content: undefined | ((tui: unknown, theme: Theme) => { render(): string[]; invalidate(): void }),
+		content:
+			| undefined
+			| ((
+					tui: unknown,
+					theme: Theme,
+			  ) => { render(): string[]; invalidate(): void }),
 		options?: { placement?: "aboveEditor" | "belowEditor" },
 	): void;
 };
@@ -73,9 +83,10 @@ export function getPromptModeLabel(type: SubagentType): string | undefined {
 	return getConfig(type).promptMode === "append" ? "twin" : undefined;
 }
 
-export function buildInvocationTags(
-	invocation: AgentInvocation | undefined,
-): { modelName?: string; tags: string[] } {
+export function buildInvocationTags(invocation: AgentInvocation | undefined): {
+	modelName?: string;
+	tags: string[];
+} {
 	const tags: string[] = [];
 	if (!invocation) return { tags };
 	if (invocation.thinking) tags.push(`thinking: ${invocation.thinking}`);
@@ -87,12 +98,19 @@ export function buildInvocationTags(
 }
 
 function truncateLine(text: string, len = 60): string {
-	const line = text.split("\n").find((l) => l.trim())?.trim() ?? "";
+	const line =
+		text
+			.split("\n")
+			.find((l) => l.trim())
+			?.trim() ?? "";
 	if (line.length <= len) return line;
-	return line.slice(0, len) + "…";
+	return `${line.slice(0, len)}…`;
 }
 
-export function describeActivity(activeTools: Map<string, string>, responseText?: string): string {
+export function describeActivity(
+	activeTools: Map<string, string>,
+	responseText?: string,
+): string {
 	if (activeTools.size > 0) {
 		const groups = new Map<string, number>();
 		for (const toolName of activeTools.values()) {
@@ -103,7 +121,7 @@ export function describeActivity(activeTools: Map<string, string>, responseText?
 		for (const [action, count] of groups) {
 			parts.push(count > 1 ? `${action} ${count}×` : action);
 		}
-		return parts.join(", ") + "…";
+		return `${parts.join(", ")}…`;
 	}
 	if (responseText?.trim()) return truncateLine(responseText);
 	return "thinking…";
@@ -150,7 +168,9 @@ export class AgentWidget {
 
 	private shouldShowFinished(agentId: string, status: string): boolean {
 		const age = this.finishedTurnAge.get(agentId) ?? 0;
-		const maxAge = ERROR_STATUSES.has(status) ? AgentWidget.ERROR_LINGER_TURNS : 1;
+		const maxAge = ERROR_STATUSES.has(status)
+			? AgentWidget.ERROR_LINGER_TURNS
+			: 1;
 		return age < maxAge;
 	}
 
@@ -161,7 +181,17 @@ export class AgentWidget {
 	}
 
 	private renderFinishedLine(
-		a: { id: string; type: SubagentType; status: string; description: string; toolUses: number; startedAt: number; completedAt?: number; error?: string; invocation?: AgentInvocation },
+		a: {
+			id: string;
+			type: SubagentType;
+			status: string;
+			description: string;
+			toolUses: number;
+			startedAt: number;
+			completedAt?: number;
+			error?: string;
+			invocation?: AgentInvocation;
+		},
 		theme: Theme,
 	): string {
 		const name = getDisplayName(a.type);
@@ -170,7 +200,7 @@ export class AgentWidget {
 
 		// model label (the pix twist — always shown)
 		const modelLabel = a.invocation?.modelName
-			? " " + theme.fg("muted", `[${a.invocation.modelName}]`)
+			? ` ${theme.fg("muted", `[${a.invocation.modelName}]`)}`
 			: "";
 		const modeTag = modeLabel ? ` ${theme.fg("dim", `(${modeLabel})`)}` : "";
 
@@ -196,22 +226,32 @@ export class AgentWidget {
 
 		const parts: string[] = [];
 		const activity = this.agentActivity.get(a.id);
-		if (activity) parts.push(formatTurns(activity.turnCount, activity.maxTurns));
-		if (a.toolUses > 0) parts.push(`${a.toolUses} tool use${a.toolUses === 1 ? "" : "s"}`);
+		if (activity)
+			parts.push(formatTurns(activity.turnCount, activity.maxTurns));
+		if (a.toolUses > 0)
+			parts.push(`${a.toolUses} tool use${a.toolUses === 1 ? "" : "s"}`);
 		parts.push(duration);
 
 		return `${icon} ${theme.fg("dim", name)}${modelLabel}${modeTag}  ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`;
 	}
 
-	private renderWidget(tui: { terminal: { columns: number }; requestRender?: () => void }, theme: Theme): string[] {
+	private renderWidget(
+		tui: { terminal: { columns: number }; requestRender?: () => void },
+		theme: Theme,
+	): string[] {
 		const allAgents = this.manager.listAgents();
 		const running = allAgents.filter((a) => a.status === "running");
 		const queued = allAgents.filter((a) => a.status === "queued");
 		const finished = allAgents.filter(
-			(a) => a.status !== "running" && a.status !== "queued" && a.completedAt && this.shouldShowFinished(a.id, a.status),
+			(a) =>
+				a.status !== "running" &&
+				a.status !== "queued" &&
+				a.completedAt &&
+				this.shouldShowFinished(a.id, a.status),
 		);
 
-		if (running.length === 0 && queued.length === 0 && finished.length === 0) return [];
+		if (running.length === 0 && queued.length === 0 && finished.length === 0)
+			return [];
 
 		const w = tui.terminal.columns;
 		const truncate = (line: string) => truncateToWidth(line, w);
@@ -222,7 +262,11 @@ export class AgentWidget {
 
 		const finishedLines: string[] = [];
 		for (const a of finished) {
-			finishedLines.push(truncate(theme.fg("dim", "├─") + " " + this.renderFinishedLine(a, theme)));
+			finishedLines.push(
+				truncate(
+					`${theme.fg("dim", "├─")} ${this.renderFinishedLine(a, theme)}`,
+				),
+			);
 		}
 
 		const runningLines: string[][] = [];
@@ -231,7 +275,7 @@ export class AgentWidget {
 			const modeLabel = getPromptModeLabel(a.type);
 			// model label inline (the pix twist)
 			const modelLabel = a.invocation?.modelName
-				? " " + theme.fg("muted", `[${a.invocation.modelName}]`)
+				? ` ${theme.fg("muted", `[${a.invocation.modelName}]`)}`
 				: "";
 			const modeTag = modeLabel ? ` ${theme.fg("dim", `(${modeLabel})`)}` : "";
 			const elapsed = formatMs(Date.now() - a.startedAt);
@@ -239,22 +283,37 @@ export class AgentWidget {
 			const bg = this.agentActivity.get(a.id);
 			const toolUses = bg?.toolUses ?? a.toolUses;
 			const tokens = getLifetimeTotal(bg?.lifetimeUsage);
-			const contextPercent = bg?.session ? getSessionContextPercent(bg.session as Parameters<typeof getSessionContextPercent>[0]) : null;
-			const tokenText = tokens > 0 ? formatSessionTokens(tokens, contextPercent, theme, a.compactionCount) : "";
+			const contextPercent = bg?.session
+				? getSessionContextPercent(
+						bg.session as Parameters<typeof getSessionContextPercent>[0],
+					)
+				: null;
+			const tokenText =
+				tokens > 0
+					? formatSessionTokens(
+							tokens,
+							contextPercent,
+							theme,
+							a.compactionCount,
+						)
+					: "";
 
 			const parts: string[] = [];
 			if (bg) parts.push(formatTurns(bg.turnCount, bg.maxTurns));
-			if (toolUses > 0) parts.push(`${toolUses} tool use${toolUses === 1 ? "" : "s"}`);
+			if (toolUses > 0)
+				parts.push(`${toolUses} tool use${toolUses === 1 ? "" : "s"}`);
 			if (tokenText) parts.push(tokenText);
 			parts.push(elapsed);
 			const statsText = parts.join(" · ");
 
-			const activity = bg ? describeActivity(bg.activeTools, bg.responseText) : "thinking…";
+			const activity = bg
+				? describeActivity(bg.activeTools, bg.responseText)
+				: "thinking…";
 
 			runningLines.push([
 				truncate(
 					theme.fg("dim", "├─") +
-					` ${theme.fg("accent", frame)} ${theme.bold(name)}${modelLabel}${modeTag}  ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)}`,
+						` ${theme.fg("accent", frame)} ${theme.bold(name)}${modelLabel}${modeTag}  ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)}`,
 				),
 				truncate(theme.fg("dim", "│  ") + theme.fg("dim", `  ⎿  ${activity}`)),
 			]);
@@ -262,14 +321,22 @@ export class AgentWidget {
 
 		const queuedLine =
 			queued.length > 0
-				? truncate(theme.fg("dim", "├─") + ` ${theme.fg("muted", "◦")} ${theme.fg("dim", `${queued.length} queued`)}`)
+				? truncate(
+						theme.fg("dim", "├─") +
+							` ${theme.fg("muted", "◦")} ${theme.fg("dim", `${queued.length} queued`)}`,
+					)
 				: undefined;
 
 		const maxBody = MAX_WIDGET_LINES - 1;
-		const totalBody = finishedLines.length + runningLines.length * 2 + (queuedLine ? 1 : 0);
+		const totalBody =
+			finishedLines.length + runningLines.length * 2 + (queuedLine ? 1 : 0);
 
 		const lines: string[] = [
-			truncate(theme.fg(headingColor, headingIcon) + " " + theme.fg(headingColor, "Agents")),
+			truncate(
+				theme.fg(headingColor, headingIcon) +
+					" " +
+					theme.fg(headingColor, "Agents"),
+			),
 		];
 
 		if (totalBody <= maxBody) {
@@ -292,13 +359,24 @@ export class AgentWidget {
 			let hiddenFinished = 0;
 
 			for (const pair of runningLines) {
-				if (budget >= 2) { lines.push(...pair); budget -= 2; }
-				else { hiddenRunning++; }
+				if (budget >= 2) {
+					lines.push(...pair);
+					budget -= 2;
+				} else {
+					hiddenRunning++;
+				}
 			}
-			if (queuedLine && budget >= 1) { lines.push(queuedLine); budget--; }
+			if (queuedLine && budget >= 1) {
+				lines.push(queuedLine);
+				budget--;
+			}
 			for (const fl of finishedLines) {
-				if (budget >= 1) { lines.push(fl); budget--; }
-				else { hiddenFinished++; }
+				if (budget >= 1) {
+					lines.push(fl);
+					budget--;
+				} else {
+					hiddenFinished++;
+				}
 			}
 
 			const overflowParts: string[] = [];
@@ -307,7 +385,7 @@ export class AgentWidget {
 			lines.push(
 				truncate(
 					theme.fg("dim", "└─") +
-					` ${theme.fg("dim", `+${hiddenRunning + hiddenFinished} more (${overflowParts.join(", ")})`)}`,
+						` ${theme.fg("dim", `+${hiddenRunning + hiddenFinished} more (${overflowParts.join(", ")})`)}`,
 				),
 			);
 		}
@@ -325,7 +403,8 @@ export class AgentWidget {
 		for (const a of allAgents) {
 			if (a.status === "running") runningCount++;
 			else if (a.status === "queued") queuedCount++;
-			else if (a.completedAt && this.shouldShowFinished(a.id, a.status)) hasFinished = true;
+			else if (a.completedAt && this.shouldShowFinished(a.id, a.status))
+				hasFinished = true;
 		}
 		const hasActive = runningCount > 0 || queuedCount > 0;
 
@@ -344,7 +423,8 @@ export class AgentWidget {
 				this.widgetInterval = undefined;
 			}
 			for (const [id] of this.finishedTurnAge) {
-				if (!allAgents.some((a) => a.id === id)) this.finishedTurnAge.delete(id);
+				if (!allAgents.some((a) => a.id === id))
+					this.finishedTurnAge.delete(id);
 			}
 			return;
 		}
@@ -371,7 +451,13 @@ export class AgentWidget {
 					this.tui = tui;
 					return {
 						render: () =>
-							this.renderWidget(tui as { terminal: { columns: number }; requestRender?: () => void }, theme),
+							this.renderWidget(
+								tui as {
+									terminal: { columns: number };
+									requestRender?: () => void;
+								},
+								theme,
+							),
 						invalidate: () => {
 							this.widgetRegistered = false;
 							this.tui = undefined;
@@ -382,7 +468,9 @@ export class AgentWidget {
 			);
 			this.widgetRegistered = true;
 		} else {
-			(this.tui as { requestRender?: () => void } | undefined)?.requestRender?.();
+			(
+				this.tui as { requestRender?: () => void } | undefined
+			)?.requestRender?.();
 		}
 	}
 

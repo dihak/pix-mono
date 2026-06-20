@@ -9,15 +9,17 @@ import type { ThinkingLevel } from "@earendil-works/pi-ai";
 import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { LifetimeUsage } from "./usage.ts";
 
-export type { LifetimeUsage };
-
-export type { ThinkingLevel };
+export type { LifetimeUsage, ThinkingLevel };
 
 /** Agent type: any string name (built-in defaults or user-defined). */
 export type SubagentType = string;
 
 /** Names of the three embedded default agents. */
-export const DEFAULT_AGENT_NAMES = ["general-purpose", "Explore", "Plan"] as const;
+export const DEFAULT_AGENT_NAMES = [
+	"general-purpose",
+	"Explore",
+	"Plan",
+] as const;
 
 /** Unified agent configuration — used for both default and user-defined agents. */
 export interface AgentConfig {
@@ -58,7 +60,14 @@ export interface AgentRecord {
 	id: string;
 	type: SubagentType;
 	description: string;
-	status: "queued" | "running" | "completed" | "steered" | "aborted" | "stopped" | "error";
+	status:
+		| "queued"
+		| "running"
+		| "completed"
+		| "steered"
+		| "aborted"
+		| "stopped"
+		| "error";
 	result?: string;
 	error?: string;
 	toolUses: number;

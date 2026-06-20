@@ -12,20 +12,20 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { loadCustomAgents } from "./custom-agents.ts";
-import { registerAgents } from "./agent-types.ts";
 import { AgentManager } from "./agent-manager.ts";
+import { registerAgents } from "./agent-types.ts";
+import { loadCustomAgents } from "./custom-agents.ts";
 import { listAvailable } from "./model-resolver.ts";
 import {
-	createAgentTool,
+	type AgentActivity,
 	createAgentResultTool,
 	createAgentSteerTool,
-	type AgentActivity,
+	createAgentTool,
 } from "./tools.ts";
-import { AgentWidget } from "./ui/widget.ts";
-import { registerNotificationRenderer } from "./ui/notification.ts";
-import { getLifetimeTotal } from "./usage.ts";
 import type { NotificationDetails } from "./types.ts";
+import { registerNotificationRenderer } from "./ui/notification.ts";
+import { AgentWidget } from "./ui/widget.ts";
+import { getLifetimeTotal } from "./usage.ts";
 
 const EXTENSION_KEY = "pix-subagent";
 
@@ -37,7 +37,11 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 	const g = globalThis as Record<string, unknown>;
 	const prevCleanup = g[CLEANUP_KEY];
 	if (typeof prevCleanup === "function") {
-		try { (prevCleanup as () => void)(); } catch { /* best effort */ }
+		try {
+			(prevCleanup as () => void)();
+		} catch {
+			/* best effort */
+		}
 	}
 
 	// ── Agent registry ─────────────────────────────────────────────────────────
@@ -56,15 +60,25 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 
 	function scheduleNudge(key: string, send: () => void) {
 		cancelNudge(key);
-		pendingNudges.set(key, setTimeout(() => {
-			pendingNudges.delete(key);
-			try { send(); } catch { /* ignore stale context errors */ }
-		}, NUDGE_HOLD_MS));
+		pendingNudges.set(
+			key,
+			setTimeout(() => {
+				pendingNudges.delete(key);
+				try {
+					send();
+				} catch {
+					/* ignore stale context errors */
+				}
+			}, NUDGE_HOLD_MS),
+		);
 	}
 
 	function cancelNudge(key: string) {
 		const t = pendingNudges.get(key);
-		if (t != null) { clearTimeout(t); pendingNudges.delete(key); }
+		if (t != null) {
+			clearTimeout(t);
+			pendingNudges.delete(key);
+		}
 	}
 
 	// ── AgentManager ──────────────────────────────────────────────────────────
@@ -82,7 +96,9 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 			const totalTokens = getLifetimeTotal(record.lifetimeUsage);
 			const activity = agentActivity.get(record.id);
 			const resultPreview = record.result
-				? record.result.length > 500 ? record.result.slice(0, 500) + "…" : record.result
+				? record.result.length > 500
+					? `${record.result.slice(0, 500)}…`
+					: record.result
 				: "No output.";
 
 			const details: NotificationDetails = {
@@ -94,13 +110,18 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 				turnCount: activity?.turnCount ?? 0,
 				maxTurns: activity?.maxTurns,
 				totalTokens,
-				durationMs: record.completedAt ? record.completedAt - record.startedAt : 0,
+				durationMs: record.completedAt
+					? record.completedAt - record.startedAt
+					: 0,
 				error: record.error,
 				resultPreview,
 			};
 
 			scheduleNudge(record.id, () => {
-				if (record.resultConsumed) { widget.update(); return; }
+				if (record.resultConsumed) {
+					widget.update();
+					return;
+				}
 				pi.sendMessage<NotificationDetails>(
 					{
 						customType: "subagent-notification",
@@ -116,7 +137,9 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 		},
 		4, // maxConcurrent
 		// onStart
-		(_record) => { widget.update(); },
+		(_record) => {
+			widget.update();
+		},
 	);
 
 	// ── Widget ─────────────────────────────────────────────────────────────────
@@ -135,7 +158,13 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 
 	function registerTools() {
 		pi.registerTool(
-			createAgentTool(pi as Parameters<typeof manager.spawnAndWait>[0], manager, agentActivity, reloadCustomAgents, currentModelList),
+			createAgentTool(
+				pi as Parameters<typeof manager.spawnAndWait>[0],
+				manager,
+				agentActivity,
+				reloadCustomAgents,
+				currentModelList,
+			),
 		);
 		pi.registerTool(createAgentResultTool(manager, agentActivity));
 		pi.registerTool(createAgentSteerTool(manager));
@@ -154,7 +183,11 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 			currentModelList = newList;
 			// Re-register tools with fresh description
 			// ponytail: if pi throws on duplicate tool names, skip the re-register
-			try { registerTools(); } catch { /* description may be stale; non-fatal */ }
+			try {
+				registerTools();
+			} catch {
+				/* description may be stale; non-fatal */
+			}
 		}
 	});
 

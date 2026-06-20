@@ -5,7 +5,11 @@ const registry = {
 	find: (p: string, id: string) => ({ provider: p, id, name: id }),
 	getAll: () => [
 		{ provider: "anthropic", id: "claude-haiku-4-5", name: "Claude Haiku 4.5" },
-		{ provider: "anthropic", id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
+		{
+			provider: "anthropic",
+			id: "claude-sonnet-4-6",
+			name: "Claude Sonnet 4.6",
+		},
 	],
 };
 
