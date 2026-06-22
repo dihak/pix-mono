@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-display",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Pi core extension — paste chip rendering and thinking block display",
 	"type": "module",
 	"main": "src/index.ts",

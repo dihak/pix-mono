@@ -52,6 +52,10 @@ const PATH_RE = /(^|[^\w/])((?:~|\/)[^\s,;'"(){}[\]]+)/g;
 // Pi's marker grammar — must match exactly for atomic segmentation.
 // e.g. `[paste #1 58 chars]` or `[paste #2 +42 lines]`
 const MARKER_RE = /\[paste #(\d+)( (\+(\d+) lines|(\d+) chars))?\]/g;
+// Cursor inversion codes the TUI Editor embeds when the cursor intersects
+// a marker. Strip them before matching — Pi re-wraps each render call, so
+// width-preserving is not required.
+const CURSOR_RE = /\x1b\[[0-9;]*m/g;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -107,7 +111,10 @@ function replaceImagePaths(
  * Width-preserving is not required — Pi re-wraps each render call.
  */
 export function restyleMarkers(line: string, imageIds: Set<number>): string {
-	return line.replace(
+	// Strip cursor inversion codes the TUI embeds when the cursor
+	// intersects a marker — plain MARKER_RE handles the rest.
+	const clean = line.includes("\x1b") ? line.replace(CURSOR_RE, "") : line;
+	return clean.replace(
 		MARKER_RE,
 		(_full, idStr, _g2, _g3, linesStr, charsStr) => {
 			const id = Number.parseInt(idStr, 10);

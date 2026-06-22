@@ -77,6 +77,26 @@ describe("paste-chips restyleMarkers", () => {
 			const result = restyleMarkers(line, new Set());
 			expect(stripAnsi(result)).toBe("󰉿 text 500 chars");
 		});
+
+		it("restyles markers with cursor inversion codes inside", () => {
+			// Cursor at '5' inside the char count: [paste #1 \x1b[7m5\x1b[0m8 chars]
+			const line = "[paste #1 \x1b[7m5\x1b[0m8 chars]";
+			const result = restyleMarkers(line, new Set());
+			expect(stripAnsi(result)).toBe("󰉿 text 58 chars");
+		});
+
+		it("restyles image markers with cursor codes at bracket", () => {
+			const imageIds = new Set([2]);
+			const line = "\x1b[7m[\x1b[0mpaste #2 99 chars\x1b[7m]\x1b[0m";
+			const result = restyleMarkers(line, imageIds);
+			expect(stripAnsi(result)).toBe("󰋩 image #2");
+		});
+
+		it("restyles lines marker with cursor codes inside", () => {
+			const line = "[paste #3 \x1b[7m+\x1b[0m42 lines]";
+			const result = restyleMarkers(line, new Set());
+			expect(stripAnsi(result)).toBe("󰉿 text 42 lines");
+		});
 	});
 });
 
