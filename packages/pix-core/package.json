@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-core",
-	"version": "0.4.8",
+	"version": "0.4.9",
 	"description": "Pi extension bundle — installs and activates all core pix-* extensions",
 	"type": "module",
 	"main": "src/extension.ts",
@@ -38,6 +38,7 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@xynogen/pix-data": "*",
 		"@xynogen/pix-welcome": "*",
 		"@xynogen/pix-footer": "*",
 		"@xynogen/pix-diagnostics": "*",

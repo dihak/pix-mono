@@ -15,6 +15,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import registerAsk from "@xynogen/pix-ask/src/index.ts";
 import registerBash from "@xynogen/pix-bash/src/extension.ts";
 import registerCommands from "@xynogen/pix-commands/src/extension.ts";
+import registerData from "@xynogen/pix-data/src/index.ts";
 import registerDiagnostics from "@xynogen/pix-diagnostics/src/extension.ts";
 import registerDisplay from "@xynogen/pix-display/src/index.ts";
 import registerEdit from "@xynogen/pix-edit/src/extension.ts";
@@ -41,6 +42,7 @@ import registerWrite from "@xynogen/pix-write/src/extension.ts";
 type Factory = (pi: never) => void;
 
 const MEMBERS: Factory[] = [
+	registerData,
 	registerWelcome,
 	registerFooter,
 	registerModels,
