@@ -18,7 +18,6 @@ import { checkboxGlyphs, selectionGlyph } from "./glyphs.js";
 import { safeMarkdownTheme, sentinelsFor } from "./helpers.js";
 import type { OptionData, Params, QuestionData } from "./schema.js";
 import {
-	SENTINEL_CHAT,
 	SENTINEL_FREEFORM,
 	SENTINEL_NEXT,
 	SEPARATOR,
@@ -579,13 +578,6 @@ export class AskQuestionnaire extends Container {
 				: t.fg("dim", "type to filter");
 			lines.push(row(`${t.fg("accent", "Filter:")} ${searchVal}`));
 		}
-
-		// Chat sentinel
-		const chatLabel =
-			this.selectedOptionIndex === -999
-				? t.fg("accent", t.bold(SENTINEL_CHAT))
-				: t.fg("dim", SENTINEL_CHAT);
-		lines.push(row(`  ${t.fg("dim", "💬")} ${chatLabel}`));
 
 		// Options (with optional split-pane preview)
 		const optionLines = this.renderOptions(useSplit ? leftWidth : width);

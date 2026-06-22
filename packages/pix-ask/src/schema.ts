@@ -45,7 +45,7 @@ export const QuestionSchema = Type.Object({
 		minItems: MIN_OPTIONS,
 		maxItems: MAX_OPTIONS,
 		description:
-			"2-4 options. 'Type something.' and 'Chat about this' are auto-appended.",
+			"2-4 options. 'Type something.' is auto-appended for single-select.",
 	}),
 	multiSelect: Type.Optional(
 		Type.Boolean({

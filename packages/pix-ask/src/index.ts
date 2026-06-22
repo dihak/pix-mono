@@ -11,7 +11,6 @@ import {
 	MAX_QUESTIONS,
 	MIN_OPTIONS,
 	ParamsSchema,
-	SENTINEL_CHAT,
 	SENTINEL_FREEFORM,
 } from "./schema.js";
 import type { QuestionAnswer, QuestionnaireResult } from "./types.js";
@@ -42,8 +41,8 @@ export default function registerAsk(pi: ExtensionAPI): void {
 			promptSnippet: `Ask the user up to ${MAX_QUESTIONS} structured questions (${MIN_OPTIONS}-${MAX_OPTIONS} options each) when requirements are ambiguous`,
 			promptGuidelines: [
 				`Use ask whenever the user's request is underspecified and you cannot proceed without concrete decisions — you can ask up to ${MAX_QUESTIONS} questions per invocation.`,
-				`Each question MUST have ${MIN_OPTIONS}-${MAX_OPTIONS} options. Every option requires a concise label (1-5 words) and a description explaining what the choice means or its trade-offs. The user can additionally type a custom answer ("${SENTINEL_FREEFORM}" row is appended automatically to single-select questions) or pick "${SENTINEL_CHAT}" to abandon the questionnaire.`,
-				`Set multiSelect: true when multiple answers are valid; this suppresses the "${SENTINEL_FREEFORM}" row. Provide an options[].preview markdown string when an option benefits from richer side-by-side context (mockups, code snippets, diagrams, configs) — single-select only. NOTE: any non-empty preview on a single-select question ALSO suppresses the "${SENTINEL_FREEFORM}" row (no room in the side-by-side layout); "${SENTINEL_CHAT}" remains the escape hatch. If you recommend a specific option, make it the first option and append "(Recommended)" to its label.`,
+				`Each question MUST have ${MIN_OPTIONS}-${MAX_OPTIONS} options. Every option requires a concise label (1-5 words) and a description explaining what the choice means or its trade-offs. The user can additionally type a custom answer ("${SENTINEL_FREEFORM}" row is appended automatically to single-select questions).`,
+				`Set multiSelect: true when multiple answers are valid; this suppresses the "${SENTINEL_FREEFORM}" row. Provide an options[].preview markdown string when an option benefits from richer side-by-side context (mockups, code snippets, diagrams, configs) — single-select only. NOTE: any non-empty preview on a single-select question ALSO suppresses the "${SENTINEL_FREEFORM}" row (no room in the side-by-side layout). If you recommend a specific option, make it the first option and append "(Recommended)" to its label.`,
 				"Do not stack multiple ask calls back-to-back — group all clarifying questions into one invocation.",
 			],
 			executionMode: "sequential",
