@@ -131,8 +131,6 @@ const RTK_COMMANDS = new Set([
 	"kubectl",
 	"aws",
 	"psql",
-	"curl",
-	"wget",
 	"wc",
 	"prisma",
 	"dotnet",
