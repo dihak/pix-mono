@@ -5,7 +5,8 @@
  *   "confirm" — SelectList only. Used by pix-gate for command gating.
  *   "sudo"    — SelectList → masked password input. Used by pix-sudo.
  *
- * Both modes share: colored border, title, body lines, countdown.
+ * Both modes share: rounded modal frame (╭─╮╰─╯), solid bg, accent border,
+ * title, body lines, optional countdown. Same visual style as pix-ask.
  *
  * Design goals:
  *   - Pure function — no side effects, no global state.
@@ -13,14 +14,8 @@
  *   - Single source of truth for the overlay look across pix-gate and pix-sudo.
  */
 
-import { DynamicBorder } from "@earendil-works/pi-coding-agent";
-import {
-	Box,
-	Input,
-	type SelectItem,
-	SelectList,
-	Text,
-} from "@earendil-works/pi-tui";
+import { Input, type SelectItem, SelectList } from "@earendil-works/pi-tui";
+import { frameLines, modalWidth, selectListTheme } from "./modal-frame.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -122,6 +117,67 @@ class MaskedInput extends Input {
 	}
 }
 
+// ── Renderer ──────────────────────────────────────────────────────────────────
+
+/** Build body lines for the current stage, rendered into frameLines. */
+function buildLines(opts: {
+	theme: OverlayTheme;
+	accent: string;
+	config: OverlayConfig;
+	stage: "select" | "password";
+	selectList: SelectList;
+	maskedInput: MaskedInput;
+	countdownLine: string | undefined;
+	width: number;
+}): string[] {
+	const {
+		theme,
+		accent,
+		config,
+		stage,
+		selectList,
+		maskedInput,
+		countdownLine,
+		width,
+	} = opts;
+	const inner = width - 4; // CHROME = 2 border + 2 padding
+	const lines: string[] = [];
+
+	// Title
+	lines.push(theme.fg(accent, theme.bold(config.title)));
+
+	// Body
+	for (const line of config.body ?? []) {
+		lines.push(theme.fg("text", line));
+	}
+
+	// Divider after title/body
+	lines.push(theme.fg("dim", "─".repeat(inner)));
+
+	// Countdown
+	if (countdownLine !== undefined) lines.push(countdownLine);
+
+	// Select or password stage
+	if (stage === "select") {
+		const listLines = selectList.render(inner);
+		for (const l of listLines) lines.push(l);
+		lines.push("");
+		lines.push(theme.fg("dim", "↑↓ navigate • enter select • esc deny"));
+	} else {
+		const label =
+			config.mode === "sudo"
+				? (config.passwordLabel ?? "Sudo password:")
+				: "Password:";
+		lines.push(theme.fg("muted", label));
+		const inputLines = maskedInput.render(inner);
+		for (const l of inputLines) lines.push(l);
+		lines.push("");
+		lines.push(theme.fg("dim", "enter confirm • esc cancel"));
+	}
+
+	return lines;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 /**
@@ -171,9 +227,9 @@ export function showOverlay(
 
 		ui.custom<OverlayResult>(
 			(tui, theme, _kb, done) => {
-				// ── state ───────────────────────────────────────────────────────
 				type Stage = "select" | "password";
 				let stage: Stage = "select";
+				let countdownLine: string | undefined;
 
 				// ── components ──────────────────────────────────────────────────
 				const selectItems: SelectItem[] = choices.map((c) => ({
@@ -182,32 +238,12 @@ export function showOverlay(
 					description: c.description,
 				}));
 
-				const selectList = new SelectList(selectItems, selectItems.length, {
-					selectedPrefix: (t) => theme.fg(accent, t),
-					selectedText: (t) => theme.fg(accent, t),
-					description: (t) => theme.fg("muted", t),
-					scrollInfo: (t) => theme.fg("dim", t),
-					noMatch: (t) => theme.fg("warning", t),
-				});
-
+				const selectList = new SelectList(
+					selectItems,
+					selectItems.length,
+					selectListTheme(theme, accent),
+				);
 				const maskedInput = new MaskedInput();
-				const passwordHint = new Text("", 1, 0);
-				const helpText = new Text("", 1, 0);
-				const countdownText = new Text("", 1, 0);
-
-				// ── container ───────────────────────────────────────────────────
-				// padding: 2 cols horizontal, 1 row vertical around all dialog content
-				const container = new Box(2, 1, (s) => theme.bg("customMessageBg", s));
-				container.addChild(
-					new DynamicBorder((s: string) => theme.fg(accent, s)),
-				);
-				container.addChild(
-					new Text(theme.fg(accent, theme.bold(config.title)), 1, 0),
-				);
-
-				for (const line of config.body ?? []) {
-					container.addChild(new Text(theme.fg("text", line), 1, 0));
-				}
 
 				// ── countdown ───────────────────────────────────────────────────
 				let ticker: ReturnType<typeof setInterval> | undefined;
@@ -218,56 +254,25 @@ export function showOverlay(
 							0,
 							Math.ceil((deadlineMs - Date.now()) / SECOND_MS),
 						);
-						countdownText.setText(
+						countdownLine =
 							theme.fg("dim", "Auto-deny in ") +
-								theme.fg(
-									remaining <= COUNTDOWN_WARN_S ? accent : "muted",
-									`${remaining}s`,
-								),
-						);
+							theme.fg(
+								remaining <= COUNTDOWN_WARN_S ? accent : "muted",
+								`${remaining}s`,
+							);
 					};
 					updateCountdown();
 					ticker = setInterval(() => {
 						updateCountdown();
 						tui.requestRender();
 					}, SECOND_MS);
-					container.addChild(countdownText);
 				}
 
-				// ── select stage (always starts here) ───────────────────────────
-				helpText.setText(
-					theme.fg("dim", "↑↓ navigate • enter select • esc deny"),
-				);
-				container.addChild(selectList);
-				container.addChild(helpText);
-				container.addChild(
-					new DynamicBorder((s: string) => theme.fg(accent, s)),
-				);
-
-				// ── finish helper ────────────────────────────────────────────────
+				// ── finish ───────────────────────────────────────────────────────
 				const finish = (result: OverlayResult) => {
 					if (timer !== undefined) clearTimeout(timer);
 					if (ticker !== undefined) clearInterval(ticker);
 					done(result);
-				};
-
-				// ── stage: password (sudo mode only) ────────────────────────────
-				const switchToPassword = () => {
-					stage = "password";
-					container.removeChild(selectList);
-					container.removeChild(helpText);
-
-					const label =
-						config.mode === "sudo"
-							? (config.passwordLabel ?? "Sudo password:")
-							: "Password:";
-					passwordHint.setText(theme.fg("muted", label));
-					container.addChild(passwordHint);
-					container.addChild(maskedInput);
-					container.addChild(
-						new Text(theme.fg("dim", "enter confirm • esc cancel"), 1, 0),
-					);
-					tui.requestRender();
 				};
 
 				// ── event wiring ─────────────────────────────────────────────────
@@ -275,7 +280,8 @@ export function showOverlay(
 					if (item.value !== approveVal) {
 						finish({ action: "denied" });
 					} else if (config.mode === "sudo") {
-						switchToPassword();
+						stage = "password";
+						tui.requestRender();
 					} else {
 						finish({ action: "approved" });
 					}
@@ -292,8 +298,26 @@ export function showOverlay(
 
 				// ── component interface ──────────────────────────────────────────
 				return {
-					render: (w) => container.render(w),
-					invalidate: () => container.invalidate(),
+					render: (w) => {
+						const mw = modalWidth(w);
+						const lines = buildLines({
+							theme,
+							accent,
+							config,
+							stage,
+							selectList,
+							maskedInput,
+							countdownLine,
+							width: mw,
+						});
+						return frameLines({
+							width: mw,
+							lines,
+							color: (s) => theme.fg(accent, s),
+							bg: (s) => theme.bg("customMessageBg", s),
+						});
+					},
+					invalidate: () => {},
 					handleInput: (data) => {
 						if (stage === "select") selectList.handleInput(data);
 						else maskedInput.handleInput(data);

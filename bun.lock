@@ -17,7 +17,7 @@
     },
     "packages/pix-9router": {
       "name": "@xynogen/pix-9router",
-      "version": "0.2.4",
+      "version": "0.2.5",
       "dependencies": {
         "@xynogen/pix-data": "^0.1.0",
         "typebox": "^1.1.38",
@@ -29,8 +29,9 @@
     },
     "packages/pix-ask": {
       "name": "@xynogen/pix-ask",
-      "version": "0.1.5",
+      "version": "0.2.0",
       "dependencies": {
+        "@xynogen/pix-pretty": "*",
         "typebox": "^1.1.38",
       },
       "peerDependencies": {
@@ -51,14 +52,14 @@
     },
     "packages/pix-commands": {
       "name": "@xynogen/pix-commands",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
       },
     },
     "packages/pix-core": {
       "name": "@xynogen/pix-core",
-      "version": "0.4.9",
+      "version": "0.4.10",
       "dependencies": {
         "@xynogen/pix-ask": "*",
         "@xynogen/pix-bash": "*",
@@ -91,7 +92,7 @@
     },
     "packages/pix-data": {
       "name": "@xynogen/pix-data",
-      "version": "0.1.3",
+      "version": "0.2.0",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
       },
@@ -138,7 +139,7 @@
     },
     "packages/pix-footer": {
       "name": "@xynogen/pix-footer",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "dependencies": {
         "@xynogen/pix-data": "*",
       },
@@ -181,7 +182,7 @@
     },
     "packages/pix-models": {
       "name": "@xynogen/pix-models",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@xynogen/pix-data": "*",
       },
@@ -199,7 +200,7 @@
     },
     "packages/pix-optimizer": {
       "name": "@xynogen/pix-optimizer",
-      "version": "1.1.3",
+      "version": "1.1.4",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",
@@ -249,7 +250,7 @@
     },
     "packages/pix-subagent": {
       "name": "@xynogen/pix-subagent",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "dependencies": {
         "@xynogen/pix-data": "*",
         "typebox": "^1.1.38",
@@ -278,7 +279,7 @@
     },
     "packages/pix-todo": {
       "name": "@xynogen/pix-todo",
-      "version": "0.1.6",
+      "version": "0.1.7",
       "dependencies": {
         "typebox": "^1.1.38",
       },

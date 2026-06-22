@@ -1,18 +1,14 @@
 /**
  * pix-pretty/confirm — reusable Yes/No confirmation overlay.
  *
- * A single coloured SelectList overlay (Yes / No) with optional title, body
- * lines and an auto-cancel countdown. Mirrors the confirm stage of pix-sudo
- * so any extension can get the same look without re-implementing it.
- *
- * Returns true on confirm, false on deny / cancel / timeout.
+ * Rounded modal frame (╭─╮╰─╯), solid bg, accent border — same visual style
+ * as gate-overlay and pix-ask. Returns true on confirm, false on deny/timeout.
  */
 
-import { DynamicBorder } from "@earendil-works/pi-coding-agent";
-import { Box, type SelectItem, SelectList, Text } from "@earendil-works/pi-tui";
+import { type SelectItem, SelectList } from "@earendil-works/pi-tui";
+import { frameLines, modalWidth, selectListTheme } from "./modal-frame.js";
 
-// Minimal structural type for the `ctx.ui.custom` host call. Kept local so the
-// component has no hard dependency on a specific Pi context shape.
+// Minimal structural type for the `ctx.ui.custom` host call.
 interface CustomTheme {
 	fg(color: string, text: string): string;
 	bg(color: string, text: string): string;
@@ -76,6 +72,7 @@ export function confirmOverlay(
 		ui.custom<boolean>(
 			(tui, theme, _kb, done) => {
 				let ticker: ReturnType<typeof setInterval> | undefined;
+				let countdownLine: string | undefined;
 
 				const choices: SelectItem[] = [
 					{
@@ -90,61 +87,32 @@ export function confirmOverlay(
 					},
 				];
 
-				const selectList = new SelectList(choices, choices.length, {
-					selectedPrefix: (t) => theme.fg(accent, t),
-					selectedText: (t) => theme.fg(accent, t),
-					description: (t) => theme.fg("muted", t),
-					scrollInfo: (t) => theme.fg("dim", t),
-					noMatch: (t) => theme.fg("warning", t),
-				});
-
-				const container = new Box(0, 0, (s) => theme.bg("customMessageBg", s));
-				container.addChild(
-					new DynamicBorder((s: string) => theme.fg(accent, s)),
+				const selectList = new SelectList(
+					choices,
+					choices.length,
+					selectListTheme(theme, accent),
 				);
-				container.addChild(
-					new Text(theme.fg(accent, theme.bold(opts.title)), 1, 0),
-				);
-
-				for (const line of opts.body ?? []) {
-					container.addChild(new Text(theme.fg("text", line), 1, 0));
-				}
 
 				if (timeoutMs > 0) {
 					const deadlineMs = Date.now() + timeoutMs;
-					const countdownText = new Text("", 1, 0);
 					const updateCountdown = () => {
 						const remaining = Math.max(
 							0,
 							Math.ceil((deadlineMs - Date.now()) / SECOND_MS),
 						);
-						countdownText.setText(
+						countdownLine =
 							theme.fg("dim", "Auto-cancel in ") +
-								theme.fg(
-									remaining <= COUNTDOWN_WARN_S ? accent : "muted",
-									`${remaining}s`,
-								),
-						);
+							theme.fg(
+								remaining <= COUNTDOWN_WARN_S ? accent : "muted",
+								`${remaining}s`,
+							);
 					};
 					updateCountdown();
 					ticker = setInterval(() => {
 						updateCountdown();
 						tui.requestRender();
 					}, SECOND_MS);
-					container.addChild(countdownText);
 				}
-
-				container.addChild(selectList);
-				container.addChild(
-					new Text(
-						theme.fg("dim", "↑↓ navigate • enter select • esc cancel"),
-						1,
-						0,
-					),
-				);
-				container.addChild(
-					new DynamicBorder((s: string) => theme.fg(accent, s)),
-				);
 
 				const finish = (value: boolean) => {
 					if (timer !== undefined) clearTimeout(timer);
@@ -157,8 +125,41 @@ export function confirmOverlay(
 				controller.signal.addEventListener("abort", () => finish(false));
 
 				return {
-					render: (w: number) => container.render(w),
-					invalidate: () => container.invalidate(),
+					render: (w: number) => {
+						const mw = modalWidth(w);
+						const inner = mw - 4;
+						const lines: string[] = [];
+
+						// Title
+						lines.push(theme.fg(accent, theme.bold(opts.title)));
+
+						// Body
+						for (const line of opts.body ?? []) {
+							lines.push(theme.fg("text", line));
+						}
+
+						// Divider
+						lines.push(theme.fg("dim", "─".repeat(inner)));
+
+						// Countdown
+						if (countdownLine !== undefined) lines.push(countdownLine);
+
+						// Select list
+						for (const l of selectList.render(inner)) lines.push(l);
+
+						lines.push("");
+						lines.push(
+							theme.fg("dim", "↑↓ navigate • enter select • esc cancel"),
+						);
+
+						return frameLines({
+							width: mw,
+							lines,
+							color: (s) => theme.fg(accent, s),
+							bg: (s) => theme.bg("customMessageBg", s),
+						});
+					},
+					invalidate: () => {},
 					handleInput: (data: string) => {
 						selectList.handleInput(data);
 						tui.requestRender();
