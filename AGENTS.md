@@ -159,7 +159,7 @@ The tag, not the commit, triggers publishing. Only packages with a new version s
 
 Each package is intended to be **independently installable and usable**.
 
-- **No cross-package imports unless unavoidable.** `pix-9router` and `pix-core` depend on `pix-data` — that's an intentional shared data layer. Beyond that, keep packages self-contained.
+- **No cross-package imports unless unavoidable.** Three packages are sanctioned shared layers, each a different kind: `pix-data` (shared **data** — models.dev + BenchLM cache), `pix-pretty` (shared **render code** — highlight/diff/icons/fff; most tool packages depend on it), and `pix-core` (the **aggregator** that bundles the rest). Depending on these is intentional. Beyond them, keep packages self-contained.
 - **Prefer duplicating small utilities over adding a cross-package dep.** A shared dep creates a hard install coupling.
 - **Each package has its own `package.json` version.** Bump only the package(s) actually changed — unrelated packages keep their version and are skipped at publish time.
 - **Pi host is always a `peerDependency`**, never a direct dep. Users already have Pi installed.
