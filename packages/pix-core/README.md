@@ -18,7 +18,7 @@ Pi activates extensions per installed package via each package's `pi.extensions`
 | `pix-footer` | Status bar: mode / git branch / model / cost / live TPS |
 | `pix-models` | `/models` — enhanced model picker with BenchLM rank, context, cost |
 | `pix-update` | `/update` — self-update Pi + refresh extensions |
-| `pix-commands` | `/clear` slash command |
+| `pix-commands` | Slash commands — `/clear`; more on the way |
 | `pix-diagnostics` | Compact LSP diagnostic widget |
 | `pix-prompts` | System-prompt injection (AGENTS.md + repo directive files) |
 | `pix-skills` | Agent skill loader (`read_skills` tool + 28 bundled skills) |

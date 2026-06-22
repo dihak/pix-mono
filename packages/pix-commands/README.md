@@ -1,10 +1,10 @@
 # pix-commands
 
-Pi extension — `/clear` slash command.
+Pi extension — slash commands. `/clear`; more commands are planned.
 
 ## What it does
 
-Registers the `/clear` slash command. `/clear` deletes `~/.cache/pi` — useful for flushing stale model-data or BenchLM cache — and prompts you to run `/reload` to apply the change. No extra dependencies beyond Pi.
+Registers slash commands. Currently `/clear`, which deletes `~/.cache/pi` — useful for flushing stale model-data or BenchLM cache — and prompts you to run `/reload` to apply the change. **More commands are on the way.** No extra dependencies beyond Pi.
 
 > Diff review moved to the `diff` skill in [`@xynogen/pix-skills`](https://github.com/xynogen/pix-mono/tree/main/packages/pix-skills), which pre-populates `git status` + staged/unstaged diffs via the `` !`cmd` `` directive.
 
