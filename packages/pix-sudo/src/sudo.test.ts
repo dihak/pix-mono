@@ -162,10 +162,29 @@ describe("detectAuthFailure", () => {
 // No real sudo is spawned — runWithSudo is never reached unless the overlay
 // resolves with choice="allow" + a non-blank password.
 //
-// UI shape after single-overlay refactor:
+// UI shape after the shared pix-pretty overlay refactor:
 //   ctx.ui.custom()  — one overlay covering both confirm + password stages
-//                      returns { choice, password? }
+//                      resolves { action: "approved"|"denied"|"timeout", password? }
 //   ctx.ui.notify()  — fire-and-forget (swallowed in mock)
+
+import { mock } from "bun:test";
+import type { SudoResult } from "./lib.ts";
+
+// Swappable runWithSudo stub — index.ts imports the mocked module.
+// Default throws so any unstubbed sudo call is an obvious test bug.
+let sudoMock: (cmd: string, pw: string) => Promise<SudoResult> = async () => {
+	throw new Error("runWithSudo not stubbed for this test");
+};
+// Default: no cached ticket — the password stage runs (matches most tests).
+let ticketMock = false;
+mock.module("./lib.ts", () => {
+	const actual = require("./lib.ts");
+	return {
+		...actual,
+		runWithSudo: (c: string, p: string) => sudoMock(c, p),
+		hasValidTicket: async () => ticketMock,
+	};
+});
 
 import registerSudo from "./index.ts";
 
@@ -179,7 +198,7 @@ const stubTheme = {
 const stubTui = { requestRender: () => {} };
 
 interface OverlayResult {
-	choice: "allow" | "deny" | "timeout";
+	action: "approved" | "denied" | "timeout";
 	password?: string;
 }
 
@@ -234,10 +253,10 @@ function makeHost() {
 
 /**
  * overlayResult — what ctx.ui.custom() resolves to.
- *   choice="allow" + non-blank password       => runs sudo
- *   choice="deny"                             => cancelled by user
- *   choice="timeout"                          => auto-denied
- *   choice="allow" + blank/missing password   => cancelled
+ *   action="approved" + non-blank password     => runs sudo
+ *   action="denied"                            => cancelled by user
+ *   action="timeout"                           => auto-denied
+ *   action="approved" + blank/missing password => cancelled
  *
  * onCustom — called with rendered lines after the component renders once.
  */
@@ -248,7 +267,9 @@ function makeCtx(
 		onCustom?: (lines: string[]) => void;
 	} = {},
 ) {
-	const overlayResult: OverlayResult = opts.overlayResult ?? { choice: "deny" };
+	const overlayResult: OverlayResult = opts.overlayResult ?? {
+		action: "denied",
+	};
 	return {
 		hasUI: opts.hasUI ?? true,
 		ui: {
@@ -284,68 +305,146 @@ describe("sudo_run tool execute()", () => {
 		expect(text(result)).toContain("no UI available");
 	});
 
-	test("choice=deny => cancelled", async () => {
+	test("action=denied => cancelled", async () => {
 		const host = makeHost();
 		const result = await host.execute(
 			"id",
 			{ command: "whoami" },
 			undefined,
 			undefined,
-			makeCtx({ overlayResult: { choice: "deny" } }),
+			makeCtx({ overlayResult: { action: "denied" } }),
 		);
-		expect(text(result)).toContain("Cancelled");
+		expect(text(result)).toContain("Denied by user");
 		expect(result.isError).toBeUndefined();
 	});
 
-	test("choice=timeout => cancelled", async () => {
+	test("action=timeout => cancelled", async () => {
 		const host = makeHost();
 		const result = await host.execute(
 			"id",
 			{ command: "whoami" },
 			undefined,
 			undefined,
-			makeCtx({ overlayResult: { choice: "timeout" } }),
+			makeCtx({ overlayResult: { action: "timeout" } }),
 		);
-		expect(text(result)).toContain("Cancelled");
+		expect(text(result)).toContain("Timed out");
 		expect(result.isError).toBeUndefined();
 	});
 
-	test("choice=allow + blank password => cancelled", async () => {
+	test("action=approved + blank password => cancelled", async () => {
 		const host = makeHost();
 		const result = await host.execute(
 			"id",
 			{ command: "whoami" },
 			undefined,
 			undefined,
-			makeCtx({ overlayResult: { choice: "allow", password: "" } }),
+			makeCtx({ overlayResult: { action: "approved", password: "" } }),
 		);
-		expect(text(result)).toContain("Cancelled");
+		expect(text(result)).toContain("no password entered");
 		expect(result.isError).toBeUndefined();
 	});
 
-	test("choice=allow + whitespace password => cancelled", async () => {
+	test("action=approved + whitespace password => cancelled", async () => {
 		const host = makeHost();
 		const result = await host.execute(
 			"id",
 			{ command: "whoami" },
 			undefined,
 			undefined,
-			makeCtx({ overlayResult: { choice: "allow", password: "   " } }),
+			makeCtx({ overlayResult: { action: "approved", password: "   " } }),
 		);
-		expect(text(result)).toContain("Cancelled");
+		expect(text(result)).toContain("no password entered");
 	});
 
-	test("choice=allow + undefined password => cancelled", async () => {
+	test("action=approved + undefined password => cancelled", async () => {
 		const host = makeHost();
 		const result = await host.execute(
 			"id",
 			{ command: "whoami" },
 			undefined,
 			undefined,
-			makeCtx({ overlayResult: { choice: "allow", password: undefined } }),
+			makeCtx({ overlayResult: { action: "approved", password: undefined } }),
 		);
-		expect(text(result)).toContain("Cancelled");
+		expect(text(result)).toContain("no password entered");
 		expect(result.isError).toBeUndefined();
+	});
+
+	test("action=approved + password => runs sudo (happy path)", async () => {
+		sudoMock = async () => ({ stdout: "root", stderr: "", code: 0 });
+		const host = makeHost();
+		const result = await host.execute(
+			"id",
+			{ command: "whoami" },
+			undefined,
+			undefined,
+			makeCtx({ overlayResult: { action: "approved", password: "hunter2" } }),
+		);
+		expect(text(result)).toContain("Exit code: 0");
+		expect(text(result)).toContain("root");
+		expect(result.isError).toBe(false);
+	});
+
+	test("action=approved + wrong password => auth failure", async () => {
+		sudoMock = async () => ({
+			stdout: "",
+			stderr: "sudo: incorrect password",
+			code: 1,
+		});
+		const host = makeHost();
+		const result = await host.execute(
+			"id",
+			{ command: "whoami" },
+			undefined,
+			undefined,
+			makeCtx({ overlayResult: { action: "approved", password: "wrong" } }),
+		);
+		expect(text(result)).toContain("authentication failed");
+		expect(result.isError).toBe(true);
+	});
+
+	test("cached ticket => confirm only, runs sudo with empty password", async () => {
+		ticketMock = true;
+		let seenPassword: string | undefined;
+		sudoMock = async (_c, pw) => {
+			seenPassword = pw;
+			return { stdout: "root", stderr: "", code: 0 };
+		};
+		try {
+			const host = makeHost();
+			// No password supplied — confirm-only overlay returns just the action.
+			const result = await host.execute(
+				"id",
+				{ command: "whoami" },
+				undefined,
+				undefined,
+				makeCtx({ overlayResult: { action: "approved" } }),
+			);
+			expect(text(result)).toContain("Exit code: 0");
+			expect(result.isError).toBe(false);
+			expect(seenPassword).toBe("");
+		} finally {
+			ticketMock = false;
+		}
+	});
+
+	test("cached ticket => deny still blocks", async () => {
+		ticketMock = true;
+		sudoMock = async () => {
+			throw new Error("must not run sudo when denied");
+		};
+		try {
+			const host = makeHost();
+			const result = await host.execute(
+				"id",
+				{ command: "whoami" },
+				undefined,
+				undefined,
+				makeCtx({ overlayResult: { action: "denied" } }),
+			);
+			expect(text(result)).toContain("Denied by user");
+		} finally {
+			ticketMock = false;
+		}
 	});
 
 	test("overlay renders the command", async () => {
@@ -357,7 +456,7 @@ describe("sudo_run tool execute()", () => {
 			undefined,
 			undefined,
 			makeCtx({
-				overlayResult: { choice: "deny" },
+				overlayResult: { action: "denied" },
 				onCustom: (lines) => rendered.push(...lines),
 			}),
 		);
@@ -376,7 +475,7 @@ describe("sudo_run tool execute()", () => {
 			undefined,
 			undefined,
 			makeCtx({
-				overlayResult: { choice: "deny" },
+				overlayResult: { action: "denied" },
 				onCustom: (lines) => rendered.push(...lines),
 			}),
 		);
@@ -392,7 +491,7 @@ describe("sudo_run tool execute()", () => {
 			undefined,
 			undefined,
 			makeCtx({
-				overlayResult: { choice: "deny" },
+				overlayResult: { action: "denied" },
 				onCustom: (lines) => rendered.push(...lines),
 			}),
 		);

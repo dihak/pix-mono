@@ -62,8 +62,25 @@ export interface SudoResult {
 }
 
 /**
- * Run `command` via `sudo -S -k -- sh -c <command>`, piping `password`
- * to stdin.  Returns stdout, stderr (prompt lines stripped), and exit code.
+ * True when sudo has a valid cached PAM ticket — `sudo -n true` exits 0
+ * without prompting. Lets the caller skip the password stage on repeat calls
+ * within the system sudoers timeout (default ~15 min).
+ */
+export function hasValidTicket(): Promise<boolean> {
+	return new Promise((resolve) => {
+		const proc = spawn("sudo", ["-n", "true"], {
+			stdio: ["ignore", "ignore", "ignore"],
+		});
+		proc.on("error", () => resolve(false));
+		proc.on("close", (code) => resolve(code === 0));
+	});
+}
+
+/**
+ * Run `command` via `sudo -S -- sh -c <command>`, piping `password` to stdin.
+ * Drops `-k` so sudo's PAM timestamp cache persists across calls — a valid
+ * ticket means an empty `password` still succeeds without a prompt. Returns
+ * stdout, stderr (prompt lines stripped), and exit code.
  */
 export function runWithSudo(
 	command: string,
@@ -71,7 +88,7 @@ export function runWithSudo(
 	signal?: AbortSignal,
 ): Promise<SudoResult> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("sudo", ["-S", "-k", "--", "sh", "-c", command], {
+		const proc = spawn("sudo", ["-S", "--", "sh", "-c", command], {
 			stdio: ["pipe", "pipe", "pipe"],
 		});
 

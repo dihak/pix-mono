@@ -8,264 +8,30 @@
  *     Shows command + AI intent.  User picks Allow or Deny via SelectList.
  *     Auto-denies after 30 s.
  *
- *   Stage 2 — password
+ *   Stage 2 — password (skipped when a valid PAM ticket already exists)
  *     Inline masked input (● per char) inside the same overlay.
  *     Enter submits, Esc cancels, 30 s inactivity auto-cancels.
  *
  * Security notes:
  *   - Password never leaves JS memory; never written to disk.
- *   - `-k` invalidates cached sudo ticket — PAM always re-checks.
+ *   - Every command still requires explicit per-call confirmation in the UI.
+ *   - PAM timestamp cache is honoured (no `-k`): within the system sudoers
+ *     timeout a repeat call skips the password prompt but NOT the confirm.
  *   - No UI (RPC / JSON mode) = blocked with isError immediately.
  *   - Output truncated to 50 KB / 2000 lines.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { DynamicBorder } from "@earendil-works/pi-coding-agent";
-import {
-	Box,
-	Input,
-	type SelectItem,
-	SelectList,
-	Text,
-} from "@earendil-works/pi-tui";
+import { showOverlay } from "@xynogen/pix-pretty/gate-overlay";
 import { Type } from "typebox";
 import {
 	detectAuthFailure,
+	hasValidTicket,
 	MAX_OUTPUT_BYTES,
 	MAX_OUTPUT_LINES,
 	runWithSudo,
 	truncate,
 } from "./lib.ts";
-
-const PROMPT_TIMEOUT_MS = 30_000;
-
-// ── Masked input wrapper ─────────────────────────────────────────────────────
-// Delegates everything to Input but replaces visible chars with ● in render().
-
-class MaskedInput extends Input {
-	override render(width: number): string[] {
-		// Temporarily swap value for masked version, render, restore.
-		const real = this.getValue();
-		const masked = "●".repeat(real.length);
-		this.setValue(masked);
-		const lines = super.render(width);
-		this.setValue(real);
-		return lines;
-	}
-}
-
-// ── Main overlay builder ──────────────────────────────────────────────────────
-
-interface OverlayResult {
-	choice: "allow" | "deny" | "timeout";
-	password?: string;
-}
-
-/**
- * Show a single overlay that walks through two stages:
- *   1. confirm (SelectList)
- *   2. password (MaskedInput)
- *
- * Returns the user's final decision + password (if allowed).
- */
-async function showSudoOverlay(
-	ctx: {
-		ui: {
-			custom: <T>(
-				cb: (
-					tui: { requestRender(): void },
-					theme: {
-						fg(c: string, t: string): string;
-						bg(c: string, t: string): string;
-						bold(t: string): string;
-					},
-					kb: unknown,
-					done: (v: T) => void,
-				) => {
-					render(w: number): string[];
-					invalidate(): void;
-					handleInput(d: string): void;
-					focused?: boolean;
-				},
-				opts?: { overlay?: boolean },
-			) => Promise<T | undefined>;
-		};
-	},
-	command: string,
-	reason: string | undefined,
-): Promise<OverlayResult> {
-	return new Promise((resolve) => {
-		const controller = new AbortController();
-		const timer = setTimeout(() => controller.abort(), PROMPT_TIMEOUT_MS);
-
-		ctx.ui
-			.custom<OverlayResult>(
-				(tui, theme, _kb, done) => {
-					// ── state ──────────────────────────────────────────────────
-					type Stage = "confirm" | "password";
-					let stage: Stage = "confirm";
-					const deadlineMs = Date.now() + PROMPT_TIMEOUT_MS;
-					let ticker: ReturnType<typeof setInterval> | undefined;
-
-					// ── components that are swapped between stages ─────────────
-					const confirmChoices: SelectItem[] = [
-						{
-							value: "allow",
-							label: "Allow — enter password",
-							description: "Proceed to password prompt",
-						},
-						{
-							value: "deny",
-							label: "Deny — block command",
-							description: "Prevent this command from running",
-						},
-					];
-
-					const selectList = new SelectList(
-						confirmChoices,
-						confirmChoices.length,
-						{
-							selectedPrefix: (t) => theme.fg("error", t),
-							selectedText: (t) => theme.fg("error", t),
-							description: (t) => theme.fg("muted", t),
-							scrollInfo: (t) => theme.fg("dim", t),
-							noMatch: (t) => theme.fg("warning", t),
-						},
-					);
-
-					const passwordInput = new MaskedInput();
-					const passwordHint = new Text("", 1, 0);
-
-					// ── static rows ────────────────────────────────────────────
-					const container = new Box(0, 0, (s) =>
-						theme.bg("customMessageBg", s),
-					);
-
-					container.addChild(
-						new DynamicBorder((s: string) => theme.fg("error", s)),
-					);
-					container.addChild(
-						new Text(
-							`🔐 ${theme.fg("error", theme.bold("ROOT COMMAND REQUEST"))}`,
-							1,
-							0,
-						),
-					);
-
-					// AI intent
-					const intentText = reason?.trim()
-						? `${theme.fg("muted", "Intent: ")}${theme.fg("text", reason.trim())}`
-						: theme.fg("dim", "No reason provided by AI");
-					container.addChild(new Text(intentText, 1, 0));
-
-					// Command label + command
-					container.addChild(new Text(theme.fg("muted", "Command:"), 1, 0));
-					container.addChild(new Text(theme.fg("toolOutput", command), 2, 0));
-
-					// Live countdown
-					const countdownText = new Text("", 1, 0);
-					const updateCountdown = () => {
-						const remaining = Math.max(
-							0,
-							Math.ceil((deadlineMs - Date.now()) / 1000),
-						);
-						countdownText.setText(
-							theme.fg("dim", "Auto-deny in ") +
-								theme.fg(remaining <= 5 ? "error" : "muted", `${remaining}s`),
-						);
-					};
-					updateCountdown();
-					ticker = setInterval(() => {
-						updateCountdown();
-						tui.requestRender();
-					}, 1000);
-					container.addChild(countdownText);
-
-					// ── stage-specific slot ────────────────────────────────────
-					// Start with the SelectList; swap in password input on Allow.
-					container.addChild(selectList);
-
-					// Help row (updated per stage)
-					const helpText = new Text(
-						theme.fg("dim", "↑↓ navigate • enter select • esc deny"),
-						1,
-						0,
-					);
-					container.addChild(helpText);
-					container.addChild(
-						new DynamicBorder((s: string) => theme.fg("error", s)),
-					);
-
-					// ── stage transitions ──────────────────────────────────────
-					const switchToPassword = () => {
-						stage = "password";
-
-						// Replace SelectList with password label + masked input
-						container.removeChild(selectList);
-						container.removeChild(helpText);
-
-						// Remove old bottom border too (will re-add at end)
-						// Actually easier: just insert before the bottom border
-						// Re-add in correct order
-						passwordHint.setText(
-							`${theme.fg("muted", "🔑 ")}${theme.fg("text", "Sudo password:")}`,
-						);
-						container.addChild(passwordHint);
-						container.addChild(passwordInput);
-						container.addChild(
-							new Text(theme.fg("dim", "enter confirm • esc cancel"), 1, 0),
-						);
-
-						tui.requestRender();
-					};
-
-					// ── event wiring ───────────────────────────────────────────
-					const finish = (result: OverlayResult) => {
-						clearTimeout(timer);
-						if (ticker !== undefined) clearInterval(ticker);
-						done(result);
-					};
-
-					selectList.onSelect = (item) => {
-						if (item.value === "deny") {
-							finish({ choice: "deny" });
-						} else {
-							switchToPassword();
-						}
-					};
-					selectList.onCancel = () => finish({ choice: "deny" });
-
-					passwordInput.onSubmit = (pw) =>
-						finish({ choice: "allow", password: pw });
-					passwordInput.onEscape = () => finish({ choice: "deny" });
-
-					// Timeout auto-deny
-					controller.signal.addEventListener("abort", () =>
-						finish({ choice: "timeout" }),
-					);
-
-					// ── component interface ────────────────────────────────────
-					return {
-						render: (w: number) => container.render(w),
-						invalidate: () => container.invalidate(),
-						handleInput: (data: string) => {
-							if (stage === "confirm") {
-								selectList.handleInput(data);
-							} else {
-								passwordInput.handleInput(data);
-							}
-							tui.requestRender();
-						},
-					};
-				},
-				{ overlay: true },
-			)
-			.then((result) => {
-				clearTimeout(timer);
-				resolve(result ?? { choice: "timeout" });
-			});
-	});
-}
 
 // ── Extension entry point ─────────────────────────────────────────────────────
 
@@ -318,14 +84,54 @@ export default function (pi: ExtensionAPI): void {
 				};
 			}
 
-			// ── Steps 1+2: single overlay (confirm → password) ─────────────────
-			const overlayResult = await showSudoOverlay(ctx, command, reason);
+			// A valid PAM ticket lets us skip the password stage (confirm only).
+			const cached = await hasValidTicket();
 
-			if (overlayResult.choice !== "allow" || !overlayResult.password?.trim()) {
+			const body = [
+				reason?.trim()
+					? `Intent: ${reason.trim()}`
+					: "No reason provided by AI",
+				`Command: ${command}`,
+			];
+
+			// ── Confirm (+ password unless a ticket is already cached) ─────────
+			const overlayResult = cached
+				? await showOverlay(ctx.ui, {
+						mode: "confirm",
+						title: "🔐 ROOT COMMAND REQUEST",
+						body: [...body, "(sudo session active — no password needed)"],
+						accent: "error",
+						choices: [
+							{ value: "yes", label: "Allow", description: "Run the command" },
+							{ value: "no", label: "Deny", description: "Block the command" },
+						],
+					})
+				: await showOverlay(ctx.ui, {
+						mode: "sudo",
+						title: "🔐 ROOT COMMAND REQUEST",
+						body,
+						accent: "error",
+						choices: [
+							{
+								value: "yes",
+								label: "Allow — enter password",
+								description: "Proceed to password prompt",
+							},
+							{
+								value: "no",
+								label: "Deny — block command",
+								description: "Prevent this command from running",
+							},
+						],
+					});
+
+			// Cached ticket needs no password; otherwise a blank password is a cancel.
+			const missingPassword = !cached && !overlayResult.password?.trim();
+			if (overlayResult.action !== "approved" || missingPassword) {
 				const msg =
-					overlayResult.choice === "timeout"
+					overlayResult.action === "timeout"
 						? "Timed out — auto-denied."
-						: overlayResult.choice === "deny"
+						: overlayResult.action === "denied"
 							? "Denied by user."
 							: "Cancelled — no password entered.";
 				ctx.ui.notify(`🔐 ${msg}`, "warning");
@@ -335,7 +141,8 @@ export default function (pi: ExtensionAPI): void {
 				};
 			}
 
-			const password = overlayResult.password;
+			// Empty string when relying on the cached ticket (sudo -S reads nothing).
+			const password = overlayResult.password ?? "";
 
 			// ── Step 3: Execute via sudo -S ────────────────────────────────────
 			let result: { stdout: string; stderr: string; code: number };
