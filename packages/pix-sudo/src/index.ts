@@ -22,7 +22,24 @@
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
+import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
+import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
 import { showOverlay } from "@xynogen/pix-pretty/gate-overlay";
+import { renderBashOutput } from "@xynogen/pix-pretty/renderers";
+import type {
+	RenderContextLike,
+	ThemeLike,
+	ToolResultLike,
+} from "@xynogen/pix-pretty/types";
+import {
+	fillToolBackground,
+	getTextContent,
+	normalizeLineEndings,
+	renderToolError,
+	rule,
+	termW,
+} from "@xynogen/pix-pretty/utils";
 import { Type } from "typebox";
 import {
 	detectAuthFailure,
@@ -53,6 +70,9 @@ export default function (pi: ExtensionAPI): void {
 				"Always set `reason` to a short plain-English sentence explaining why root is needed " +
 				'(e.g. "Installing a system package to /usr/local/bin").',
 		],
+
+		// Full-width framing (rules + bg fill) baked at termW(), like pix-bash.
+		renderShell: "self",
 
 		parameters: Type.Object({
 			command: Type.String({
@@ -187,6 +207,10 @@ export default function (pi: ExtensionAPI): void {
 				? `\n\n[Output truncated to ${MAX_OUTPUT_LINES} lines / ${MAX_OUTPUT_BYTES / 1024}KB]`
 				: "";
 
+			const combinedOut =
+				[result.stdout, result.stderr].filter(Boolean).join("\n") ||
+				"(no output)";
+
 			return {
 				content: [
 					{
@@ -199,9 +223,54 @@ export default function (pi: ExtensionAPI): void {
 					stdout: result.stdout,
 					stderr: result.stderr,
 					truncated,
+					_render: normalizeLineEndings(combinedOut)
+						.replace(/\n{3,}/g, "\n\n")
+						.replace(/^\n+|\n+$/g, ""),
 				},
 				isError: result.code !== 0,
 			};
 		},
+
+		renderResult: ((
+			result: ToolResultLike,
+			_opt: unknown,
+			theme: ThemeLike,
+			renderCtx: RenderContextLike,
+		) => {
+			const text = renderCtx.lastComponent ?? new Text("", 0, 0);
+
+			if (renderCtx.isError && !result.details) {
+				text.setText(renderToolError(getTextContent(result) || "Error", theme));
+				return text;
+			}
+
+			const d = result.details as Record<string, unknown> | undefined;
+			const code = typeof d?.code === "number" ? d.code : null;
+			const rendered = typeof d?._render === "string" ? d._render : "";
+			const { summary } = renderBashOutput(rendered, code);
+
+			const lines = rendered ? rendered.split("\n") : [];
+			const lineCount = lines.length;
+			const lineInfo =
+				lineCount > 1 ? `  ${FG_DIM}(${lineCount} lines)${RST}` : "";
+			const header = `  ${summary}${lineInfo}`;
+
+			if (!rendered) {
+				text.setText(fillToolBackground(header));
+				return text;
+			}
+
+			const maxShow = renderCtx.expanded ? lineCount : MAX_PREVIEW_LINES;
+			const show = lines.slice(0, maxShow);
+			const tw = termW();
+			const out: string[] = [header, rule(tw)];
+			for (const line of show) out.push(`  ${line}`);
+			out.push(rule(tw));
+			if (lineCount > maxShow) {
+				out.push(`${FG_DIM}  … ${lineCount - maxShow} more lines${RST}`);
+			}
+			text.setText(fillToolBackground(out.join("\n")));
+			return text;
+		}) as never,
 	});
 }
