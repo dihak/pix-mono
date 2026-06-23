@@ -12,15 +12,12 @@ import type {
 	ExtensionAPI,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import { DynamicBorder } from "@earendil-works/pi-coding-agent";
 import {
-	Container,
 	fuzzyFilter,
 	Input,
 	matchesKey,
 	type SelectItem,
 	SelectList,
-	Text,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
 import {
@@ -28,6 +25,7 @@ import {
 	lookupBenchmark,
 	lookupModelsDev,
 } from "@xynogen/pix-data";
+import { frameLines, modalWidth } from "@xynogen/pix-pretty/modal-frame";
 import { patchOutBuiltinModelCommand } from "./patch-builtin";
 
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────
@@ -148,7 +146,6 @@ async function showEnhancedPicker(
 
 	const result = await ctx.ui.custom<string | null>(
 		(_tui, theme, _kb, done) => {
-			const container = new Container();
 			const accent = "accent";
 
 			// Find max rank width across all benchmarked rows for # padding
@@ -236,19 +233,6 @@ async function showEnhancedPicker(
 					)
 				: 0;
 
-			container.addChild(new DynamicBorder((s) => theme.fg(accent, s)));
-			container.addChild(
-				new Text(theme.fg(accent, theme.bold("󰚩  Select model"))),
-			);
-			container.addChild(
-				new Text(
-					theme.fg(
-						"dim",
-						"context · pricing · coding rank & score from modelgrep.com",
-					),
-				),
-			);
-
 			// Widest label (visible width, ANSI-stripped) so the model name
 			// column never truncates to "…". Add gap headroom.
 			const widestLabel = items.reduce(
@@ -317,25 +301,34 @@ async function showEnhancedPicker(
 				internal.invalidate();
 			};
 
-			container.addChild(new Text(theme.fg("muted", "Search:")));
-			container.addChild(search);
-			container.addChild(list);
-			container.addChild(
-				new Text(
-					theme.fg(
-						"dim",
-						"fuzzy search · ↑↓ navigate · enter select · esc cancel",
-					),
-				),
-			);
-			container.addChild(new DynamicBorder((s) => theme.fg(accent, s)));
-
 			return {
 				render(w: number) {
-					return container.render(w);
+					const mw = modalWidth(w);
+					const inner = mw - 4; // CHROME = 2 border + 2 padding
+					const lines: string[] = [
+						theme.fg(accent, theme.bold("󰈩  Select model")),
+						theme.fg(
+							"dim",
+							"context · pricing · coding rank & score from modelgrep.com",
+						),
+						theme.fg("muted", "Search:"),
+						...search.render(inner),
+						...list.render(inner),
+						theme.fg(
+							"dim",
+							"fuzzy search · ↑↓ navigate · enter select · esc cancel",
+						),
+					];
+					return frameLines({
+						width: mw,
+						lines,
+						color: (s) => theme.fg(accent, s),
+						bg: (s) => theme.bg("customMessageBg", s),
+					});
 				},
 				invalidate() {
-					container.invalidate();
+					list.invalidate();
+					search.invalidate();
 				},
 				handleInput(data: string) {
 					// Detect keys via pi-tui's own parser — the same recognition
@@ -350,10 +343,11 @@ async function showEnhancedPicker(
 						search.handleInput?.(data);
 						applyFuzzy(search.getValue?.() ?? "");
 					}
-					container.invalidate();
+					list.invalidate();
 				},
 			};
 		},
+		{ overlay: true },
 	);
 
 	if (!result) return;

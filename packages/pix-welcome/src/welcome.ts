@@ -27,7 +27,7 @@
  *   ✓ Ignore  up to date
  */
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import type {
@@ -122,16 +122,19 @@ async function checkPiIgnore(
 		const repoRoot = rootRes.stdout.trim();
 		if (!repoRoot) return { label: "Ignore", status: "ok", detail: "not git" };
 
-		// Determine which rules are missing
-		const missing: string[] = [];
-		for (const rule of PI_IGNORE_RULES) {
-			const hasRule = await pi.exec(
-				"grep",
-				["-qxF", rule, ".gitignore"],
-				execOpts(repoRoot, 1_000),
-			);
-			if (exitCode(hasRule) !== 0) missing.push(rule);
-		}
+		// Read .gitignore in-process — shelling out to grep/node was fragile
+		// (CRLF, trailing whitespace, grep exit-code 2, or grep/node off PATH all
+		// silently degraded to "missing", so the panel rewrote every session).
+		const gitignorePath = `${repoRoot}/.gitignore`;
+		const existing = existsSync(gitignorePath)
+			? readFileSync(gitignorePath, "utf8")
+			: "";
+
+		// Whitespace-tolerant whole-line match (handles CRLF + trailing spaces).
+		const presentLines = new Set(
+			existing.split(/\r?\n/).map((line) => line.trim()),
+		);
+		const missing = PI_IGNORE_RULES.filter((rule) => !presentLines.has(rule));
 
 		if (missing.length === 0) {
 			return { label: "Ignore", status: "ok", detail: "up to date" };
@@ -139,35 +142,18 @@ async function checkPiIgnore(
 
 		// Rewrite .gitignore — strip any existing Pix Agent section, then append
 		// a clean block with all rules under a single header.
-		const gitignorePath = `${repoRoot}/.gitignore`;
-		const allRules = PI_IGNORE_RULES;
-		const addRules = await pi.exec(
-			"node",
-			[
-				"-e",
-				[
-					"const fs = require('fs');",
-					`const p = ${JSON.stringify(gitignorePath)};`,
-					`const header = ${JSON.stringify(PI_IGNORE_SECTION_HEADER)};`,
-					`const rules = ${JSON.stringify(allRules)};`,
-					"const existing = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';",
-					// Strip existing Pix Agent section (header line + consecutive rule lines)
-					"const stripped = existing.replace(/(?:^|\\n)# Pix Agent\\n(?:[^\\n]*\\n)*/g, '\\n').trimEnd();",
-					"const block = [header, ...rules].join('\\n');",
-					"const content = (stripped ? stripped + '\\n\\n' : '') + block + '\\n';",
-					"fs.writeFileSync(p, content, 'utf8');",
-				].join("\n"),
-			],
-			execOpts(repoRoot, 5_000),
-		);
+		const stripped = existing
+			.replace(/(?:^|\n)# Pix Agent\n(?:[^\n]*\n)*/g, "\n")
+			.trimEnd();
+		const block = [PI_IGNORE_SECTION_HEADER, ...PI_IGNORE_RULES].join("\n");
+		const content = `${stripped ? `${stripped}\n\n` : ""}${block}\n`;
+		writeFileSync(gitignorePath, content, "utf8");
 
-		return exitCode(addRules) === 0
-			? {
-					label: "Ignore",
-					status: "ok",
-					detail: `added ${missing.length} rule${missing.length === 1 ? "" : "s"}`,
-				}
-			: { label: "Ignore", status: "warn", detail: "write failed" };
+		return {
+			label: "Ignore",
+			status: "ok",
+			detail: `${missing.length} added`,
+		};
 	} catch {
 		return { label: "Ignore", status: "warn", detail: "check failed" };
 	}

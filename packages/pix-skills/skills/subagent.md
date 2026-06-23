@@ -8,8 +8,16 @@ description: Plan a task, break it into small independent units, and fan them ou
 Plan first, decompose into small independent units, then fan those units out to
 **cheaper** subagent models running **in parallel**. A capable orchestrator (you)
 keeps the plan, the decisions, and the final integration. Cheap workers do the
-bulk grunt work concurrently. Net effect: faster wall-clock, lower cost, less of
-the expensive model's tokens spent on mechanical work.
+bulk grunt work concurrently.
+
+**The real trade is not intelligence for speed — it is spending *less of* the
+orchestrator's intelligence.** The strong model's context window and attention
+are the scarce resource. Every mechanical unit it does itself burns that finite
+budget on work that does not need it. Offloading those units to cheap workers
+keeps the smart model's context clean and reserved for the hard 10% — the plan,
+the seams, the integration. Faster wall-clock and lower cost are byproducts; the
+point is preserving the expensive model's intelligence for where it actually
+matters.
 
 This skill is for the **parent orchestrator only**. Children receive concrete,
 self-contained tasks — they do not plan, do not decompose further, and do not
@@ -73,10 +81,41 @@ Split the plan into units that satisfy the independence test:
 If a unit fails the test, either merge it back, sequence it (chain), or keep it
 on the orchestrator.
 
+> **Delegating ≠ branching.** A foreground/blocking subagent call where the
+> parent waits for the result before launching the next is *serial delegation* —
+> it only buys context isolation, **zero wall-clock gain**. The whole point of
+> this skill is branching: all independent units must be launched **together in
+> one fan-out** (`tasks:[...]` with `async: true`, or N background launches in a
+> single turn) so they run concurrently. If you spawn one, wait, spawn the next,
+> you are not using the power of subagents — you are just relaying work serially.
+> Splitting a *dependency chain* into separate agents wins nothing either: they
+> serialize on each other's data. Branch only truly-independent units.
+
 ### 3. Fan out to cheap models
 
 Use top-level parallel tasks with a per-task `model` override pointing at a
 cheaper/smaller model.
+
+> **Delegating ≠ branching — serial fan-out is pure loss.** A foreground/blocking
+> subagent call where the parent waits for one result before launching the next
+> is *serial delegation*, and it is **strictly worse than doing the work
+> yourself**. The orchestrator stays tied up relaying the unit — so its scarce
+> context/attention was spent anyway — *and* the unit ran on a weaker model. You
+> traded the strong model's intelligence away and got nothing back, not even less
+> of it spent. The only thing serial delegation buys is context isolation, which
+> rarely justifies the quality hit.
+>
+> The entire value of this skill is **branching**: launch every independent unit
+> **together in one fan-out** (`tasks:[...]` with `async: true`, or N background
+> launches in a single turn) so they run concurrently. Concurrency is what makes
+> the trade pay — N units of mechanical work leave the orchestrator's context at
+> once, freeing its budget for the hard parts. Remove the parallelism and you
+> keep none of that upside, only the downside.
+>
+> Corollary: splitting a *dependency chain* into separate agents wins nothing
+> either — the units serialize on each other's data, collapsing back to serial.
+> Branch **only** truly-independent units; if you cannot fan them out
+> concurrently, keep the work on the orchestrator instead of delegating it.
 
 **Resolve the cheap model at call time — never hardcode it.** The active model is
 dynamic: the user can switch it mid-chat, and the orchestrator's own model is

@@ -2,11 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
 	buildHelp,
 	buildPrompt,
-	DEFAULT_CONFIG,
 	LEVEL_NUMBERS,
 	LEVELS,
 	type Level,
-	parseConfig,
 	resolveLevel,
 	STATUS_LABELS,
 	STOP_ALIASES,
@@ -201,40 +199,5 @@ describe("buildPrompt", () => {
 		expect(lite).toContain("Keep articles");
 		expect(ultra).toContain("Abbreviate");
 		expect(lite).not.toContain("Abbreviate");
-	});
-});
-
-// ── parseConfig ───────────────────────────────────────────────────────────────
-
-describe("parseConfig", () => {
-	it("parses valid config", () => {
-		const cfg = parseConfig({ defaultLevel: "ultra", showStatus: false });
-		expect(cfg.defaultLevel).toBe("ultra");
-		expect(cfg.showStatus).toBe(false);
-	});
-
-	it("falls back to defaults for invalid defaultLevel", () => {
-		const cfg = parseConfig({ defaultLevel: "invalid", showStatus: true });
-		expect(cfg.defaultLevel).toBe(DEFAULT_CONFIG.defaultLevel);
-	});
-
-	it("falls back to defaults for missing fields", () => {
-		const cfg = parseConfig({});
-		expect(cfg.defaultLevel).toBe(DEFAULT_CONFIG.defaultLevel);
-		expect(cfg.showStatus).toBe(DEFAULT_CONFIG.showStatus);
-	});
-
-	it("falls back to defaults for null/undefined", () => {
-		const cfg = parseConfig(null);
-		expect(cfg.defaultLevel).toBe(DEFAULT_CONFIG.defaultLevel);
-		expect(cfg.showStatus).toBe(DEFAULT_CONFIG.showStatus);
-	});
-
-	it("accepts all valid levels as defaultLevel", () => {
-		for (const l of LEVELS) {
-			expect(
-				parseConfig({ defaultLevel: l, showStatus: true }).defaultLevel,
-			).toBe(l);
-		}
 	});
 });

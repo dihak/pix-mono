@@ -71,6 +71,20 @@ export function getEditOperations(input: EditParams): EditOperation[] {
 	return oldText && oldText !== newText ? [{ oldText, newText }] : [];
 }
 
+// 1-based file line where `needle` begins post-edit, for absolute diff gutters.
+// 0 = file unreadable or needle not found (renderer falls back to relative).
+// Duplicate identical edits collapse to the first match — acceptable.
+function opEditLine(filePath: string, needle: string): number {
+	try {
+		if (!filePath || !existsSync(filePath)) return 0;
+		const f = readFileSync(filePath, "utf-8");
+		const idx = f.indexOf(needle);
+		return idx >= 0 ? f.slice(0, idx).split("\n").length : 0;
+	} catch {
+		return 0;
+	}
+}
+
 export function summarizeEditOperations(operations: EditOperation[]) {
 	const diffs = operations.map((e) => parseDiff(e.oldText, e.newText));
 	const totalAdded = diffs.reduce((sum, d) => sum + d.added, 0);
@@ -122,20 +136,10 @@ export function registerEditTool(
 			const { diffs, summary } = summarizeEditOperations(operations);
 
 			if (operations.length === 1) {
-				let editLine = 0;
-				try {
-					if (fp && existsSync(fp)) {
-						const f = readFileSync(fp, "utf-8");
-						const idx = f.indexOf(operations[0].newText);
-						if (idx >= 0) editLine = f.slice(0, idx).split("\n").length;
-					}
-				} catch {
-					editLine = 0;
-				}
 				setResultDetails(result, {
 					_type: "editInfo",
 					summary,
-					editLine,
+					editLine: opEditLine(fp, operations[0].newText),
 					oldContent: operations[0].oldText,
 					newContent: operations[0].newText,
 					language: fileLang,
@@ -154,6 +158,7 @@ export function registerEditTool(
 					newContent: op.newText,
 					language: fileLang,
 					filePath: fp,
+					editLine: opEditLine(fp, op.newText),
 				})),
 			});
 			return result;
@@ -212,6 +217,8 @@ export function registerEditTool(
 					const diff = parseDiff(
 						d.oldContent as string,
 						d.newContent as string,
+						3,
+						d.editLine as number,
 					);
 					renderSplit(
 						diff,
@@ -253,9 +260,15 @@ export function registerEditTool(
 								oldContent: string;
 								newContent: string;
 								language?: string;
+								editLine?: number;
 							}>
 						).map((op) => {
-							const diff = parseDiff(op.oldContent, op.newContent);
+							const diff = parseDiff(
+								op.oldContent,
+								op.newContent,
+								3,
+								op.editLine ?? 0,
+							);
 							return renderSplit(diff, op.language, MAX_RENDER_LINES, dc);
 						}),
 					)

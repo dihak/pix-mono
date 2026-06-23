@@ -21,9 +21,8 @@ import type {
 	Theme,
 	ToolInfo,
 } from "@earendil-works/pi-coding-agent";
-import { DynamicBorder, getAgentDir } from "@earendil-works/pi-coding-agent";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import {
-	Container,
 	decodeKittyPrintable,
 	fuzzyFilter,
 	Input,
@@ -32,10 +31,10 @@ import {
 	matchesKey,
 	type SelectItem,
 	SelectList,
-	Text,
 	type TUI,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
+import { frameLines, modalWidth } from "@xynogen/pix-pretty/modal-frame";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -337,7 +336,17 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 
 	async function showPicker(ctx: {
 		ui: {
-			custom: <T>(f: unknown) => Promise<T>;
+			custom: <T>(
+				f: unknown,
+				opts?: {
+					overlay?: boolean;
+					overlayOptions?: {
+						anchor?: string;
+						maxHeight?: number | string;
+						width?: number | string;
+					};
+				},
+			) => Promise<T>;
 			notify: (m: string, t?: "info" | "warning" | "error") => void;
 		};
 	}): Promise<void> {
@@ -350,7 +359,6 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 			) => {
 				const accent = "accent";
 				const mute = (s: string) => theme.fg("muted", s);
-				const container = new Container();
 
 				type RowState = "active" | "gated";
 				const stateOf = (name: string): RowState =>
@@ -414,7 +422,7 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 				};
 
 				const search = new Input();
-				const statusLine = new Text("");
+				let statusText = "";
 
 				const refreshLabels = () => {
 					for (const it of internal.items) {
@@ -424,7 +432,6 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 						it.description = descFor(r);
 					}
 					list.invalidate();
-					container.invalidate();
 					tui.requestRender?.();
 				};
 
@@ -432,7 +439,7 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 					const sel = list.getSelectedItem();
 					if (!sel) return;
 					const msg = toggleTool(action, sel.value, rows, ops);
-					statusLine.setText(theme.fg("muted", msg));
+					statusText = theme.fg("muted", msg);
 					refreshLabels();
 				};
 
@@ -455,41 +462,39 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 								);
 					internal.selectedIndex = 0;
 					list.invalidate();
-					container.invalidate();
 				};
 
 				list.onSelect = () => done(null);
 				list.onCancel = () => done(null);
 				search.onEscape = () => done(null);
 
-				container.addChild(
-					new DynamicBorder((s: string) => theme.fg(accent, s)),
-				);
-				container.addChild(
-					new Text(theme.fg(accent, theme.bold("🧰  Toolbox"))),
-				);
-				container.addChild(new Text(theme.fg("muted", "Search:")));
-				container.addChild(search);
-				container.addChild(list);
-				container.addChild(statusLine);
-				container.addChild(
-					new Text(
-						theme.fg(
-							"dim",
-							"↑↓ navigate · e enable · d disable · space toggle · esc close",
-						),
-					),
-				);
-				container.addChild(
-					new DynamicBorder((s: string) => theme.fg(accent, s)),
-				);
-
 				return {
 					render(w: number) {
-						return container.render(w);
+						const mw = modalWidth(w);
+						const inner = mw - 4; // CHROME = 2 border + 2 padding
+						const lines: string[] = [
+							theme.fg(accent, theme.bold("🧰  Toolbox")),
+							theme.fg("muted", "Search:"),
+							...search.render(inner),
+							...list.render(inner),
+						];
+						if (statusText) lines.push(statusText);
+						lines.push(
+							theme.fg(
+								"dim",
+								"↑↓ navigate · e enable · d disable · space toggle · esc close",
+							),
+						);
+						return frameLines({
+							width: mw,
+							lines,
+							color: (s) => theme.fg(accent, s),
+							bg: (s) => theme.bg("customMessageBg", s),
+						});
 					},
 					invalidate() {
-						container.invalidate();
+						list.invalidate();
+						search.invalidate();
 					},
 					handleInput(data: string) {
 						if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
@@ -521,11 +526,12 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 								applyFilter(search.getValue?.() ?? "");
 							}
 						}
-						container.invalidate();
+						list.invalidate();
 						tui.requestRender?.();
 					},
 				};
 			},
+			{ overlay: true, overlayOptions: { anchor: "center", maxHeight: "80%" } },
 		);
 	}
 

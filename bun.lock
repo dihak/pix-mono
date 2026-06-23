@@ -29,7 +29,7 @@
     },
     "packages/pix-ask": {
       "name": "@xynogen/pix-ask",
-      "version": "0.2.0",
+      "version": "0.2.2",
       "dependencies": {
         "@xynogen/pix-pretty": "*",
         "typebox": "^1.1.38",
@@ -92,7 +92,7 @@
     },
     "packages/pix-data": {
       "name": "@xynogen/pix-data",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
       },
@@ -139,7 +139,7 @@
     },
     "packages/pix-footer": {
       "name": "@xynogen/pix-footer",
-      "version": "0.1.6",
+      "version": "0.1.8",
       "dependencies": {
         "@xynogen/pix-data": "*",
       },
@@ -150,7 +150,7 @@
     },
     "packages/pix-gate": {
       "name": "@xynogen/pix-gate",
-      "version": "0.1.5",
+      "version": "0.1.8",
       "dependencies": {
         "@xynogen/pix-pretty": "*",
       },
@@ -182,9 +182,10 @@
     },
     "packages/pix-models": {
       "name": "@xynogen/pix-models",
-      "version": "0.1.5",
+      "version": "0.1.8",
       "dependencies": {
         "@xynogen/pix-data": "*",
+        "@xynogen/pix-pretty": "*",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -200,7 +201,10 @@
     },
     "packages/pix-optimizer": {
       "name": "@xynogen/pix-optimizer",
-      "version": "1.1.4",
+      "version": "1.1.5",
+      "dependencies": {
+        "@xynogen/pix-pretty": "*",
+      },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",
@@ -208,7 +212,7 @@
     },
     "packages/pix-pretty": {
       "name": "@xynogen/pix-pretty",
-      "version": "1.7.1",
+      "version": "1.7.6",
       "dependencies": {
         "@ff-labs/fff-node": "^0.5.2",
         "cli-highlight": "^2.1.11",
@@ -239,7 +243,7 @@
     },
     "packages/pix-skills": {
       "name": "@xynogen/pix-skills",
-      "version": "0.4.13",
+      "version": "0.4.15",
       "dependencies": {
         "@xynogen/pix-gate": "*",
       },
@@ -263,7 +267,7 @@
     },
     "packages/pix-sudo": {
       "name": "@xynogen/pix-sudo",
-      "version": "0.3.0",
+      "version": "0.3.2",
       "dependencies": {
         "@xynogen/pix-pretty": "*",
         "typebox": "^1.1.38",
@@ -290,7 +294,10 @@
     },
     "packages/pix-toolbox": {
       "name": "@xynogen/pix-toolbox",
-      "version": "0.1.2",
+      "version": "0.1.3",
+      "dependencies": {
+        "@xynogen/pix-pretty": "*",
+      },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",

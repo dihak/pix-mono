@@ -1,7 +1,7 @@
 /**
  * status.ts — shared status-bar indicator for the optimizer suite.
  *
- * caveman / rtk / json each toggle independently, but they're all the same
+ * caveman / rtk / toon / ponytail each toggle independently, but they're all the same
  * class of thing (token-optimization tools), so they share ONE status cell
  * instead of three. Each tool reports its on/off state into a single registry;
  * the cell renders only the icons whose tool is currently enabled, in a fixed
@@ -18,26 +18,22 @@ import type {
 	ThemeColor,
 } from "@earendil-works/pi-coding-agent";
 
-/** Argument-completion item shape used by the merged /opt command. */
-export interface CompletionItem {
-	value: string;
-	label: string;
-	description: string;
-}
-
 /**
- * Each optimizer tool (caveman/rtk/json) exposes a handle so the single `/opt`
- * router can dispatch subcommands to it without knowing its internals.
+ * Each optimizer tool (caveman/rtk/toon/ponytail) exposes a handle so the
+ * single `/optimizer` overlay can render one row per tool and apply value
+ * changes without knowing the tool's internals.
  */
 export interface OptimizerHandle {
-	/** Subcommand name, e.g. "caveman" / "rtk" / "toon". */
+	/** Tool name, e.g. "caveman" / "rtk" / "toon". */
 	name: OptimizerTool;
-	/** One-line help shown by `/opt` with no args. */
+	/** One-line summary shown in the overlay row. */
 	help: string;
-	/** Handle `/opt <name> <args>`. `args` is everything after the name. */
-	run(args: string, ctx: ExtensionCommandContext): Promise<void> | void;
-	/** Completions for the second token (`/opt <name> <prefix>`). */
-	complete(prefix: string): CompletionItem[] | null;
+	/** Cyclable values for this tool's overlay row, in display order. */
+	values: readonly string[];
+	/** Current value string (must be one of `values`). */
+	current(): string;
+	/** Apply a chosen value (persists + repaints status). `value` is one of `values`. */
+	run(value: string, ctx: ExtensionCommandContext): Promise<void> | void;
 }
 
 /** Stable status-bar key shared by every optimizer tool. */
@@ -93,6 +89,11 @@ export function renderStatus(
  */
 export class OptimizerStatus {
 	private states: Partial<Record<OptimizerTool, boolean>> = {};
+
+	/** Current enabled state for one tool (undefined until first set). */
+	get(tool: OptimizerTool): boolean | undefined {
+		return this.states[tool];
+	}
 
 	/** Update one tool's enabled state and repaint the shared cell. */
 	set(

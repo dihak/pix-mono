@@ -22,6 +22,9 @@ export function parseDiff(
 	oldContent: string,
 	newContent: string,
 	ctx = 3,
+	// 1-based file line where the snippet begins; shifts gutter numbers from
+	// snippet-relative to absolute. 0 = no shift (snippet-relative, the default).
+	baseLine = 0,
 ): ParsedDiff {
 	const patch = Diff.structuredPatch("", "", oldContent, newContent, "", "", {
 		context: ctx,
@@ -42,8 +45,9 @@ export function parseDiff(
 			});
 		}
 		const h = patch.hunks[hi];
-		let oL = h.oldStart;
-		let nL = h.newStart;
+		const shift = baseLine > 0 ? baseLine - 1 : 0;
+		let oL = h.oldStart + shift;
+		let nL = h.newStart + shift;
 		for (const raw of h.lines) {
 			if (raw === "\\ No newline at end of file") continue;
 			const ch = raw[0];

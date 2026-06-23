@@ -270,41 +270,23 @@ export function json(
 		return { systemPrompt: `${JSON_SYSTEM_PROMPT}\n\n${existing}` };
 	});
 
-	// -- Subcommand handler (dispatched by the merged /opt router) --
-
-	function complete(prefix: string) {
-		const items = [
-			{ value: "on", label: "on", description: "Force JSON/TOON guidance on" },
-			{
-				value: "off",
-				label: "off",
-				description: "Force JSON/TOON guidance off",
-			},
-		];
-		const n = prefix.trim().toLowerCase();
-		const filtered = items.filter((i) => i.value.startsWith(n));
-		return filtered.length > 0 ? filtered : null;
-	}
+	// -- Overlay value handler (called by the /optimizer overlay) --
 
 	async function run(
-		args: string,
+		value: string,
 		ctx: ExtensionCommandContext,
 	): Promise<void> {
-		{
-			const arg = args.trim().toLowerCase();
-			if (arg === "on") enabled = true;
-			else if (arg === "off") enabled = false;
-			else enabled = !enabled; // bare toggles
+		enabled = value === "on";
 
-			syncStatus(ctx);
-			ctx.ui.notify(`JSON/TOON guidance ${enabled ? "on" : "off"}.`, "info");
-		}
+		syncStatus(ctx);
+		ctx.ui.notify(`JSON/TOON guidance ${enabled ? "on" : "off"}.`, "info");
 	}
 
 	return {
 		name: "toon",
-		help: "toon [on|off] — jq+TOON guidance for dense JSON",
+		help: "toon — jq+TOON guidance for dense JSON",
+		values: ["off", "on"],
+		current: () => (enabled ? "on" : "off"),
 		run,
-		complete,
 	};
 }

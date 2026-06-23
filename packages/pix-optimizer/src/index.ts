@@ -8,8 +8,8 @@
  *   - ponytail: lazy-senior-dev system prompt (minimal code, YAGNI)
  *
  * They share ONE status-bar cell (󰜐 󰓥 󰗀 󰆐, only enabled tools shown) and ONE
- * command (/opt <tool> [args]). index.ts wires lifecycle hooks via each
- * module, then registers the merged command from their handles.
+ * command (/optimizer — an interactive overlay). index.ts wires lifecycle hooks
+ * via each module, then registers the overlay command from their handles.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -29,7 +29,7 @@ export default function optimizer(pi: ExtensionAPI) {
 	const status = new OptimizerStatus();
 
 	// Each module registers its own lifecycle hooks and returns a handle the
-	// merged /opt command dispatches to.
+	// /optimizer overlay renders + drives.
 	const handles: Record<OptimizerTool, OptimizerHandle> = {
 		caveman: caveman(pi, status),
 		rtk: rtk(pi, status),
@@ -37,7 +37,7 @@ export default function optimizer(pi: ExtensionAPI) {
 		ponytail: ponytail(pi, status),
 	};
 
-	registerOptCommand(pi, handles);
+	registerOptCommand(pi, handles, status);
 
 	// Strip model-guidance warnings injected by pi-lens into tool_result content.
 	// These strings (BLIND WRITE, THRASHING) are directives for the LLM, not

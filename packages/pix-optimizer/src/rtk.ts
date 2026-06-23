@@ -300,30 +300,17 @@ export function rtk(
 		syncStatus(ctx);
 	});
 
-	// -- Subcommand handler (dispatched by the merged /opt router) --
+	// -- Overlay value handler (called by the /optimizer overlay) --
 
 	async function run(
-		args: string,
+		value: string,
 		ctx: ExtensionCommandContext,
 	): Promise<void> {
-		const arg = args.trim().toLowerCase();
-		if (arg === "on") enabled = true;
-		else if (arg === "off") enabled = false;
-		else enabled = !enabled; // bare toggles
+		enabled = value === "on";
 
 		await checkRtkAvailability();
 		syncStatus(ctx);
 		ctx.ui.notify(`RTK rewriting ${enabled ? "on" : "off"}.`, "info");
-	}
-
-	function complete(prefix: string) {
-		const items = [
-			{ value: "on", label: "on", description: "Force RTK rewriting on" },
-			{ value: "off", label: "off", description: "Force RTK rewriting off" },
-		];
-		const n = prefix.trim().toLowerCase();
-		const filtered = items.filter((i) => i.value.startsWith(n));
-		return filtered.length > 0 ? filtered : null;
 	}
 
 	// Rewrite bash commands to add rtk prefix.
@@ -373,8 +360,9 @@ export function rtk(
 
 	return {
 		name: "rtk",
-		help: "rtk [on|off] — prefix shell commands with rtk (token-optimized)",
+		help: "rtk — prefix shell commands with rtk (token-optimized)",
+		values: ["off", "on"],
+		current: () => (enabled ? "on" : "off"),
 		run,
-		complete,
 	};
 }
