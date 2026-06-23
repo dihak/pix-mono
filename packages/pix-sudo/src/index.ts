@@ -50,6 +50,10 @@ import {
 	truncate,
 } from "./lib.ts";
 
+// Auto-deny the root prompt after this idle window (dead-man's switch). The
+// first keypress cancels it, so it only fires when the user is truly away.
+const ROOT_PROMPT_TIMEOUT_MS = 60_000;
+
 // ── Extension entry point ─────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI): void {
@@ -121,6 +125,7 @@ export default function (pi: ExtensionAPI): void {
 						title: "🔐 ROOT COMMAND REQUEST",
 						body: [...body, "(sudo session active — no password needed)"],
 						accent: "error",
+						timeoutMs: ROOT_PROMPT_TIMEOUT_MS,
 						choices: [
 							{ value: "yes", label: "Allow", description: "Run the command" },
 							{ value: "no", label: "Deny", description: "Block the command" },
@@ -131,6 +136,7 @@ export default function (pi: ExtensionAPI): void {
 						title: "🔐 ROOT COMMAND REQUEST",
 						body,
 						accent: "error",
+						timeoutMs: ROOT_PROMPT_TIMEOUT_MS,
 						choices: [
 							{
 								value: "yes",
