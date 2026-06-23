@@ -13,14 +13,26 @@ Single-agent session handoff via toggle. One session closes, next picks up exact
 
 ## Below are what agent MUST do
 
-### Step 1: Detect Mode
+### Step 1: Determine Repo Root
 
-```bash
-test -f HANDOFF.md && echo "RECEIVING" || echo "GIVING"
+Resolve the directory where `HANDOFF.md` should live:
+
+- User mentioned a specific path/repo in the prompt? Use that as root.
+- Otherwise: use the `bash` tool to run `git rev-parse --show-toplevel` from the relevant directory.
+- Still unclear? Ask: "Which directory is the repo root for this handoff?"
+
+Call this resolved path **REPO_ROOT** in your reasoning only — never pass it as a shell variable.
+
+### Step 2: Detect Mode
+
+Use the `bash` tool to check if `HANDOFF.md` exists in REPO_ROOT:
+
+```
+bash: ls <REPO_ROOT>/HANDOFF.md
 ```
 
-- Output `GIVING` → proceed to **Giving Mode**
-- Output `RECEIVING` → proceed to **Receiving Mode**
+- File found → **Receiving Mode**
+- File not found (error/empty) → **Giving Mode**
 
 ---
 
@@ -39,7 +51,7 @@ Collect all of the following — summarize if long, but never drop critical deci
 - Every failed attempt with its reason — **most critical section**
 - Single next concrete action for next session
 
-**Step 2: Write `HANDOFF.md` in repo root using this exact structure**
+**Step 2: Write `HANDOFF.md` in the resolved repo root using this exact structure**
 
 ```markdown
 # Handoff — [feature / work area name]
@@ -67,7 +79,7 @@ Collect all of the following — summarize if long, but never drop critical deci
 **Step 3: Confirm to user**
 
 ```
-Handoff written → HANDOFF.md
+Handoff written → <REPO_ROOT>/HANDOFF.md
 Next session: call this skill again to resume.
 ```
 
@@ -79,9 +91,7 @@ Next session: call this skill again to resume.
 
 **Step 1: Read the file**
 
-```bash
-cat HANDOFF.md
-```
+Use the `read` tool on `<REPO_ROOT>/HANDOFF.md`.
 
 **Step 2: Internalize before doing anything**
 
@@ -92,9 +102,7 @@ cat HANDOFF.md
 
 **Step 3: Delete the file**
 
-```bash
-rm HANDOFF.md
-```
+Use the `bash` tool: `rm <REPO_ROOT>/HANDOFF.md`
 
 Deleted immediately so next session starts fresh in giving mode.
 
