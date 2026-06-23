@@ -117,6 +117,23 @@ describe("showOverlay — confirm mode", () => {
 		expect(joined).toContain("MY TITLE");
 		expect(joined).toContain("body-line-x");
 	});
+
+	test("wraps a long body command instead of truncating it", async () => {
+		// A command far wider than any modal width — must survive in full, wrapped.
+		const longCmd = `echo ${"pix-gate-installed-or-linked ".repeat(8)}done`;
+		let captured: string[] = [];
+		await showOverlay(
+			makeUI((comp) => {
+				captured = comp.render(80);
+				comp.handleInput(ENTER);
+			}),
+			{ mode: "confirm", title: "T", body: [longCmd], timeoutMs: 0 },
+		);
+		// Every whitespace-delimited token of the command appears somewhere in the
+		// frame — nothing was dropped by truncation.
+		const joined = captured.join("\n");
+		for (const tok of longCmd.split(" ")) expect(joined).toContain(tok);
+	});
 });
 
 describe("showOverlay — sudo mode", () => {

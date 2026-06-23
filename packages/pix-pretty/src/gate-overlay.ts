@@ -14,7 +14,12 @@
  *   - Single source of truth for the overlay look across pix-gate and pix-sudo.
  */
 
-import { Input, type SelectItem, SelectList } from "@earendil-works/pi-tui";
+import {
+	Input,
+	type SelectItem,
+	SelectList,
+	wrapTextWithAnsi,
+} from "@earendil-works/pi-tui";
 import { frameLines, modalWidth, selectListTheme } from "./modal-frame.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -139,12 +144,15 @@ function buildLines(opts: {
 	const inner = width - 4; // CHROME = 2 border + 2 padding
 	const lines: string[] = [];
 
-	// Title
-	lines.push(theme.fg(accent, theme.bold(config.title)));
+	// Title — wrap so a long reason/command isn't truncated by the frame.
+	for (const t of wrapTextWithAnsi(config.title, inner)) {
+		lines.push(theme.fg(accent, theme.bold(t)));
+	}
 
-	// Body
+	// Body — wrap each line so long commands wrap instead of getting cut off.
 	for (const line of config.body ?? []) {
-		lines.push(theme.fg("text", line));
+		const wrapped = line === "" ? [""] : wrapTextWithAnsi(line, inner);
+		for (const w of wrapped) lines.push(theme.fg("text", w));
 	}
 
 	// Divider after title/body
