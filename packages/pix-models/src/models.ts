@@ -179,8 +179,9 @@ async function showEnhancedPicker(
 					let rankPrefix: string;
 					if (localRank) {
 						const rankStr = String(localRank).padEnd(maxRankWidth);
-						const rankColor =
-							localRank <= 3 ? "success" : localRank <= 7 ? "warning" : "error";
+						// Color rank by the model's bench score (same scale as ⚡score),
+						// not by list position — keeps the two colors consistent.
+						const rankColor = benchScoreColor(bench?.overallScore);
 						rankPrefix = mute("#") + theme.fg(rankColor, rankStr);
 					} else {
 						rankPrefix = " ".repeat(maxRankWidth + 1);
