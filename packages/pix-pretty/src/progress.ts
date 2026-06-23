@@ -13,7 +13,7 @@
  *   p.close();                             // releases input, removes overlay
  */
 
-import { Box, Text } from "@earendil-works/pi-tui";
+import { frameLines, modalWidth } from "./modal-frame.js";
 
 interface ProgressTheme {
 	fg(color: string, text: string): string;
@@ -66,31 +66,15 @@ export function openProgress(
 	ui.custom<void>(
 		(tui, theme, _kb, done) => {
 			let frame = 0;
-			const titleText = new Text(theme.fg(accent, theme.bold(title)), 1, 0);
-			const statusText = new Text("", 1, 0);
-
-			const render = () => {
-				statusText.setText(
-					`${theme.fg(accent, SPINNER[frame])} ${theme.fg("muted", labelValue)}`,
-				);
-			};
-
 			let labelValue = "Working…";
-			render();
 
 			const ticker = setInterval(() => {
 				frame = (frame + 1) % SPINNER.length;
-				render();
 				tui.requestRender();
 			}, SPINNER_INTERVAL_MS);
 
-			const container = new Box(2, 1, (s) => theme.bg("customMessageBg", s));
-			container.addChild(titleText);
-			container.addChild(statusText);
-
 			setLabelImpl = (label: string) => {
 				labelValue = label;
-				render();
 				tui.requestRender();
 			};
 			closeImpl = () => {
@@ -99,8 +83,19 @@ export function openProgress(
 			};
 
 			return {
-				render: (w: number) => container.render(w),
-				invalidate: () => container.invalidate(),
+				render: (w: number) => {
+					const mw = modalWidth(w);
+					return frameLines({
+						width: mw,
+						lines: [
+							theme.fg(accent, theme.bold(title)),
+							`${theme.fg(accent, SPINNER[frame])} ${theme.fg("muted", labelValue)}`,
+						],
+						color: (s) => theme.fg(accent, s),
+						bg: (s) => theme.bg("customMessageBg", s),
+					});
+				},
+				invalidate: () => {},
 				// Swallow every keystroke: a focused overlay owns input, so nothing
 				// reaches the editor while the update runs.
 				handleInput: () => {},

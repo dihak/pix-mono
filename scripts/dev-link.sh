@@ -127,6 +127,14 @@ process.exit(1);
 
 # ── main loop ─────────────────────────────────────────────────────────────────
 
+# Also symlink packages into the repo's own node_modules/@xynogen so that
+# Node can resolve @xynogen/* imports when traversing up from a symlink target
+# (packages/<pkg>/src/). Without this, cross-package imports like
+# @xynogen/pix-pretty/ansi fail at runtime because Node follows the real path
+# of a symlink when walking node_modules ancestors.
+REPO_NM_DIR="${repo_root}/node_modules/@xynogen"
+mkdir -p "$REPO_NM_DIR"
+
 compute_core_closure
 
 for dir in "$packages_dir"/*/; do
@@ -147,6 +155,8 @@ for dir in "$packages_dir"/*/; do
 			echo "↩ unlinked ${name}"
 			restored=$((restored + 1))
 		fi
+		# Remove repo node_modules symlink too.
+		[ -L "${REPO_NM_DIR}/${short}" ] && rm "${REPO_NM_DIR}/${short}"
 		# Remove from settings.json if it was registered.
 		if [ "$needs_registration" = true ]; then
 			if settings_remove "$name"; then
@@ -160,6 +170,9 @@ for dir in "$packages_dir"/*/; do
 	# Remove the existing npm copy (or stale link) and point at the repo.
 	rm -rf "$dest"
 	ln -s "${dir%/}" "$dest"
+	# Also symlink into repo node_modules so Node traversal resolves @xynogen/*.
+	rm -rf "${REPO_NM_DIR}/${short}"
+	ln -s "${dir%/}" "${REPO_NM_DIR}/${short}"
 	echo "→ linked ${name} → ${dir%/}"
 	linked=$((linked + 1))
 
