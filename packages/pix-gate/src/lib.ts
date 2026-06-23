@@ -144,6 +144,7 @@ export function loadUserConfig(): UserConfig {
 export function buildRules(cfg: UserConfig): {
 	rules: Rule[];
 	autoApprove: RegExp[];
+	pathRules: PathRule[];
 } {
 	const base = cfg.disableDefaults ? [] : DEFAULT_RULES.slice();
 	const extra = (cfg.extraRules ?? []).map((r) => ({
@@ -152,7 +153,9 @@ export function buildRules(cfg: UserConfig): {
 		reason: r.reason ?? "user-defined rule",
 	}));
 	const autoApprove = (cfg.autoApprove ?? []).map((s) => new RegExp(s));
-	return { rules: [...base, ...extra], autoApprove };
+	// ponytail: path rule config extension skipped for now — add extraPathRules/disablePathDefaults to UserConfig when needed
+	const pathRules = cfg.disableDefaults ? [] : DEFAULT_PATH_RULES.slice();
+	return { rules: [...base, ...extra], autoApprove, pathRules };
 }
 
 /**
@@ -168,6 +171,114 @@ export function classify(command: string, rules: Rule[]): Rule | undefined {
 		if (hit) return hit;
 	}
 	return undefined;
+}
+
+// ── Path rules ───────────────────────────────────────────────────────────────
+
+export type PathSeverity = "block" | "warn" | "info";
+
+export interface PathRule {
+	pattern: RegExp;
+	severity: PathSeverity;
+	reason: string;
+	/** Which ops to intercept: "read" | "write" | both (default both) */
+	ops?: ("read" | "write")[];
+}
+
+/**
+ * block — red, deny-first dialog (user can still allow)
+ * warn  — yellow, allow-first dialog
+ * info  — blue notify only, always passes through
+ */
+export const DEFAULT_PATH_RULES: PathRule[] = [
+	// block — red deny-first
+	{
+		pattern: /(^|\/)id_(rsa|dsa|ecdsa|ed25519)$/i,
+		severity: "block",
+		reason: "SSH private key",
+	},
+	{
+		pattern: /\.(pem|key|p12|pfx|jks|keystore)$/i,
+		severity: "block",
+		reason: "private key / keystore",
+	},
+	{
+		pattern: /(^|\/)\.aws\/credentials$/i,
+		severity: "block",
+		reason: "AWS credentials",
+	},
+	{
+		pattern: /(^|\/)\.netrc$/i,
+		severity: "block",
+		reason: "netrc credentials",
+	},
+	{
+		pattern: /(^|\/)(credentials|service-account)\.(json|ya?ml|toml)$/i,
+		severity: "block",
+		reason: "credentials file",
+	},
+
+	// warn — yellow allow-first
+	{ pattern: /(^|\/)\.env(\.|$)/i, severity: "warn", reason: ".env file" },
+	{ pattern: /(^|\/)\.envrc$/i, severity: "warn", reason: "direnv file" },
+	{
+		pattern: /(^|\/)\.npmrc$/i,
+		severity: "warn",
+		reason: ".npmrc (may contain auth tokens)",
+	},
+	{
+		pattern: /(^|\/)\.pypirc$/i,
+		severity: "warn",
+		reason: ".pypirc (may contain tokens)",
+	},
+	{ pattern: /\.(crt|cer)$/i, severity: "warn", reason: "certificate file" },
+	{
+		pattern: /(^|\/)(secrets?)\.(json|ya?ml|toml)$/i,
+		severity: "warn",
+		reason: "secrets file",
+	},
+	{ pattern: /(^|\/)\.ssh\//i, severity: "warn", reason: ".ssh directory" },
+
+	// info — notify only (write-only guard)
+	{
+		pattern: /(^|\/)\.git\//,
+		severity: "info",
+		reason: ".git directory",
+		ops: ["write"],
+	},
+	{
+		pattern: /(^|\/)node_modules\//,
+		severity: "info",
+		reason: "node_modules",
+		ops: ["write"],
+	},
+];
+
+export function classifyPath(
+	path: string,
+	op: "read" | "write",
+	rules: PathRule[],
+): PathRule | undefined {
+	const order: PathSeverity[] = ["block", "warn", "info"];
+	for (const sev of order) {
+		const hit = rules.find((r) => {
+			if (r.severity !== sev) return false;
+			if (r.ops && !r.ops.includes(op)) return false;
+			return r.pattern.test(path);
+		});
+		if (hit) return hit;
+	}
+	return undefined;
+}
+
+/** Extract candidate file paths from a bash command string */
+export function extractPathsFromBash(cmd: string): string[] {
+	const out: string[] = [];
+	const re =
+		/(?:^|[\s=><|;&"'`(])((?:\.\.\/|\/|~\/|\.)[^\s"'`<>|;&)]+|\.env(?:\.[A-Za-z0-9_-]+)?|[A-Za-z0-9_./-]+\.(?:pem|key|p12|pfx|crt|cer|env|envrc|netrc))/g;
+	let m: RegExpExecArray | null;
+	while ((m = re.exec(cmd)) !== null) out.push(m[1]);
+	return out;
 }
 
 /** True when command contains a real sudo invocation (not a path like pix-sudo). */
