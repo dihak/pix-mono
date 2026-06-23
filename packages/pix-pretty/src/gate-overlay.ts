@@ -19,7 +19,7 @@ import { frameLines, modalWidth, selectListTheme } from "./modal-frame.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type OverlayAction = "approved" | "denied" | "timeout";
+export type OverlayAction = "approved" | "denied" | "timeout"; // ponytail: timeout kept for back-compat; never emitted now
 
 export interface OverlayResult {
 	action: OverlayAction;
@@ -40,7 +40,7 @@ interface BaseConfig {
 	title: string;
 	/** Optional body lines under the title. */
 	body?: string[];
-	/** Auto-deny after this many ms. 0 = no timeout. Default 30_000. */
+	/** @deprecated No-op — timeout removed. Dialog waits indefinitely for user input. */
 	timeoutMs?: number;
 	/**
 	 * Choices shown in the SelectList.
@@ -95,10 +95,6 @@ export interface OverlayUI {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const SECOND_MS = 1_000;
-const COUNTDOWN_WARN_S = 5;
-const DEFAULT_TIMEOUT_MS = 30_000;
 
 const DEFAULT_CHOICES: OverlayChoice[] = [
 	{ value: "yes", label: "Allow", description: "Proceed" },
@@ -214,17 +210,10 @@ export function showOverlay(
 	config: OverlayConfig,
 ): Promise<OverlayResult> {
 	const accent = config.accent ?? "accent";
-	const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 	const choices = config.choices ?? DEFAULT_CHOICES;
 	const approveVal = config.approveValue ?? "yes";
 
 	return new Promise((resolve) => {
-		const controller = new AbortController();
-		const timer =
-			timeoutMs > 0
-				? setTimeout(() => controller.abort(), timeoutMs)
-				: undefined;
-
 		ui.custom<OverlayResult>(
 			(tui, theme, _kb, done) => {
 				type Stage = "select" | "password";
@@ -245,35 +234,8 @@ export function showOverlay(
 				);
 				const maskedInput = new MaskedInput();
 
-				// ── countdown ───────────────────────────────────────────────────
-				let ticker: ReturnType<typeof setInterval> | undefined;
-				if (timeoutMs > 0) {
-					const deadlineMs = Date.now() + timeoutMs;
-					const updateCountdown = () => {
-						const remaining = Math.max(
-							0,
-							Math.ceil((deadlineMs - Date.now()) / SECOND_MS),
-						);
-						countdownLine =
-							theme.fg("dim", "Auto-deny in ") +
-							theme.fg(
-								remaining <= COUNTDOWN_WARN_S ? accent : "muted",
-								`${remaining}s`,
-							);
-					};
-					updateCountdown();
-					ticker = setInterval(() => {
-						updateCountdown();
-						tui.requestRender();
-					}, SECOND_MS);
-				}
-
 				// ── finish ───────────────────────────────────────────────────────
-				const finish = (result: OverlayResult) => {
-					if (timer !== undefined) clearTimeout(timer);
-					if (ticker !== undefined) clearInterval(ticker);
-					done(result);
-				};
+				const finish = (result: OverlayResult) => done(result);
 
 				// ── event wiring ─────────────────────────────────────────────────
 				selectList.onSelect = (item) => {
@@ -291,10 +253,6 @@ export function showOverlay(
 				maskedInput.onSubmit = (pw) =>
 					finish({ action: "approved", password: pw });
 				maskedInput.onEscape = () => finish({ action: "denied" });
-
-				controller.signal.addEventListener("abort", () =>
-					finish({ action: "timeout" }),
-				);
 
 				// ── component interface ──────────────────────────────────────────
 				return {
@@ -327,8 +285,7 @@ export function showOverlay(
 			},
 			{ overlay: true },
 		).then((result) => {
-			if (timer !== undefined) clearTimeout(timer);
-			resolve(result ?? { action: "timeout" });
+			resolve(result ?? { action: "denied" });
 		});
 	});
 }
