@@ -222,14 +222,15 @@ function renderModel(
 	}
 	if (provider && id !== "?") {
 		const dev = lookupModelsDev(provider, id);
-		out += theme.fg("muted", ` · ${fmtCost(dev)}`);
+		const costStr = fmtCost(dev);
+		// color the $ and numbers green, separator muted
+		out += theme.fg("muted", " · ") + theme.fg("success", costStr);
 	}
 	const bench = lookupBenchmark(id);
 	if (bench) {
 		const score = bench.overallScore ?? "?";
-		out +=
-			theme.fg("muted", " · ⚡") +
-			theme.fg(benchScoreColor(bench.overallScore), `${score}`);
+		const scoreColor = benchScoreColor(bench.overallScore);
+		out += theme.fg("muted", " · ") + theme.fg(scoreColor, `⚡${score}`);
 	}
 	return out;
 }
