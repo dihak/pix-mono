@@ -33,6 +33,12 @@ type EditorFactory = (
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// Boundary wrapper injected around each expanded paste so the model sees an
+// explicit start/end per blob instead of multiple pastes merged into one wall.
+// Applies to text and image pastes alike.
+const PASTE_OPEN = "<paste>";
+const PASTE_CLOSE = "</paste>";
+
 const IMAGE_EXTS = new Set([
 	".png",
 	".jpg",
@@ -79,14 +85,55 @@ type EditorInternals = {
 	pasteCounter: number;
 };
 
+// expandPasteMarkers is TS-private on the base Editor but runtime-public JS.
+// We reimplement its loop (rather than call super) so we can wrap each
+// replacement, and to avoid depending on a non-exported private method.
+type ExpandInternals = {
+	pastes: Map<number, string>;
+};
+
+type ExpandPasteHandler = { expandPasteMarkers(text: string): string };
+
+// Mirror of the base Editor's paste-marker grammar, per-id at expand time.
+function markerReFor(pasteId: number): RegExp {
+	return new RegExp(
+		`\\[paste #${pasteId}( (\\+\\d+ lines|\\d+ chars))?\\]`,
+		"g",
+	);
+}
+
+/**
+ * Expand every paste marker in `text` to its content wrapped in
+ * `<paste>…</paste>`. Mirrors the base Editor's expansion loop but adds a
+ * boundary per blob (text and image alike) so adjacent pastes can't merge
+ * into one indistinguishable wall in the model-facing text.
+ */
+export function expandPasteMarkers(
+	text: string,
+	pastes: Map<number, string>,
+): string {
+	let result = text;
+	for (const [pasteId, pasteContent] of pastes) {
+		result = result.replace(
+			markerReFor(pasteId),
+			() => `${PASTE_OPEN}${pasteContent}${PASTE_CLOSE}`,
+		);
+	}
+	return result;
+}
+
 // ─── Path → marker rewriter ──────────────────────────────────────────────────
 
 /**
  * Walk `text`, for each image path: allocate a new paste ID, register the
  * real path in editor.pastes, remember the ID as an image, and emit a
  * Pi-format marker so deletion is atomic.
+ *
+ * Exported for integration testing: composed with `expandPasteMarkers`, this
+ * reproduces the full clipboard-image round-trip (path insert → marker →
+ * boundary-wrapped expansion) without standing up a live TUI editor.
  */
-function replaceImagePaths(
+export function replaceImagePaths(
 	text: string,
 	internals: EditorInternals,
 	imageIds: Set<number>,
@@ -167,6 +214,7 @@ class ChipEditor extends CustomEditor {
 	constructor(...args: ConstructorParameters<typeof CustomEditor>) {
 		super(...args);
 		this.patchHandlePaste();
+		this.patchExpandPasteMarkers();
 	}
 
 	override insertTextAtCursor(text: string): void {
@@ -177,6 +225,20 @@ class ChipEditor extends CustomEditor {
 		super.insertTextAtCursor(
 			endsWithMarker(replaced) ? `${replaced} ` : replaced,
 		);
+	}
+
+	/**
+	 * Patch `expandPasteMarkers` (TS-private on the base Editor, runtime-public
+	 * JS) so every paste expands to its content wrapped in `<paste>…</paste>`,
+	 * giving the model an explicit boundary per blob — text and image alike.
+	 * The base inlines content raw, letting adjacent pastes merge into one
+	 * indistinguishable wall. Patched per-instance, mirroring patchHandlePaste.
+	 */
+	private patchExpandPasteMarkers(): void {
+		const internals = this as unknown as ExpandInternals;
+		const self = this as unknown as ExpandPasteHandler;
+		self.expandPasteMarkers = (text: string): string =>
+			expandPasteMarkers(text, internals.pastes);
 	}
 
 	private patchHandlePaste(): void {

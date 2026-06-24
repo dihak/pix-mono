@@ -8,7 +8,12 @@
 
 import { describe, expect, it } from "bun:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { endsWithMarker, restyleMarkers } from "../src/paste-chips.js";
+import {
+	endsWithMarker,
+	expandPasteMarkers,
+	replaceImagePaths,
+	restyleMarkers,
+} from "../src/paste-chips.js";
 
 const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, "");
 
@@ -150,6 +155,127 @@ describe("paste-chips width safety", () => {
 			const restyled = restyleMarkers(line, new Set());
 			expect(visibleWidth(restyled)).toBeLessThanOrEqual(terminalWidth);
 		});
+	});
+});
+
+// ─── expandPasteMarkers (boundary wrapping) ──────────────────────────────────
+
+describe("paste-chips expandPasteMarkers", () => {
+	it("wraps a single text paste in <paste> tags", () => {
+		const pastes = new Map([[1, "curl https://a.example"]]);
+		const result = expandPasteMarkers("[paste #1 22 chars]", pastes);
+		expect(result).toBe("<paste>curl https://a.example</paste>");
+	});
+
+	it("wraps an image paste (path content) in <paste> tags", () => {
+		const pastes = new Map([[1, "/tmp/pi-clipboard-abc.png"]]);
+		const result = expandPasteMarkers("[paste #1 25 chars]", pastes);
+		expect(result).toBe("<paste>/tmp/pi-clipboard-abc.png</paste>");
+	});
+
+	it("gives adjacent pastes distinct boundaries (no merge)", () => {
+		const pastes = new Map([
+			[1, "curl one"],
+			[2, "curl two"],
+		]);
+		const result = expandPasteMarkers(
+			"ini [paste #1 8 chars] ini juga [paste #2 8 chars]",
+			pastes,
+		);
+		expect(result).toBe(
+			"ini <paste>curl one</paste> ini juga <paste>curl two</paste>",
+		);
+	});
+
+	it("wraps line-counted markers too", () => {
+		const pastes = new Map([[3, "line1\nline2\nline3"]]);
+		const result = expandPasteMarkers("[paste #3 +3 lines]", pastes);
+		expect(result).toBe("<paste>line1\nline2\nline3</paste>");
+	});
+
+	it("leaves text without markers unchanged", () => {
+		const pastes = new Map([[1, "unused"]]);
+		expect(expandPasteMarkers("plain text", pastes)).toBe("plain text");
+	});
+
+	it("is a no-op when there are no pastes", () => {
+		expect(expandPasteMarkers("[paste #1 5 chars]", new Map())).toBe(
+			"[paste #1 5 chars]",
+		);
+	});
+});
+
+// ─── image paste round-trip (insert → marker → wrapped expansion) ───────────
+
+// Mirrors the real clipboard-image flow: Pi writes the image to a temp file and
+// calls editor.insertTextAtCursor(path), which routes through replaceImagePaths;
+// on submit, getExpandedText → expandPasteMarkers wraps each paste. We compose
+// the two pure functions over a fake editor-internals object to prove the whole
+// chain without standing up a live TUI editor.
+describe("paste-chips image paste round-trip", () => {
+	const makeInternals = () => ({
+		pastes: new Map<number, string>(),
+		pasteCounter: 0,
+	});
+
+	it("collapses a clipboard image path into an image marker", () => {
+		const internals = makeInternals();
+		const imageIds = new Set<number>();
+		const path = "/tmp/pi-clipboard-abc123.png";
+
+		const buffer = replaceImagePaths(path, internals, imageIds);
+
+		expect(buffer).toBe(`[paste #1 ${path.length} chars]`);
+		expect(internals.pastes.get(1)).toBe(path);
+		expect(imageIds.has(1)).toBe(true);
+	});
+
+	it("expands the collapsed image path wrapped in <paste> tags", () => {
+		const internals = makeInternals();
+		const imageIds = new Set<number>();
+		const path = "/tmp/pi-clipboard-abc123.png";
+
+		const buffer = replaceImagePaths(path, internals, imageIds);
+		const expanded = expandPasteMarkers(buffer, internals.pastes);
+
+		expect(expanded).toBe(`<paste>${path}</paste>`);
+	});
+
+	it("keeps two pasted images on distinct boundaries", () => {
+		const internals = makeInternals();
+		const imageIds = new Set<number>();
+
+		const first = replaceImagePaths("/tmp/one.png", internals, imageIds);
+		const second = replaceImagePaths("/tmp/two.jpg", internals, imageIds);
+		const expanded = expandPasteMarkers(`${first} ${second}`, internals.pastes);
+
+		expect(expanded).toBe(
+			"<paste>/tmp/one.png</paste> <paste>/tmp/two.jpg</paste>",
+		);
+		expect(imageIds.has(1)).toBe(true);
+		expect(imageIds.has(2)).toBe(true);
+	});
+
+	it("leaves a non-image path uncollapsed (no marker, no wrapping)", () => {
+		const internals = makeInternals();
+		const imageIds = new Set<number>();
+
+		const buffer = replaceImagePaths("/tmp/notes.txt", internals, imageIds);
+		const expanded = expandPasteMarkers(buffer, internals.pastes);
+
+		expect(buffer).toBe("/tmp/notes.txt");
+		expect(internals.pastes.size).toBe(0);
+		expect(expanded).toBe("/tmp/notes.txt");
+	});
+
+	it("restyles the image marker to an image chip in the display layer", () => {
+		const internals = makeInternals();
+		const imageIds = new Set<number>();
+		const buffer = replaceImagePaths("/tmp/shot.png", internals, imageIds);
+
+		const stripped = stripAnsi(restyleMarkers(buffer, imageIds));
+
+		expect(stripped).toBe("󰋩 image #1");
 	});
 });
 
