@@ -277,7 +277,7 @@ export const CACHE_DIR = join(
 
 export const modelgrep = new DataSource<ModelGrepModel[]>({
 	label: "modelgrep",
-	url: `https://modelgrep.com/api/v1/models?benchmarked=1&sort=coding&order=desc&limit=${MODELGREP_PAGE}`,
+	url: `https://modelgrep.com/api/v1/models?sort=coding&order=desc&limit=${MODELGREP_PAGE}`,
 	cachePath: join(CACHE_DIR, "modelgrep.json"),
 	fetchRaw: fetchModelGrepAll,
 	parse: (raw) => (raw as ModelGrepResponse).data ?? [],
