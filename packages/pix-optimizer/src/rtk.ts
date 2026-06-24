@@ -11,6 +11,7 @@ import type {
 	ExtensionCommandContext,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { loadOptValue, saveOptValue } from "./persist.ts";
 import type { OptimizerHandle, OptimizerStatus } from "./status.ts";
 
 /**
@@ -283,6 +284,9 @@ export function rtk(
 	// Keep the status indicator in sync across the agent lifecycle. Probe
 	// availability on session start so the icon reflects reality immediately.
 	pi.on("session_start", async (_event, ctx) => {
+		// Restore the user's on/off choice from disk (survives quit/restart).
+		const saved = loadOptValue("rtk");
+		if (saved === "on" || saved === "off") enabled = saved === "on";
 		const probe = await checkRtkAvailability();
 		if (!probe.available && !warnedMissing) {
 			ctx.ui.notify(
@@ -307,6 +311,7 @@ export function rtk(
 		ctx: ExtensionCommandContext,
 	): Promise<void> {
 		enabled = value === "on";
+		saveOptValue("rtk", enabled ? "on" : "off");
 
 		await checkRtkAvailability();
 		syncStatus(ctx);

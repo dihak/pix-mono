@@ -10,6 +10,7 @@ import type {
 	ExtensionCommandContext,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { loadOptValue, saveOptValue } from "./persist.ts";
 import type { OptimizerHandle, OptimizerStatus } from "./status.ts";
 
 // ── Levels ────────────────────────────────────────────────────────────────────
@@ -155,11 +156,16 @@ export function caveman(
 	// -- Restore live level from the session log on load --
 
 	pi.on("session_start", async (_event, ctx) => {
+		// Session log first (survives in-session branch nav), then disk (survives
+		// a full quit/restart). Disk wins when present so a new session restores
+		// the last chosen level instead of defaulting to off.
 		for (const entry of ctx.sessionManager.getEntries()) {
 			if (entry.type === "custom" && entry.customType === "caveman-level") {
 				level = (entry.data as { level: Level })?.level ?? level;
 			}
 		}
+		const saved = loadOptValue("caveman");
+		if (saved && LEVELS.includes(saved as Level)) level = saved as Level;
 		syncStatus(ctx);
 	});
 
@@ -182,6 +188,7 @@ export function caveman(
 		level = resolved;
 
 		pi.appendEntry("caveman-level", { level });
+		saveOptValue("caveman", level);
 		syncStatus(ctx);
 
 		ctx.ui.notify(

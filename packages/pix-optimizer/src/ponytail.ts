@@ -14,6 +14,7 @@ import type {
 	ExtensionCommandContext,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { loadOptValue, saveOptValue } from "./persist.ts";
 import type { OptimizerHandle, OptimizerStatus } from "./status.ts";
 
 // ── Levels ────────────────────────────────────────────────────────────────────
@@ -159,11 +160,15 @@ export function ponytail(
 	// -- Restore live level from the session log on load --
 
 	pi.on("session_start", async (_event, ctx) => {
+		// Session log first (in-session branch nav), then disk (survives a full
+		// quit/restart). Disk wins when present.
 		for (const entry of ctx.sessionManager.getEntries()) {
 			if (entry.type === "custom" && entry.customType === "ponytail-level") {
 				level = (entry.data as { level: Level })?.level ?? level;
 			}
 		}
+		const saved = loadOptValue("ponytail");
+		if (saved && LEVELS.includes(saved as Level)) level = saved as Level;
 		syncStatus(ctx);
 	});
 
@@ -186,6 +191,7 @@ export function ponytail(
 		level = resolved;
 
 		pi.appendEntry("ponytail-level", { level });
+		saveOptValue("ponytail", level);
 		syncStatus(ctx);
 
 		ctx.ui.notify(

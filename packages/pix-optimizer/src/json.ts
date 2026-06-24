@@ -22,6 +22,7 @@ import type {
 	ExtensionCommandContext,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { loadOptValue, saveOptValue } from "./persist.ts";
 import type { OptimizerHandle, OptimizerStatus } from "./status.ts";
 
 // ── System prompt ───────────────────────────────────────────────────────────
@@ -225,6 +226,9 @@ export function json(
 	}
 
 	pi.on("session_start", async (_event, ctx) => {
+		// Restore the user's on/off choice from disk (survives quit/restart).
+		const saved = loadOptValue("toon");
+		if (saved === "on" || saved === "off") enabled = saved === "on";
 		syncStatus(ctx);
 	});
 	pi.on("agent_start", async (_event, ctx) => {
@@ -277,6 +281,7 @@ export function json(
 		ctx: ExtensionCommandContext,
 	): Promise<void> {
 		enabled = value === "on";
+		saveOptValue("toon", enabled ? "on" : "off");
 
 		syncStatus(ctx);
 		ctx.ui.notify(`JSON/TOON guidance ${enabled ? "on" : "off"}.`, "info");
