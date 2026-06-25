@@ -7,7 +7,7 @@
  * Default model: dg/nova-3 (Deepgram Nova 3)
  *
  * Environment:
- *   ROUTER_API_BASE  — router API base URL (default: https://9r.xynogen.xyz/v1)
+ *   ROUTER_API_BASE  — router API base URL (default: https://9router.example.com/v1)
  *   ROUTER_API_KEY   — bearer token for the router
  */
 

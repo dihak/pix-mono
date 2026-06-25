@@ -4,9 +4,12 @@
  * Renders a coloured π logo above the editor on session start.
  * Runs checks in parallel while the banner is visible:
  *
- *   · pi version   — read installed version only
+ *   · PI version   — read installed version only
  *   · auth         — at least one provider configured in modelRegistry
- *   · gitignore    — auto-ignore Pi emissions (.ai/.pi-lens) in git repos
+ *   · models       — count of loaded models
+ *   · tools        — count of active tools
+ *   · skills       — count of loaded skills
+ *   · gitignore    — auto-ignore Pi emissions (.pi/, .pi-lens/) in git repos
  *
  * Each check updates the banner live as results arrive.
  * Banner auto-dismisses on the first user turn (turn_start).
@@ -24,6 +27,7 @@
  *   ✓ Auth    connected
  *   ✓ Models  16 loaded
  *   ✓ Tools   24 loaded
+ *   ✓ Skills  10 loaded
  *   ✓ Ignore  up to date
  */
 
@@ -274,8 +278,8 @@ interface ToolInfo {
 }
 
 /**
- * Summarise loaded tools by source. Counts everything in `getActiveTools()`
- * and breaks out built-in vs. extension/custom tools for the detail line.
+ * Summarise loaded tools. Counts everything in `getActiveTools()` and reports
+ * the total as the detail line (`N loaded`).
  */
 export function summariseTools(tools: ToolInfo[]): CheckResult {
 	const total = tools.length;

@@ -2,7 +2,7 @@
  * fetch.ts — fetch tool via 9Router API, with curl fallback.
  *
  * Environment:
- *   ROUTER_API_BASE  — router API base URL (default: https://9r.xynogen.xyz/v1)
+ *   ROUTER_API_BASE  — router API base URL (default: https://9router.example.com/v1)
  *   ROUTER_API_KEY   — bearer token for the router
  */
 

@@ -4,7 +4,8 @@
  * Warms the shared model data cache on session start so other extensions
  * (pix-9router, models picker, footer) can read from ~/.cache/pi/* synchronously.
  *
- * Single non-blocking fetch — Pi session starts immediately.
+ * Two non-blocking fetches (modelgrep catalog + BenchLM scores) — Pi session
+ * starts immediately; consumers read whichever cache file they need.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";

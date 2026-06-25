@@ -6,11 +6,11 @@
  *
  *   Stage 1 — confirm
  *     Shows command + AI intent.  User picks Allow or Deny via SelectList.
- *     Auto-denies after 30 s.
+ *     Auto-denies after 60 s.
  *
  *   Stage 2 — password (skipped when a valid PAM ticket already exists)
  *     Inline masked input (● per char) inside the same overlay.
- *     Enter submits, Esc cancels, 30 s inactivity auto-cancels.
+ *     Enter submits, Esc cancels, 60 s inactivity auto-cancels.
  *
  * Security notes:
  *   - Password never leaves JS memory; never written to disk.

@@ -3,8 +3,8 @@
  *
  * Models drift toward improvising mid-session, forgetting they can ask the
  * user, search the web, pull library docs (context7), use LSP, or invoke an
- * Agent Skill instead of guessing. Fires on EVERY user prompt via
- * `before_agent_start`, injected into the system prompt for the turn.
+ * Agent Skill instead of guessing. Hooks `before_agent_start` and injects into
+ * the system prompt on selected turns only (see REMINDER_INTERVAL).
  *
  * Two modes:
  *   1. FIRST prompt of the session — an orientation block: a high-level
@@ -12,8 +12,9 @@
  *      and HOW to explore it. We deliberately do NOT dump the whole inventory
  *      every turn — the model should call read_skills() for skills and use /toolbox
  *      (slash command, user-facing) to discover/enable gated tools.
- *   2. EVERY subsequent prompt — the terse one-line CAPABILITY_REMINDER, a
- *      cheap (~40 tok) reinforcement that steers toward read_skills() and /toolbox.
+ *   2. Every REMINDER_INTERVAL-th turn thereafter (turns 11, 21, …) — the terse
+ *      one-line CAPABILITY_REMINDER, a cheap (~40 tok) reinforcement that steers
+ *      toward read_skills() and /toolbox. All other turns inject nothing.
  *
  * NOTE: `toolbox` is a slash command only (/toolbox) — NOT a model-callable
  * function tool. The model cannot call toolbox() in function definitions.

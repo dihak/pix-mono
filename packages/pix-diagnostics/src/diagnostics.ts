@@ -1,12 +1,14 @@
 /**
- * diagnostics.ts — Lightweight diagnostic reporter (pi-lens replacement)
+ * diagnostics.ts — Lightweight session-files widget (pi-lens replacement)
  *
- * Renders LSP diagnostics from recently touched files with a collapsed view:
- *   - Header shows total counts across all files (●4E !1W)
- *   - Body shows top 3 diagnostics only
- *   - "+N more" line if diagnostics exceed 3
+ * Tracks files touched this session via `write`/`edit` tool results and renders
+ * a single compact line: the up-to-3 most recently touched file basenames with
+ * a `+N more` suffix and a `(/lens-booboo for details)` hint.
  *
- * Registers widget with id "pi-lens" to override external pi-lens widget.
+ * NOTE: it does NOT currently query live LSP diagnostics — `FileRecord.diagnostics`
+ * is always empty. The file list is a placeholder for future LSP integration.
+ *
+ * Registers widget with id "pi-lens" to override the external pi-lens widget.
  */
 
 import type { ExtensionAPI, Theme } from "@earendil-works/pi-coding-agent";

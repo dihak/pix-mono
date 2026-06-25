@@ -4,12 +4,12 @@
  * caveman / rtk / toon / ponytail each toggle independently, but they're all the same
  * class of thing (token-optimization tools), so they share ONE status cell
  * instead of three. Each tool reports its on/off state into a single registry;
- * the cell renders only the icons whose tool is currently enabled, in a fixed
- * order, accent-colored. When everything is off the cell is empty.
+ * the cell renders ALL four icons in a fixed order — accent-colored when the
+ * tool is enabled, dim when disabled. The cell is never empty.
  *
- *   all on:        󰜐 󰓥 󰗀 󰆐
- *   caveman off:   󰓥 󰗀 󰆐
- *   all off:       (empty)
+ *   all on:        all four accent
+ *   caveman off:   caveman dim, rest accent
+ *   all off:       all four dim
  */
 
 import type {

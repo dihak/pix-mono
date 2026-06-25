@@ -1,7 +1,10 @@
 /**
- * pi-pretty — Pretty terminal output for pi built-in tools.
+ * pix-pretty — Pretty terminal output for pi built-in tools.
  *
- * Pure rendering library — no Pi lifecycle hooks or extensions.
+ * Primarily a rendering library (highlight/diff/icons/fff, imported by the tool
+ * packages). This default export is also a thin Pi extension: on load it inits
+ * the pretty theme, clears the highlight cache, and registers the FFF slash
+ * commands (/fff-health, /fff-rescan). pix-core activates it for that purpose.
  * UI features (paste chips, thinking blocks) live in pix-display.
  */
 
@@ -30,9 +33,3 @@ export default function piPrettyExtension(pi: PiPrettyApi): void {
 	// Commands become available once pix-grep initialises the finder.
 	registerFffCommands(pi, fffState);
 }
-
-/**
- * piPrettyExtension still exports a default function for packages that
- * import it as an extension (pix-core activates it for theme + FFF).
- * UI extensions (paste-chips, thinking) moved to pix-display.
- */

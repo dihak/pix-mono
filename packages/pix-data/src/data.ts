@@ -1,9 +1,11 @@
 /**
  * data.ts — shared Pi model data layer
  *
- * Single source of truth, sourced from modelgrep (coding-sorted), cached at
- * ~/.cache/pi/modelgrep.json (TTL 24h). Provides context, cost, modalities,
- * capabilities, coding-percentile score, and rank.
+ * Two data sources, each its own cached DataSource:
+ *   - modelgrep (coding-sorted catalog) — ~/.cache/pi/modelgrep.json (TTL 24h):
+ *     context, cost, modalities, capabilities, coding-percentile score, rank.
+ *   - BenchLM — ~/.cache/pi/benchlm.json: fallback overall score when modelgrep
+ *     has no benchmark for a model (see lookupBenchmark).
  *
  * Cache files are shared across all Pi extensions — whichever extension loads
  * first populates the cache; subsequent extensions read from disk.

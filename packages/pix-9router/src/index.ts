@@ -8,7 +8,7 @@
  *   - transcribe tool   (speech-to-text via audio transcription API)
  *
  * Environment:
- *   ROUTER_API_BASE  — override base URL  (default: https://9r.xynogen.xyz/v1)
+ *   ROUTER_API_BASE  — override base URL  (default: https://9router.example.com/v1)
  *   ROUTER_API_KEY   — bearer token       (required for provider + tools)
  */
 

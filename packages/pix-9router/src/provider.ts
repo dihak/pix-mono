@@ -5,7 +5,7 @@
  * router API. Falls back to an empty model list if ROUTER_API_KEY is unset.
  *
  * Environment:
- *   ROUTER_API_BASE  — override API base URL (default: https://9r.xynogen.xyz/v1)
+ *   ROUTER_API_BASE  — override API base URL (default: https://9router.example.com/v1)
  *   ROUTER_API_KEY   — bearer token (required for live model list)
  */
 
