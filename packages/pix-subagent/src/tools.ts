@@ -107,7 +107,7 @@ export function formatTurns(
 	turnCount: number,
 	maxTurns?: number | null,
 ): string {
-	return maxTurns != null ? `↻${turnCount}≤${maxTurns}` : `↻${turnCount}`;
+	return maxTurns != null ? `🗘${turnCount}≤${maxTurns}` : `🗘${turnCount}`;
 }
 
 export function formatMs(ms: number): string {

@@ -19,11 +19,11 @@ test("formatMs rounds to 1dp", () => {
 });
 
 test("formatTurns no max", () => {
-	expect(formatTurns(3)).toBe("↻3");
+	expect(formatTurns(3)).toBe("🗘3");
 });
 
 test("formatTurns with max", () => {
-	expect(formatTurns(3, 10)).toBe("↻3≤10");
+	expect(formatTurns(3, 10)).toBe("🗘3≤10");
 });
 
 test("formatSpeed computes output t/s", () => {

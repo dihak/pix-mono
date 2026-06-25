@@ -352,7 +352,7 @@ export class AgentWidget {
 			runningLines.push(
 				truncate(
 					theme.fg("dim", "├─") +
-						` ${theme.fg("accent", frame)} ${theme.fg("dim", activity)} ${theme.fg("dim", "·")} ${theme.bold(name)}${modelLabel}${modeTag}  ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)}`,
+						` ${theme.fg("accent", frame)} ${theme.fg("dim", activity)} ${theme.fg("dim", "·")} ${theme.fg("toolTitle", theme.bold(name))}${modelLabel}${modeTag}  ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)}`,
 				),
 			);
 		}
