@@ -172,13 +172,12 @@ export function buildAgentToolDescription(modelList: string[]): string {
 	const typeList = available
 		.map((name) => {
 			const cfg = getAgentConfig(name);
-			const modelSuffix = cfg?.model ? ` (${cfg.model})` : "";
 			const tools = cfg?.builtinToolNames;
 			const toolsSuffix =
 				!tools || tools.length === BUILTIN_TOOL_NAMES.length
 					? " (Tools: *)"
 					: ` (Tools: ${tools.join(", ")})`;
-			return `- ${name}: ${cfg?.description ?? name}${modelSuffix}${toolsSuffix}`;
+			return `- ${name}: ${cfg?.description ?? name}${toolsSuffix}`;
 		})
 		.join("\n");
 
@@ -210,6 +209,7 @@ If the target is already known, use a direct tool — \`read\` for a known path,
 - Use resume with an agent ID to continue a previous agent's work.
 - Use agent_steer to send mid-run messages to a running background agent.
 - Use model to specify a model from the available models list above (provider/id or fuzzy e.g. "haiku").
+- Type sets the tool allowlist and persona only — never the model. Pick the model yourself via \`model:\` (see Available models above); omit to inherit the parent's. For mechanical/read-only work prefer a cheap tier; for hard reasoning match or exceed the parent.
 - Use allowed_tools[] to restrict which tools the sub-agent can use (useful for scoping work). Omit for the agent type's default tool set.
 - Use thinking to control extended thinking level: off|minimal|low|medium|high|xhigh.
 - Use inherit_context if the agent needs the parent conversation history.

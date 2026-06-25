@@ -1,10 +1,14 @@
 import { expect, test } from "bun:test";
 import {
 	BUILTIN_TOOL_NAMES,
+	getAgentConfig,
 	getAvailableTypes,
 	getToolNamesForType,
 	registerAgents,
 } from "../src/agent-types.ts";
+import { DEFAULT_AGENTS } from "../src/default-agents.ts";
+import { resolveAgentInvocationConfig } from "../src/invocation-config.ts";
+import type { AgentConfig } from "../src/types.ts";
 
 test("BUILTIN_TOOL_NAMES is the 7 pi built-ins", () => {
 	expect(new Set(BUILTIN_TOOL_NAMES)).toEqual(
@@ -28,4 +32,60 @@ test("getToolNamesForType falls back to all built-ins for unknown type", () => {
 	expect(new Set(getToolNamesForType("does-not-exist"))).toEqual(
 		new Set(BUILTIN_TOOL_NAMES),
 	);
+});
+
+test("no default agent carries a baked-in model", () => {
+	// Type must imply tools + persona only — never a model. Caller picks model.
+	for (const [_name, config] of DEFAULT_AGENTS) {
+		expect(config.model).toBeUndefined();
+	}
+	// Sanity: built-ins are general-purpose, Explore, Plan
+	expect([...DEFAULT_AGENTS.keys()].sort()).toEqual([
+		"Explore",
+		"Plan",
+		"general-purpose",
+	]);
+});
+
+test("caller params.model always wins over agentConfig.model", () => {
+	const customConfig: AgentConfig = {
+		name: "test-custom",
+		description: "test",
+		extensions: true,
+		skills: true,
+		systemPrompt: "",
+		promptMode: "append",
+		model: "anthropic/claude-haiku-4-5-20251001",
+	};
+
+	// Caller passes sonnet → sonnet wins, not the haiku baked into the config
+	const r1 = resolveAgentInvocationConfig(customConfig, {
+		model: "anthropic/claude-sonnet-4-6",
+	});
+	expect(r1.modelInput).toBe("anthropic/claude-sonnet-4-6");
+	expect(r1.modelFromParams).toBe(true);
+
+	// Caller silent → config model applies as a default
+	const r2 = resolveAgentInvocationConfig(customConfig, {});
+	expect(r2.modelInput).toBe("anthropic/claude-haiku-4-5-20251001");
+	expect(r2.modelFromParams).toBe(false);
+
+	// Caller silent + no config model → undefined (caller inherits parent)
+	const r3 = resolveAgentInvocationConfig(
+		{ ...customConfig, model: undefined },
+		{},
+	);
+	expect(r3.modelInput).toBeUndefined();
+	expect(r3.modelFromParams).toBe(false);
+});
+
+test("defaults resolve with no model — caller inherits parent", () => {
+	registerAgents(new Map());
+	for (const name of getAvailableTypes()) {
+		const cfg = getAgentConfig(name);
+		expect(cfg).toBeDefined();
+		const r = resolveAgentInvocationConfig(cfg, {});
+		expect(r.modelInput).toBeUndefined();
+		expect(r.modelFromParams).toBe(false);
+	}
 });

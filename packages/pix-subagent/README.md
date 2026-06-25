@@ -77,11 +77,18 @@ Delivered after the agent's current tool execution. If the session isn't ready y
 
 ## Default agent types
 
-| Type | Tools | Model |
-|---|---|---|
-| `general-purpose` | all (read/bash/edit/write/grep/find/ls) | parent |
-| `Explore` | read/bash/grep/find/ls (read-only) | haiku |
-| `Plan` | read/bash/grep/find/ls (read-only) | parent |
+| Type | Tools |
+|---|---|
+| `general-purpose` | all (read/bash/edit/write/grep/find/ls) |
+| `Explore` | read/bash/grep/find/ls (read-only) |
+| `Plan` | read/bash/grep/find/ls (read-only) |
+
+Built-in types set the **tool allowlist and persona only** — never a model. The
+caller picks the model per call via the `model` parameter on the `agent` tool,
+or omits it to inherit the parent's. For mechanical/read-only work pass a cheap
+tier; for hard reasoning match or exceed the parent. A read-only `Explore`
+worker is not automatically cheap — you make it cheap by passing a cheap-tier
+model. See `model` in the `agent` tool above.
 
 ## Custom agents
 
@@ -98,7 +105,12 @@ max_turns: 20
 You are a read-only code scout. Find patterns, never write files.
 ```
 
-Frontmatter fields: `description`, `tools` (CSV), `model`, `thinking`, `max_turns`, `extensions` (true/false/CSV), `skills` (true/false/CSV), `isolated`, `inherit_context`, `run_in_background`, `prompt_mode` (replace/append), `enabled` (false to disable).
+Frontmatter fields: `description`, `tools` (CSV), `model` (caller-overridable default), `thinking`, `max_turns`, `extensions` (true/false/CSV), `skills` (true/false/CSV), `isolated`, `inherit_context`, `run_in_background`, `prompt_mode` (replace/append), `enabled` (false to disable).
+
+**`model`** in a custom agent is a *caller-overridable default*: it applies
+when the caller's `model:` param is omitted, but a caller's explicit `model:`
+always wins. This is the pix principle — model selection is caller-decided,
+always; the type/persona config never overrides it.
 
 ## Deferred (v2+)
 

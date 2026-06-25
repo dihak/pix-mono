@@ -60,11 +60,11 @@ exact file paths, the shared contracts (types, function signatures, interfaces),
 the naming, and the acceptance criteria **before** splitting. The whole point is
 that workers inherit decisions instead of inventing them.
 
-For large/complex tasks, delegate planning to the builtin `planner` first, get
+For large/complex tasks, delegate planning to the builtin `Plan` agent first, get
 the plan, then decompose it:
 
 ```typescript
-subagent({ agent: "planner", task: "Plan: <task>. Emphasize independent, parallelizable units." })
+subagent({ subagent_type: "Plan", prompt: "Plan: <task>. Emphasize independent, parallelizable units." })
 ```
 
 ### 2. Decompose
@@ -117,7 +117,14 @@ cheaper/smaller model.
 > Branch **only** truly-independent units; if you cannot fan them out
 > concurrently, keep the work on the orchestrator instead of delegating it.
 
-**Resolve the cheap model at call time — never hardcode it.** The active model is
+**Type and model are orthogonal — set both, every time.** `subagent_type` (the
+agent type) picks the tool allowlist and persona: `Explore` for read-only search,
+`Plan` for read-only architecture, `general-purpose` for full-toolset work. It
+does **not** pick the model. The model is always yours to choose per call via
+`model:`. A read-only `Explore` worker is not automatically cheap — you make it
+cheap by passing a cheap-tier model.
+
+Resolve that model at call time — never hardcode it. The active model is
 dynamic: the user can switch it mid-chat, and the orchestrator's own model is
 whatever is current. So before fanning out:
 
@@ -128,9 +135,10 @@ whatever is current. So before fanning out:
    rather than guessing — the wrong pick wastes the run.
 
 The per-task `model` override is the right mechanism precisely because the main
-model can change: the override pins each worker to the chosen cheap model
-regardless of what the orchestrator is running at that moment. Examples below use
-`<cheap-model>` as a placeholder — substitute the resolved model.
+model can change: the override pins each worker to the chosen model regardless
+of what the orchestrator is running at that moment. Examples below use
+`<cheap-model>` as a placeholder — substitute the resolved model. Omit `model:`
+only when you deliberately want the worker to inherit the parent's model.
 
 ```typescript
 subagent({

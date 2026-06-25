@@ -27,9 +27,11 @@ export function resolveAgentInvocationConfig(
 	runInBackground: boolean;
 	isolated: boolean;
 } {
+	// Caller's explicit `params.model` always wins; agentConfig?.model is a
+	// caller-overridable default for users who set one in .pi/agents/*.md.
 	return {
-		modelInput: agentConfig?.model ?? params.model,
-		modelFromParams: agentConfig?.model == null && params.model != null,
+		modelInput: params.model ?? agentConfig?.model,
+		modelFromParams: params.model != null,
 		thinking: (agentConfig?.thinking ?? params.thinking) as
 			| ThinkingLevel
 			| undefined,
