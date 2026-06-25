@@ -17,7 +17,7 @@ Shared dependencies pulled in automatically — install directly only if you nee
 | Package | Description |
 | --- | --- |
 | [`@xynogen/pix-data`](packages/pix-data) | Shared model data layer (modelgrep catalog + coding score), cached at `~/.cache/pi` |
-| [`@xynogen/pix-pretty`](packages/pix-pretty) | Enhanced tool output rendering — syntax highlighting, icons, tree views, FFF, paste chips |
+| [`@xynogen/pix-pretty`](packages/pix-pretty) | Enhanced tool output rendering — syntax highlighting, icons, tree views, FFF, gate-overlay |
 
 **Theme**
 
@@ -29,22 +29,23 @@ Shared dependencies pulled in automatically — install directly only if you nee
 
 | Package | Description |
 | --- | --- |
-| [`@xynogen/pix-welcome`](packages/pix-welcome) | ASCII π banner + startup health checks (version, auth, gitignore) |
+| [`@xynogen/pix-welcome`](packages/pix-welcome) | ASCII π banner + startup health checks (version, auth, models, tools, skills, gitignore) |
 | [`@xynogen/pix-footer`](packages/pix-footer) | Status bar — mode, git branch, model, tokens, cost, live TPS |
 | [`@xynogen/pix-models`](packages/pix-models) | `/models` — enhanced model picker with coding score/rank, context window, cost |
 | [`@xynogen/pix-update`](packages/pix-update) | `/update` — self-update Pi + all extensions, detects install method |
-| [`@xynogen/pix-commands`](packages/pix-commands) | `/diff` and `/clear` slash commands |
+| [`@xynogen/pix-commands`](packages/pix-commands) | `/clear` slash command (flushes `~/.cache/pi`) |
 | [`@xynogen/pix-nudge`](packages/pix-nudge) | Tools nudge + capability nudge hooks to steer model toward correct tools |
-| [`@xynogen/pix-diagnostics`](packages/pix-diagnostics) | Compact LSP diagnostic widget (errors + warnings across session files) |
-| [`@xynogen/pix-prompts`](packages/pix-prompts) | System-prompt injection — `AGENTS.md` baseline + repo directive files |
-| [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skills` tool + 23 bundled skills) |
+| [`@xynogen/pix-diagnostics`](packages/pix-diagnostics) | Compact LSP diagnostic widget — recent files list, overrides pi-lens |
+| [`@xynogen/pix-display`](packages/pix-display) | Paste chip rendering (`[paste image #1]`) + leaked `<think>` tag → native thinking blocks |
+| [`@xynogen/pix-prompts`](packages/pix-prompts) | System-prompt injection — bundled `AGENT.md` baseline + repo directive files |
+| [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skills` tool + 29 bundled skills) |
 
 **Behaviour**
 
 | Package | Description |
 | --- | --- |
-| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression + ponytail lazy-dev mode (`/opt`) |
-| [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash commands — 3 severity tiers, configurable |
+| [`@xynogen/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression + ponytail lazy-dev mode (`/optimizer` overlay) |
+| [`@xynogen/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash + path commands — 4 severity tiers (block/critical/dangerous/risky) + sudo redirect, configurable |
 | [`@xynogen/pix-subagent`](packages/pix-subagent) | Sub-agent spawning — 3 tools (`agent`, `agent_result`, `agent_steer`), live model widget, work-splitting |
 
 ### Tool suite
@@ -54,14 +55,14 @@ Bundled by `pix-core`. Drop-in replacements for the tools Pi exposes to the mode
 | Package | Description |
 | --- | --- |
 | [`@xynogen/pix-bash`](packages/pix-bash) | `bash` — shell execution with framed output block and exit-code summary |
-| [`@xynogen/pix-read`](packages/pix-read) | `read` — file read with syntax highlighting and image metadata |
+| [`@xynogen/pix-read`](packages/pix-read) | `read` — file read with syntax highlighting, image mime + size metadata |
 | [`@xynogen/pix-write`](packages/pix-write) | `write` — file write with split-diff rendering on overwrite |
 | [`@xynogen/pix-edit`](packages/pix-edit) | `edit` — precise text replacement with side-by-side diff per edit |
 | [`@xynogen/pix-find`](packages/pix-find) | `find` — glob search with FFF acceleration and file icons |
 | [`@xynogen/pix-grep`](packages/pix-grep) | `grep` — pattern search with FFF-prioritised results |
 | [`@xynogen/pix-ls`](packages/pix-ls) | `ls` — directory listing as an indented icon tree |
 | [`@xynogen/pix-ask`](packages/pix-ask) | `ask_user` — structured TUI questionnaire (multi-choice, multi-select, previews) |
-| [`@xynogen/pix-todo`](packages/pix-todo) | `todo` — durable execution checklist, survives context compaction (plan-mode seeding currently broken) |
+| [`@xynogen/pix-todo`](packages/pix-todo) | `todo` — durable execution checklist, survives context compaction |
 
 ### Standalone extensions (opt-in)
 
@@ -69,7 +70,7 @@ Not bundled by `pix-core` — install each only if you want it. These are delibe
 
 | Package | Why it's opt-in |
 | --- | --- |
-| [`@xynogen/pix-9router`](packages/pix-9router) | 9Router LLM provider + `fetch`/`search` tools — needs a 9Router API key, so only useful if you route through 9Router |
+| [`@xynogen/pix-9router`](packages/pix-9router) | 9Router LLM provider + `fetch`/`search`/`transcribe` tools — needs a 9Router API key, so only useful if you route through 9Router |
 | [`@xynogen/pix-sudo`](packages/pix-sudo) | `sudo_run` — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode) |
 | [`@xynogen/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use |
 
@@ -147,7 +148,7 @@ Several packages here originated as forks or merges of community Pi packages:
 | [`git:github.com/DietrichGebert/ponytail`](https://github.com/DietrichGebert/ponytail) | ruleset adapted as ponytail mode in `pix-optimizer` |
 | `npm:@heyhuynhgiabuu/pi-pretty` | replaced by `@xynogen/pix-pretty` |
 | `npm:@heyhuynhgiabuu/pi-diff` | superseded (merged into `pix-core`) |
-| `npm:@juicesharp/rpiv-ask-user-question` | rewritten as the `ask-user` skill in `pix-core` |
+| `npm:@juicesharp/rpiv-ask-user-question` | rewritten as the `ask-user` skill in `pix-skills` |
 | [`git:github.com/tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) | spawn engine ported into `pix-subagent` |
 | [`git:github.com/nicobailon/pi-subagents`](https://github.com/nicobailon/pi-subagents) | work-splitting design adapted in `pix-subagent` |
 

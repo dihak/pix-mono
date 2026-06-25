@@ -9,14 +9,28 @@ Runtime: **Bun**. Linter/formatter: **Biome**. Type checker: **tsc**. Test runne
 
 ```
 packages/
-  pix-9router/     # 9Router LLM provider + fetch/search tools
-  pix-core/        # Core UX: welcome, footer, model picker, capability nudge, self-update
-  pix-data/        # Shared model data layer (models.dev + BenchLM), cached at ~/.cache/pi
-  pix-optimizer/   # Caveman mode, RTK tool rewriting, jq/TOON JSON compression
-  pix-pretty/      # Shared rendering lib (highlight, diff, icons, fff) + à-la-carte tool boot
-  pix-skills/      # Agent skill loader + bundled skills
-  pix-themes/      # Theme pack — Tokyo Night Storm + One Dark Pro
-  # ── Standalone tool packages (independently installable) ────────────────
+  # ── Aggregator ──────────────────────────────────────────────────────────
+  pix-core/        # Meta-package — bundles + activates the core distro (depends on the packages below)
+  # ── Shared layers ───────────────────────────────────────────────────────
+  pix-data/        # Shared model data layer (modelgrep catalog + BenchLM scores), cached at ~/.cache/pi
+  pix-pretty/      # Shared rendering lib (highlight, diff, icons, fff) + FFF slash commands
+  pix-themes/      # Theme pack — 7 dark themes
+  # ── UI / UX extensions (bundled by pix-core) ────────────────────────────
+  pix-welcome/     # ASCII π banner + startup health checks (version, auth, models, tools, skills, gitignore)
+  pix-footer/      # Status bar — mode, git branch, model, tokens, cost, live TPS
+  pix-models/      # /models — enhanced model picker (coding score/rank, context, cost)
+  pix-update/      # /update — self-update Pi + extensions (detects install method)
+  pix-commands/    # /clear — flush ~/.cache/pi
+  pix-nudge/       # Tools nudge + capability nudge (steer model toward correct tools)
+  pix-diagnostics/ # Compact session-files widget (overrides pi-lens widget id)
+  pix-display/     # Paste chip rendering + leaked <think> tag → native thinking blocks
+  pix-prompts/     # System-prompt injection — bundled AGENT.md baseline + repo directive scan
+  pix-skills/      # Agent skill loader (read_skills tool + bundled skills)
+  # ── Behaviour (bundled by pix-core) ─────────────────────────────────────
+  pix-optimizer/   # Caveman + RTK + jq/TOON + ponytail modes (/optimizer overlay)
+  pix-gate/        # Permission gate for dangerous bash + path commands (confirm/block TUI dialog)
+  pix-subagent/    # Sub-agent spawning — agent / agent_result / agent_steer tools + model widget
+  # ── Tool suite (bundled by pix-core — drop-in replacements for Pi built-ins) ──
   pix-bash/        # Tool — bash shell execution with pretty output
   pix-read/        # Tool — file read with syntax highlight
   pix-write/       # Tool — file write with diff rendering
@@ -26,9 +40,10 @@ packages/
   pix-ls/          # Tool — directory listing with tree view
   pix-todo/        # Tool — durable execution checklist (survives context compaction)
   pix-ask/         # Tool — structured questionnaire UI (ask_user)
-  pix-toolbox/     # Tool — gated tool toggle UI (/toolbox)
-  pix-gate/        # Tool — permission gate for dangerous bash commands (confirm/block TUI dialog)
+  # ── Standalone extensions (opt-in, NOT bundled by pix-core) ─────────────
+  pix-9router/     # 9Router LLM provider + fetch/search/transcribe tools (needs API key)
   pix-sudo/        # Tool — sudo_run with interactive PAM password prompt
+  pix-toolbox/     # Tool — gated tool toggle UI (/toolbox)
 scripts/
   dev-link.sh      # Symlink local packages into Pi for instant dev iteration
   publish-all.sh   # Publish changed packages to npm (idempotent — skips already-published versions)
