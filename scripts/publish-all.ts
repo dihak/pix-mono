@@ -84,7 +84,7 @@ async function publishOne(pkg: PkgInfo): Promise<void> {
 	try {
 		const result = await $`npm publish ${PUBLISH_FLAGS}`.cwd(dir).quiet();
 		if (DRY_RUN) console.log(result.stdout.toString());
-		console.log(`✔ published ${name}@${version}`);
+		console.log(`${DRY_RUN ? "✔ (dry-run) would publish" : "✔ published"} ${name}@${version}`);
 		publishedCount++;
 	} catch (e) {
 		const err = e as { stderr?: Buffer | string; stdout?: Buffer | string };
@@ -113,5 +113,5 @@ for (let i = 0; i < toPublish.length; i += CONCURRENCY) {
 	await Promise.all(batch.map(publishOne));
 }
 
-console.log(`\nPublish summary: ${publishedCount} published, ${toSkip.length} skipped, ${failedCount} failed.`);
+console.log(`\n${DRY_RUN ? "[dry-run] " : ""}Publish summary: ${publishedCount} ${DRY_RUN ? "would publish" : "published"}, ${toSkip.length} skipped, ${failedCount} failed.`);
 if (failedCount > 0) process.exit(1);
