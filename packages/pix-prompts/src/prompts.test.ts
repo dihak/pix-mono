@@ -1,0 +1,95 @@
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import registerPrompts from "./prompts.ts";
+
+type Handler = (event: {
+	systemPrompt?: string;
+}) => Promise<{ systemPrompt?: string } | undefined>;
+
+/** Minimal fake pi that captures the before_agent_start handler. */
+function fakePi(): { pi: ExtensionAPI; getHandler: () => Handler } {
+	let handler: Handler | undefined;
+	const pi = {
+		on(event: string, fn: Handler) {
+			if (event === "before_agent_start") handler = fn;
+		},
+	} as unknown as ExtensionAPI;
+	return {
+		pi,
+		getHandler: () => {
+			if (!handler) throw new Error("handler not registered");
+			return handler;
+		},
+	};
+}
+
+describe("pix-prompts host-aware injection", () => {
+	let dir: string;
+	let prevCwd: string;
+
+	beforeEach(() => {
+		prevCwd = process.cwd();
+		dir = mkdtempSync(join(tmpdir(), "pix-prompts-"));
+		process.chdir(dir);
+	});
+
+	afterEach(() => {
+		process.chdir(prevCwd);
+		rmSync(dir, { recursive: true, force: true });
+	});
+
+	it("injects a repo directive file the host has NOT already injected", async () => {
+		writeFileSync(join(dir, "GEMINI.md"), "gemini rules");
+		const { pi, getHandler } = fakePi();
+		registerPrompts(pi);
+
+		const result = await getHandler()({ systemPrompt: "BASE" });
+
+		expect(result?.systemPrompt).toContain("<pix-prompts-gemini-md>");
+		expect(result?.systemPrompt).toContain("gemini rules");
+	});
+
+	it("SKIPS a file the host already injected as <project_instructions path>", async () => {
+		const agentsPath = join(dir, "AGENTS.md");
+		writeFileSync(agentsPath, "repo directives");
+		const { pi, getHandler } = fakePi();
+		registerPrompts(pi);
+
+		// Simulate the host having already injected AGENTS.md verbatim.
+		const hostPrompt = `BASE\n<project_instructions path="${agentsPath}">\nrepo directives\n</project_instructions>`;
+		const result = await getHandler()({ systemPrompt: hostPrompt });
+
+		// pix-prompts still injects its own bundled baseline (<pix-agent-sop>),
+		// but must NOT re-wrap AGENTS.md in its own tag (host already has it).
+		expect(result?.systemPrompt).not.toContain("<pix-prompts-agents-md>");
+	});
+
+	it("re-injects AGENTS.md if the host did NOT (self-healing)", async () => {
+		writeFileSync(join(dir, "AGENTS.md"), "repo directives");
+		const { pi, getHandler } = fakePi();
+		registerPrompts(pi);
+
+		const result = await getHandler()({ systemPrompt: "BASE" });
+
+		expect(result?.systemPrompt).toContain("<pix-prompts-agents-md>");
+		expect(result?.systemPrompt).toContain("repo directives");
+	});
+
+	it("is idempotent on retry — does not double-inject its own tag", async () => {
+		writeFileSync(join(dir, "GEMINI.md"), "gemini rules");
+		const { pi, getHandler } = fakePi();
+		registerPrompts(pi);
+
+		const first = await getHandler()({ systemPrompt: "BASE" });
+		const second = await getHandler()({ systemPrompt: first?.systemPrompt });
+
+		// Second pass finds its own tag already present → nothing new.
+		expect(second).toBeUndefined();
+		const occurrences =
+			(first?.systemPrompt ?? "").split("<pix-prompts-gemini-md>").length - 1;
+		expect(occurrences).toBe(1);
+	});
+});

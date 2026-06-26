@@ -3,13 +3,17 @@
  *
  * Injects structured context into every agent turn via `before_agent_start`.
  * Sources (injected in order):
- *   1. Own bundled AGENT.md — the pix agent operating spec baseline.
- *   2. Repo CWD files — AGENTS.md, CLAUDE.md, GEMINI.md, .cursorrules,
- *      .windsurfrules (repo directives; extend/override the baseline).
+ *   1. Own bundled SOP.md — the pix agent operating spec baseline.
+ *   2. Repo CWD directive files — AGENTS.md, CLAUDE.md, GEMINI.md,
+ *      .cursorrules, .windsurfrules (extend/override the baseline).
  *
  * Each file is wrapped in a labelled XML tag so the model knows provenance.
- * Injection is idempotent per source: a file whose tag is already present in
- * the system prompt is silently skipped (prevents double-injection on retry).
+ * Injection is idempotent and host-aware: a file is skipped when either our
+ * own tag is already present (retry) OR the Pi host has already injected the
+ * same absolute path as <project_instructions path="..."> (resource-loader.js
+ * auto-loads AGENTS.md / CLAUDE.md). This stays correct whichever files the
+ * host decides to inject — no static assumption about host behaviour, so the
+ * host coverage and pix-prompts coverage can never silently double or drop.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -33,15 +37,15 @@ interface PromptSource {
 	path: string;
 }
 
-/** Resolve the absolute path to AGENT.md bundled inside this package. */
-function resolveOwnAgentMd(): string | null {
+/** Resolve the absolute path to SOP.md bundled inside this package. */
+function resolveOwnSopMd(): string | null {
 	try {
 		const require = createRequire(import.meta.url);
 		const pkgJson = require.resolve("@xynogen/pix-prompts/package.json");
-		return resolve(pkgJson, "..", "AGENT.md");
+		return resolve(pkgJson, "..", "SOP.md");
 	} catch {
 		// Fallback: resolve relative to this file's location at runtime.
-		return resolve(new URL(".", import.meta.url).pathname, "..", "AGENT.md");
+		return resolve(new URL(".", import.meta.url).pathname, "..", "SOP.md");
 	}
 }
 
@@ -60,8 +64,8 @@ function wrap(tag: string, content: string): string {
 }
 
 export default function registerPrompts(pi: ExtensionAPI): void {
-	// Resolve own AGENT.md once at load time (path is static).
-	const ownAgentMdPath = resolveOwnAgentMd();
+	// Resolve own SOP.md once at load time (path is static).
+	const ownSopMdPath = resolveOwnSopMd();
 
 	pi.on("before_agent_start", async (event) => {
 		const existing = event.systemPrompt ?? "";
@@ -69,9 +73,9 @@ export default function registerPrompts(pi: ExtensionAPI): void {
 
 		const sources: PromptSource[] = [];
 
-		// 1. Own AGENT.md
-		if (ownAgentMdPath) {
-			sources.push({ tag: "pix-agent-sop", path: ownAgentMdPath });
+		// 1. Own SOP.md
+		if (ownSopMdPath) {
+			sources.push({ tag: "pix-agent-sop", path: ownSopMdPath });
 		}
 
 		// 2. Repo directive files (root only)
@@ -84,10 +88,15 @@ export default function registerPrompts(pi: ExtensionAPI): void {
 			}
 		}
 
-		// Inject each source that isn't already in the system prompt.
+		// Inject each source the prompt doesn't already carry.
+		// Skip when EITHER our own tag is present (retry) OR the host has
+		// already injected this file as <project_instructions path="...">.
+		// The host uses the absolute file path verbatim (system-prompt.js),
+		// so a path match means the content is already present byte-for-byte.
 		let prompt = existing;
 		for (const { tag, path } of sources) {
-			if (prompt.includes(`<${tag}>`)) continue; // already injected
+			if (prompt.includes(`<${tag}>`)) continue;
+			if (prompt.includes(`path="${path}"`)) continue; // host already injected it
 			const content = safeRead(path);
 			if (!content) continue;
 			prompt = prompt
