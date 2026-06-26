@@ -28,6 +28,11 @@ jobs:
           # Check out the exact SHA CI validated (not the default branch tip).
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
+          # Fetch tags so `git tag --points-at HEAD` can find the release-* tag
+          # that triggered this workflow. Without this, the targeted SHA-only
+          # refspec above omits refs/tags/* and the tag check below returns empty,
+          # silently skipping the publish.
+          fetch-tags: true
 
       # Check whether a release tag points at this commit.
       # If none found, skip publish silently — this is a plain main push, not a release.
