@@ -7,18 +7,21 @@
  *   - toon:     jq + TOON guidance for dense JSON (+ bundled skill)
  *   - ponytail: lazy-senior-dev system prompt (minimal code, YAGNI)
  *
- * They share ONE status-bar cell (󰜐 󰓥 󰗀 󰆐, all four always shown — dimmed when off, accented when on) and ONE
- * command (/optimizer — an interactive overlay). index.ts wires lifecycle hooks
- * via each module, then registers the overlay command from their handles.
+ * They share ONE status-bar cell (all four icons always shown — dimmed when
+ * off, accented when on; icon style is nerd/unicode/ascii, set via /optimizer)
+ * and ONE command (/optimizer — an interactive overlay). index.ts wires
+ * lifecycle hooks via each module, then registers the overlay command.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { caveman } from "./caveman.ts";
 import { json } from "./json.ts";
 import { registerOptCommand } from "./opt.ts";
+import { loadIconMode } from "./persist.ts";
 import { ponytail } from "./ponytail.ts";
 import { rtk } from "./rtk.ts";
 import {
+	envIconMode,
 	type OptimizerHandle,
 	OptimizerStatus,
 	type OptimizerTool,
@@ -26,7 +29,8 @@ import {
 import { filterModelWarnings } from "./tool-result-filter.ts";
 
 export default function optimizer(pi: ExtensionAPI) {
-	const status = new OptimizerStatus();
+	// Persisted menu choice wins; otherwise fall back to the env default.
+	const status = new OptimizerStatus(loadIconMode() ?? envIconMode());
 
 	// Each module registers its own lifecycle hooks and returns a handle the
 	// /optimizer overlay renders + drives.

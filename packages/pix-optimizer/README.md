@@ -25,8 +25,31 @@ State persists to `~/.pi/agent/optimizer.json` (caveman/rtk/toon/ponytail).
 
 ## Status bar
 
-A single cell always shows the enabled icons in a fixed order (`󰜐 󰓥 󰗀 󰆐`), color-
-coded by state: **accent** when the tool is enabled, **dim** when disabled.
+A single cell always shows all four tool icons in a fixed order, color-coded by
+state: **accent** when the tool is enabled, **dim** when disabled.
+
+### Icon style (Nerd Font, Unicode, or ASCII)
+
+The default glyphs (`󰜐 󰓥 󰗀 󰆐`) are **Nerd Font** symbols and require a patched
+font (e.g. MesloLGS NF). Terminals without one render them as missing-glyph
+“tofu” boxes. Two font-independent fallbacks are available:
+
+| Mode | Glyphs | Needs Nerd Font? |
+|---|---|---|
+| `nerd` (default) | `󰜐 󰓥 󰗀 󰆐` | yes |
+| `unicode` | `♤ ♡ ♢ ♧` (outline card suits) | no |
+| `ascii` | `Cv Rk Tn Pt` | no |
+
+Switch the style live from the **`/optimizer` overlay** — a fifth `icons` row
+at the bottom cycles `nerd → unicode → ascii` with `←→`; the choice persists to
+`~/.pi/agent/optimizer.json`.
+
+Or set it via env var (a persisted menu choice takes precedence):
+
+```bash
+export OPTIMIZER_ICONS=unicode   # nerd | unicode | ascii
+export PRETTY_ICONS=none         # stack-wide: also maps the cell to ASCII
+```
 
 ## Features
 

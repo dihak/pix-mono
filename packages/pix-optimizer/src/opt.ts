@@ -16,12 +16,22 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { frameLines } from "@xynogen/pix-pretty/modal-frame";
+import { saveIconMode } from "./persist.ts";
 import {
+	getIcons,
+	ICON_MODES,
+	type IconMode,
 	type OptimizerHandle,
 	type OptimizerStatus,
 	type OptimizerTool,
-	TOOL_ICONS,
 } from "./status.ts";
+
+/** Glyph for the icon-mode row itself (uses the active mode's diamond/Tn). */
+const ICON_ROW_GLYPH: Record<IconMode, string> = {
+	nerd: "󰆐", // gear-ish; distinct from the four tool glyphs
+	unicode: "\u25C8\uFE0E", // ◈ diamond-in-diamond
+	ascii: "Ic",
+};
 
 /** Min/max content width for the overlay box (excludes 4 cols of chrome). */
 const MIN_CONTENT = 28;
@@ -76,7 +86,7 @@ export function buildOptHelp(
 export function registerOptCommand(
 	pi: ExtensionAPI,
 	handles: Record<OptimizerTool, OptimizerHandle>,
-	_status: OptimizerStatus,
+	status: OptimizerStatus,
 ): void {
 	pi.registerCommand("optimizer", {
 		description: "pix-optimizer: caveman / rtk / toon / ponytail tools",
@@ -129,9 +139,26 @@ export function registerOptCommand(
 					_kb: unknown,
 					done: (v: null) => void,
 				) => {
+					// Rows = 4 tools + 1 icon-mode row at index TOOL_ORDER.length.
+					const ICON_ROW = TOOL_ORDER.length;
+					const ROW_COUNT = TOOL_ORDER.length + 1;
+					const ICON_HELP = "status-cell icon style (nerd needs a Nerd Font)";
 					let selected = 0;
 
+					const cycleIconMode = (direction: -1 | 1) => {
+						const cur = ICON_MODES.indexOf(status.mode);
+						const next =
+							(cur + direction + ICON_MODES.length) % ICON_MODES.length;
+						const mode = ICON_MODES[next]!;
+						status.setMode(mode, ctx);
+						saveIconMode(mode);
+					};
+
 					const cycle = (direction: -1 | 1) => {
+						if (selected === ICON_ROW) {
+							cycleIconMode(direction);
+							return;
+						}
 						const tool = TOOL_ORDER[selected]!;
 						const values = handles[tool].values;
 						const cur = values.indexOf(handles[tool].current());
@@ -140,17 +167,17 @@ export function registerOptCommand(
 					};
 
 					const move = (direction: -1 | 1) => {
-						selected =
-							(selected + direction + TOOL_ORDER.length) % TOOL_ORDER.length;
+						selected = (selected + direction + ROW_COUNT) % ROW_COUNT;
 					};
 
 					return {
 						render: () => {
+							const icons = getIcons(status.mode);
 							const rows = TOOL_ORDER.map((tool, i) => {
 								const on = handles[tool].current() !== "off";
 								const sel = i === selected;
 								const cursor = sel ? theme.fg("accent", "→") : " ";
-								const icon = theme.fg(on ? "accent" : "dim", TOOL_ICONS[tool]);
+								const icon = theme.fg(on ? "accent" : "dim", icons[tool]);
 								const name = theme.fg(
 									sel ? "accent" : on ? "text" : "muted",
 									tool.padEnd(nameWidth),
@@ -166,15 +193,29 @@ export function registerOptCommand(
 								);
 								return `${cursor} ${icon}  ${name}  ${value}  ${bar}`;
 							});
+							// Icon-mode row: glyph + "icons" + current mode name.
+							const iconSel = selected === ICON_ROW;
+							const iconCursor = iconSel ? theme.fg("accent", "→") : " ";
+							const iconGlyph = theme.fg("accent", ICON_ROW_GLYPH[status.mode]);
+							const iconName = theme.fg(
+								iconSel ? "accent" : "text",
+								"icons".padEnd(nameWidth),
+							);
+							const iconValue = theme.fg(
+								"success",
+								status.mode.padEnd(valueWidth),
+							);
+							const iconRow = `${iconCursor} ${iconGlyph}  ${iconName}  ${iconValue}`;
+							const helpText = iconSel
+								? ICON_HELP
+								: helpSummary(handles[TOOL_ORDER[selected]!].help);
 							const lines = [
 								theme.fg("accent", theme.bold("󱎫  Optimizer")),
 								"",
 								...rows,
+								iconRow,
 								"",
-								theme.fg(
-									"dim",
-									helpSummary(handles[TOOL_ORDER[selected]!].help),
-								),
+								theme.fg("dim", helpText),
 								"",
 								theme.fg("dim", "←→ change · ↑↓ move · esc close"),
 							];
