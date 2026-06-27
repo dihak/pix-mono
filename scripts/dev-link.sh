@@ -8,8 +8,12 @@
 # like pix-bash that are soft-loaded by pix-pretty) only need the symlink.
 #
 # Usage:
-#   scripts/dev-link.sh           # link repo packages into Pi
-#   scripts/dev-link.sh --unlink  # restore the real npm-installed copies
+#   scripts/dev-link.sh                    # link all repo packages into Pi
+#   scripts/dev-link.sh pix-bash pix-core  # link only the named package(s)
+#   scripts/dev-link.sh --unlink           # restore the real npm-installed copies
+#   scripts/dev-link.sh --unlink pix-bash  # restore only the named package(s)
+#
+# Package names match with or without the @xynogen/ scope (pix-bash == @xynogen/pix-bash).
 #
 # After (un)linking, restart your Pi session so the extension host reloads.
 #
@@ -32,7 +36,19 @@ if [ ! -d "$TARGET_DIR" ]; then
 fi
 
 unlink=false
-[ "${1:-}" = "--unlink" ] && unlink=true
+[ "${1:-}" = "--unlink" ] && { unlink=true; shift; }
+
+# Remaining args = explicit package filter (bare or @xynogen/-scoped names).
+# Empty filter ($# == 0) means "all packages".
+want_pkgs=("$@")
+wants() {
+	[ ${#want_pkgs[@]} -eq 0 ] && return 0
+	local name="$1" short="${1#@xynogen/}"
+	for w in "${want_pkgs[@]}"; do
+		[ "$w" = "$name" ] || [ "$w" = "$short" ] || [ "@xynogen/$w" = "$name" ] && return 0
+	done
+	return 1
+}
 
 linked=0
 restored=0
@@ -142,6 +158,7 @@ for dir in "$packages_dir"/*/; do
 	[ -f "$pkg_json" ] || continue
 
 	name=$(node -p "require('${pkg_json}').name")
+	wants "$name" || continue
 	# Strip the @xynogen/ scope to get the dir name under @xynogen.
 	short="${name#@xynogen/}"
 	dest="${TARGET_DIR}/${short}"
