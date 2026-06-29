@@ -1,6 +1,7 @@
 ---
 name: standup
 description: This skill should be used when the user asks to "standup me", "buat standup", "create standup script", "generate standup", "standup hari ini", or any request to prepare a daily standup update. Handles fetching previous context from Notion, prompting the user, generating a script, and saving to Notion.
+disable-model-invocation: true
 ---
 
 # Standup Script Skill

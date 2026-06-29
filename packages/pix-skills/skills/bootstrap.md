@@ -1,6 +1,7 @@
 ---
 name: bootstrap
 description: Project and tool scaffolding using authoritative docs for best practices. Use only on explicit request — "scaffold a project", "set up X", "bootstrap this", "init a new service".
+disable-model-invocation: true
 ---
 # Bootstrap & Scaffolding Directive
 

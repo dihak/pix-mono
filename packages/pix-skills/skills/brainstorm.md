@@ -1,6 +1,7 @@
 ---
 name: brainstorm
 description: Design exploration and spec refinement before any implementation begins
+disable-model-invocation: true
 ---
 # Brainstorm Directive
 

@@ -1,6 +1,7 @@
 ---
 name: verify
 description: Verification before completion — ensure it's actually fixed before claiming done
+disable-model-invocation: true
 ---
 # Verify Directive
 

@@ -1,6 +1,7 @@
 ---
 name: notion
 description: Efficient Notion workspace retrieval. Use when user asks to fetch, search, or read data from Notion — pages, databases, or project lists.
+disable-model-invocation: true
 ---
 # Notion Retrieval Directive
 

@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-edit",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"description": "Pi tool — precise text replacement edit with diff rendering",
 	"type": "module",
 	"main": "src/index.ts",
@@ -34,7 +34,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-pretty": "*"
+		"@xynogen/pix-pretty": "^1.7.9"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

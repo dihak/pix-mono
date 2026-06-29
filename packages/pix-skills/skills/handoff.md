@@ -1,6 +1,7 @@
 ---
 name: handoff
 description: Toggle session handoff — if HANDOFF.md does not exist, write one (giving mode); if it exists, read and delete it (receiving mode)
+disable-model-invocation: true
 ---
 
 # Handoff Directive

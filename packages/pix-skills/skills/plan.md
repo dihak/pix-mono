@@ -1,6 +1,7 @@
 ---
 name: plan
 description: Write detailed, bite-sized implementation plans before touching code
+disable-model-invocation: true
 ---
 # Plan Directive
 

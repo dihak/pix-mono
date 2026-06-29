@@ -1,6 +1,7 @@
 ---
 name: test
 description: Test execution, analysis, and failure resolution using TDD
+disable-model-invocation: true
 ---
 # Test Directive
 

@@ -5,8 +5,10 @@
  * full SKILL.md (or flat .md) by name. This is the safe "agent prompts itself"
  * pattern: the agent calls the tool explicitly; no autonomous injection.
  *
- * Also bundles the skills folder so pi auto-loads skill descriptions into the
- * system prompt at startup (names + descriptions only — full content on demand).
+ * Also bundles the skills folder via resources_discover. Bundled skills carry
+ * `disable-model-invocation: true`, so pi keeps their descriptions OUT of the
+ * system prompt — the agent finds them by calling read_skills() and loads the
+ * body on demand. This keeps baseline context flat as the skill set grows.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -215,6 +217,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 			"Browse and load bundled skills. No args → list all skills with descriptions. name only → description for that skill. name + full=true → full instructions.",
 		promptSnippet: "Browse and load bundled skill instructions",
 		promptGuidelines: [
+			"Skills are NOT pre-listed in this prompt. When a task may match a specialized procedure, call read_skills() first to discover what is available.",
 			"Call read_skills() with no arguments to list all available skills and their descriptions.",
 			"Call read_skills(name=<skill>) to read the description of a specific skill before deciding to load it.",
 			"Call read_skills(name=<skill>, full=true) to load the full procedure for a skill before executing it.",

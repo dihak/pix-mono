@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-models",
-	"version": "0.1.11",
+	"version": "0.1.12",
 	"description": "Pi extension — enhanced /models picker with BenchLM ranks",
 	"type": "module",
 	"main": "src/index.ts",
@@ -39,7 +39,7 @@
 	},
 	"dependencies": {
 		"@xynogen/pix-data": "*",
-		"@xynogen/pix-pretty": "*"
+		"@xynogen/pix-pretty": "^1.7.9"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

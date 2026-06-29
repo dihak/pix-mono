@@ -1,7 +1,7 @@
 {
 	"name": "@xynogen/pix-ask",
-	"version": "0.2.3",
-	"description": "Pi tool \u2014 structured questionnaire UI (ask_user)",
+	"version": "0.2.4",
+	"description": "Pi tool — structured questionnaire UI (ask_user)",
 	"type": "module",
 	"main": "src/index.ts",
 	"scripts": {
@@ -35,7 +35,7 @@
 	},
 	"dependencies": {
 		"typebox": "^1.1.38",
-		"@xynogen/pix-pretty": "*"
+		"@xynogen/pix-pretty": "^1.7.9"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

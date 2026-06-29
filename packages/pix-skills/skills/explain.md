@@ -1,6 +1,7 @@
 ---
 name: explain
 description: Technical deconstruction and logic tracing. Use when user asks "how does X work", "explain this", "walk me through", "what does this do", or needs to understand existing code/architecture before changing it.
+disable-model-invocation: true
 ---
 # Explain Directive
 

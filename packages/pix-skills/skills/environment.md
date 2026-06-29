@@ -1,6 +1,7 @@
 ---
 name: environment
 description: "Establish clean awareness of the user's working environment — OS, distro, kernel, arch, user, and CPU — before running or suggesting commands. Use whenever a request depends on the platform such as installing packages, system services, file paths, downloading arch-specific binaries, or any command whose syntax differs across systems. Load this first so actions match the actual machine instead of a guessed default."
+disable-model-invocation: true
 ---
 
 # Environment Skill
