@@ -102,26 +102,30 @@ describe("commandFor", () => {
 	});
 
 	it("vp: command=vp, includes package@latest", () => {
-		const spec = commandFor("vp")!;
+		const spec = commandFor("vp");
+		if (!spec) throw new Error("commandFor returned undefined");
 		expect(spec.command).toBe("vp");
 		expect(spec.args).toContain(`${PACKAGE_NAME}@latest`);
 	});
 
 	it("bun: command=bun, includes package@latest", () => {
-		const spec = commandFor("bun")!;
+		const spec = commandFor("bun");
+		if (!spec) throw new Error("commandFor returned undefined");
 		expect(spec.command).toBe("bun");
 		expect(spec.args).toContain(`${PACKAGE_NAME}@latest`);
 	});
 
 	it("npm: command=npm, -g flag, includes package@latest", () => {
-		const spec = commandFor("npm")!;
+		const spec = commandFor("npm");
+		if (!spec) throw new Error("commandFor returned undefined");
 		expect(spec.command).toBe("npm");
 		expect(spec.args).toContain("-g");
 		expect(spec.args).toContain(`${PACKAGE_NAME}@latest`);
 	});
 
 	it("brew: delegates to sh -lc with brew upgrade", () => {
-		const spec = commandFor("brew")!;
+		const spec = commandFor("brew");
+		if (!spec) throw new Error("commandFor returned undefined");
 		expect(spec.command).toBe("/bin/sh");
 		expect(spec.label).toContain("brew upgrade");
 	});

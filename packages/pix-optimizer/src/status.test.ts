@@ -74,7 +74,8 @@ describe("OptimizerStatus", () => {
 		const status = new OptimizerStatus();
 		const ctx = fakeCtx();
 		status.set("rtk", true, ctx as never);
-		const last = ctx.calls.at(-1)!;
+		const last = ctx.calls.at(-1);
+		if (!last) throw new Error("no calls");
 		expect(last.key).toBe(STATUS_KEY);
 		// caveman + toon + ponytail still unset (dim), rtk accent.
 		expect(last.text).toBe(
@@ -87,7 +88,8 @@ describe("OptimizerStatus", () => {
 		const ctx = fakeCtx();
 		status.set("caveman", true, ctx as never);
 		status.set("toon", true, ctx as never);
-		const last = ctx.calls.at(-1)!;
+		const last = ctx.calls.at(-1);
+		if (!last) throw new Error("no calls");
 		expect(last.text).toBe(
 			`<accent>${CV}</accent>  <dim>${RK}</dim>  <accent>${TN}</accent>  <dim>${PT}</dim> `,
 		);
@@ -98,7 +100,8 @@ describe("OptimizerStatus", () => {
 		const ctx = fakeCtx();
 		status.set("rtk", true, ctx as never);
 		status.set("rtk", false, ctx as never);
-		const last = ctx.calls.at(-1)!;
+		const last = ctx.calls.at(-1);
+		if (!last) throw new Error("no calls");
 		expect(last.text).toBe(
 			`<dim>${CV}</dim>  <dim>${RK}</dim>  <dim>${TN}</dim>  <dim>${PT}</dim> `,
 		);

@@ -99,8 +99,8 @@ describe("findCommandDirectives", () => {
 		const md = "x\n!`git status -s`\ny";
 		const hits = findCommandDirectives(md);
 		expect(hits).toHaveLength(1);
-		expect(hits[0]!.command).toBe("git status -s");
-		expect(md.slice(hits[0]!.start, hits[0]!.end)).toBe("!`git status -s`");
+		expect(hits[0]?.command).toBe("git status -s");
+		expect(md.slice(hits[0]?.start, hits[0]?.end)).toBe("!`git status -s`");
 	});
 
 	it("ignores plain inline code `cmd`", () => {

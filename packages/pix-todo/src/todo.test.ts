@@ -67,7 +67,8 @@ function makeHost(
 			appendCalls.push({ type, data });
 		},
 		on(ev: string, fn: (event: unknown, ctx?: unknown) => unknown) {
-			(handlers[ev] ??= []).push(fn);
+			if (!handlers[ev]) handlers[ev] = [];
+			handlers[ev].push(fn);
 		},
 		async emit(ev: string, event?: unknown, ctx?: unknown) {
 			for (const fn of handlers[ev] ?? []) await fn(event, ctx);
@@ -84,10 +85,12 @@ function makeHost(
 		pi,
 		sessionManager,
 		get execute() {
-			return capturedExecute!;
+			if (!capturedExecute) throw new Error("execute not captured");
+			return capturedExecute;
 		},
 		get render() {
-			return capturedRender!;
+			if (!capturedRender) throw new Error("render not captured");
+			return capturedRender;
 		},
 		appendCalls,
 		async emit(ev: string, event?: unknown, ctx?: unknown) {
