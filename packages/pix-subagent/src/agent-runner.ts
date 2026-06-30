@@ -4,7 +4,12 @@
 
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, resolve } from "node:path";
-import type { Model } from "@earendil-works/pi-ai";
+import type {
+	Api,
+	AssistantMessage,
+	Model,
+	ToolCall,
+} from "@earendil-works/pi-ai";
 import type {
 	ExtensionContext,
 	LoadExtensionsResult,
@@ -179,13 +184,13 @@ export function setGraceTurns(n: number): void {
  * Priority: explicit option > config.model > parent model.
  */
 function resolveDefaultModel(
-	parentModel: Model<any> | undefined,
+	parentModel: Model<Api> | undefined,
 	registry: {
-		find(provider: string, modelId: string): Model<any> | undefined;
-		getAvailable?(): Model<any>[];
+		find(provider: string, modelId: string): Model<Api> | undefined;
+		getAvailable?(): Model<Api>[];
 	},
 	configModel?: string,
-): Model<any> | undefined {
+): Model<Api> | undefined {
 	if (configModel) {
 		const slashIdx = configModel.indexOf("/");
 		if (slashIdx !== -1) {
@@ -195,7 +200,7 @@ function resolveDefaultModel(
 			// Build a set of available model keys for fast lookup
 			const available = registry.getAvailable?.();
 			const availableKeys = available
-				? new Set(available.map((m: any) => `${m.provider}/${m.id}`))
+				? new Set(available.map((m) => `${m.provider}/${m.id}`))
 				: undefined;
 			const isAvailable = (p: string, id: string) =>
 				!availableKeys || availableKeys.has(`${p}/${id}`);
@@ -219,7 +224,7 @@ export interface RunOptions {
 	pi: ExtensionAPI;
 	/** Manager-assigned id; suffixes session name to disambiguate parallel spawns (e.g. `Explore#a1b2c3d4`). */
 	agentId?: string;
-	model?: Model<any>;
+	model?: Model<Api>;
 	maxTurns?: number;
 	signal?: AbortSignal;
 	isolated?: boolean;
@@ -690,7 +695,7 @@ export async function runAgent(
 			options.onToolActivity?.({ type: "end", toolName: event.toolName });
 		}
 		if (event.type === "message_end" && event.message.role === "assistant") {
-			const u = (event.message as any).usage;
+			const u = (event.message as AssistantMessage).usage;
 			if (u)
 				options.onAssistantUsage?.({
 					input: u.input ?? 0,
@@ -768,7 +773,7 @@ export async function resumeAgent(
 						event.type === "message_end" &&
 						event.message.role === "assistant"
 					) {
-						const u = (event.message as any).usage;
+						const u = (event.message as AssistantMessage).usage;
 						if (u)
 							options.onAssistantUsage?.({
 								input: u.input ?? 0,
@@ -830,9 +835,7 @@ export function getAgentConversation(session: AgentSession): string {
 			for (const c of msg.content) {
 				if (c.type === "text" && c.text) textParts.push(c.text);
 				else if (c.type === "toolCall")
-					toolCalls.push(
-						`  Tool: ${(c as any).name ?? (c as any).toolName ?? "unknown"}`,
-					);
+					toolCalls.push(`  Tool: ${(c as ToolCall).name ?? "unknown"}`);
 			}
 			if (textParts.length > 0)
 				parts.push(`[Assistant]: ${textParts.join("\n")}`);

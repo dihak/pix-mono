@@ -9,7 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { statSync } from "node:fs";
 import { isAbsolute } from "node:path";
-import type { Model } from "@earendil-works/pi-ai";
+import type { Api, Model } from "@earendil-works/pi-ai";
 import type {
 	AgentSession,
 	ExtensionAPI,
@@ -74,7 +74,7 @@ interface SpawnArgs {
 
 interface SpawnOptions {
 	description: string;
-	model?: Model<any>;
+	model?: Model<Api>;
 	maxTurns?: number;
 	isolated?: boolean;
 	inheritContext?: boolean;
@@ -232,7 +232,7 @@ export class AgentManager {
 			const onParentAbort = () => this.abort(id);
 			options.signal.addEventListener("abort", onParentAbort, { once: true });
 			detachParentSignal = () =>
-				options.signal!.removeEventListener("abort", onParentAbort);
+				options.signal?.removeEventListener("abort", onParentAbort);
 		}
 		const detach = () => {
 			detachParentSignal?.();
@@ -255,7 +255,7 @@ export class AgentManager {
 			cwd: customCwd,
 			configCwd: customCwd !== undefined ? ctx.cwd : undefined,
 			allowedToolNames: options.allowedToolNames,
-			signal: record.abortController!.signal,
+			signal: record.abortController?.signal,
 			onToolActivity: (activity) => {
 				if (activity.type === "end") record.toolUses++;
 				options.onToolActivity?.(activity);
@@ -339,7 +339,8 @@ export class AgentManager {
 			this.queue.length > 0 &&
 			this.runningBackground < this.maxConcurrent
 		) {
-			const next = this.queue.shift()!;
+			const next = this.queue.shift();
+			if (!next) break;
 			const record = this.agents.get(next.id);
 			if (record?.status !== "queued") continue;
 			try {
@@ -370,7 +371,8 @@ export class AgentManager {
 			...options,
 			isBackground: false,
 		});
-		const record = this.agents.get(id)!;
+		const record = this.agents.get(id);
+		if (!record) throw new Error(`Agent ${id} not found after spawn`);
 		await record.promise;
 		return record;
 	}

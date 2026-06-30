@@ -106,15 +106,15 @@ function discoverSkills(): SkillEntry[] {
 export function extractDescription(content: string): string | null {
 	const m = content.match(/^---\s*\n([\s\S]*?)\n---/);
 	if (!m) return null;
-	const dm = m[1]!.match(/^description\s*:\s*["']?(.+?)["']?\s*$/m);
-	return dm ? dm[1]!.trim() : null;
+	const dm = m[1]?.match(/^description\s*:\s*["']?(.+?)["']?\s*$/m);
+	return dm ? dm[1]?.trim() : null;
 }
 
 export function extractName(content: string): string | null {
 	const m = content.match(/^---\s*\n([\s\S]*?)\n---/);
 	if (!m) return null;
-	const nm = m[1]!.match(/^name\s*:\s*["']?(.+?)["']?\s*$/m);
-	return nm ? nm[1]!.trim() : null;
+	const nm = m[1]?.match(/^name\s*:\s*["']?(.+?)["']?\s*$/m);
+	return nm ? nm[1]?.trim() : null;
 }
 
 // ─── Command directive interpolation ───────────────────────────────────────────
@@ -157,7 +157,9 @@ export async function interpolateSkill(
 
 	let out = content;
 	for (let i = resolved.length - 1; i >= 0; i--) {
-		const { d, text, blocked } = resolved[i]!;
+		const entry = resolved[i];
+		if (!entry) continue;
+		const { d, text, blocked } = entry;
 		out = replaceSpan(out, d.start, d.end, blocked ? text : fence(text));
 	}
 	return out;
@@ -186,7 +188,7 @@ export function formatSkillSummary(text: string, theme: ThemeLike): string {
 		.map((line) => {
 			const match = line.match(/^(\S+):\s+(.+)$/);
 			if (!match) return theme.fg("muted", line);
-			return `${theme.fg("accent", theme.bold(match[1]!))} ${theme.fg("muted", match[2]!)}`;
+			return `${theme.fg("accent", theme.bold(match[1] ?? ""))} ${theme.fg("muted", match[2] ?? "")}`;
 		})
 		.join("\n");
 }

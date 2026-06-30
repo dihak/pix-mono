@@ -156,7 +156,7 @@ export function splitChain(command: string): string[] | null {
 	let quote: "'" | '"' | null = null;
 
 	for (let i = 0; i < command.length; i++) {
-		const c = command[i]!;
+		const c = command[i] as string;
 		const next = command[i + 1];
 
 		if (quote) {
@@ -213,7 +213,7 @@ export function rewriteChain(command: string): string {
 		const body = part.slice(leading.length);
 		if (!body) return part;
 
-		const firstWord = body.split(/\s+/)[0]!;
+		const firstWord = body.split(/\s+/)[0] ?? "";
 		if (firstWord === "rtk") return part;
 		if (!RTK_COMMANDS.has(firstWord)) return part;
 

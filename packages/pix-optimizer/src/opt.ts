@@ -132,11 +132,11 @@ export function registerOptCommand(
 					let selected = 0;
 
 					const cycle = (direction: -1 | 1) => {
-						const tool = TOOL_ORDER[selected]!;
+						const tool = TOOL_ORDER[selected] as OptimizerTool;
 						const values = handles[tool].values;
 						const cur = values.indexOf(handles[tool].current());
 						const next = (cur + direction + values.length) % values.length;
-						handles[tool].run(values[next]!, ctx);
+						handles[tool].run(values[next] as string, ctx);
 					};
 
 					const move = (direction: -1 | 1) => {
@@ -173,7 +173,9 @@ export function registerOptCommand(
 								"",
 								theme.fg(
 									"dim",
-									helpSummary(handles[TOOL_ORDER[selected]!].help),
+									helpSummary(
+										handles[TOOL_ORDER[selected] as OptimizerTool].help,
+									),
 								),
 								"",
 								theme.fg("dim", "←→ change · ↑↓ move · esc close"),

@@ -115,10 +115,12 @@ export function splitSegments(command: string): Segment[] {
 	const out: Segment[] = [];
 	const re = /(\|\||&&|[|;&\n])/g;
 	let last = 0;
-	let m: RegExpExecArray | null;
-	while ((m = re.exec(command)) !== null) {
-		out.push({ text: command.slice(last, m.index), followedBy: m[1] });
-		last = m.index + m[1].length;
+	for (const m of command.matchAll(re)) {
+		out.push({
+			text: command.slice(last, m.index),
+			followedBy: m[1] as string,
+		});
+		last = m.index + (m[1] as string).length;
 	}
 	out.push({ text: command.slice(last), followedBy: "" });
 	return out.filter((s) => s.text.trim().length > 0);

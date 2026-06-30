@@ -62,7 +62,7 @@ export function registerPrettyCommand(pi: PiPrettyApi): void {
 			// Headless / no custom-UI host: cycle to the next mode + notify.
 			if (typeof ui.custom !== "function") {
 				const cur = ICON_MODES.indexOf(getIconMode());
-				const next = ICON_MODES[(cur + 1) % ICON_MODES.length]!;
+				const next = ICON_MODES[(cur + 1) % ICON_MODES.length] as IconMode;
 				applyMode(next);
 				ui.notify(`pix-pretty icons: ${next}`, "info");
 				return;
@@ -82,7 +82,7 @@ export function registerPrettyCommand(pi: PiPrettyApi): void {
 
 					const choose = (i: number) => {
 						selected = (i + ICON_MODES.length) % ICON_MODES.length;
-						applyMode(ICON_MODES[selected]!);
+						applyMode(ICON_MODES[selected] as IconMode);
 					};
 
 					return {

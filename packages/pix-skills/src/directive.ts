@@ -30,7 +30,7 @@ export function findCommandDirectives(content: string): CommandDirective[] {
 		hits.push({
 			start,
 			end: start + m[0].length - lead.length,
-			command: m[2]!.trim(),
+			command: m[2]?.trim(),
 		});
 	}
 	return hits;

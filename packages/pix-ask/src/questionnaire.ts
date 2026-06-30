@@ -65,7 +65,9 @@ export class AskQuestionnaire extends Container {
 	// ── Accessors ──────────────────────────────────────────────────────
 
 	private get currentQ(): QuestionData {
-		return this.params.questions[this.currentIndex]!;
+		const q = this.params.questions[this.currentIndex];
+		if (!q) throw new Error("currentIndex out of bounds");
+		return q;
 	}
 
 	private get filteredOptions(): OptionData[] {
@@ -209,7 +211,7 @@ export class AskQuestionnaire extends Container {
 		const q = this.currentQ;
 		if (prev.kind === "multi") {
 			for (let i = 0; i < q.options.length; i++) {
-				if (prev.selected?.includes(q.options[i]!.label)) {
+				if (prev.selected?.includes(q.options[i]?.label ?? "")) {
 					this.multiChecked.add(i);
 				}
 			}
@@ -354,7 +356,8 @@ export class AskQuestionnaire extends Container {
 					this.selectedOptionIndex = Math.min(idx, this.totalItems - 1);
 					this.refresh();
 				} else {
-					const opt = this.filteredOptions[idx]!;
+					const opt = this.filteredOptions[idx];
+					if (!opt) return;
 					this.recordAnswer("option", opt.label, undefined, opt.preview);
 					this.nextQuestion();
 				}
@@ -434,7 +437,8 @@ export class AskQuestionnaire extends Container {
 		const pad = " ".repeat(LABEL_COL);
 
 		for (let i = start; i < end; i++) {
-			const item = items[i]!;
+			const item = items[i];
+			if (!item) continue;
 			const sel = i === this.selectedOptionIndex;
 			const ptr = sel ? t.fg("accent", "→") : " ";
 

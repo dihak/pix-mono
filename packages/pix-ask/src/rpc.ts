@@ -6,14 +6,18 @@ import type { QuestionAnswer, QuestionnaireResult } from "./types.js";
 // Used when ctx.hasUI is false (headless / JSON / print mode).
 
 export async function rpcFallback(
-	ui: { select: Function; input: Function },
+	ui: {
+		select(title: string, options: string[]): Promise<string | undefined>;
+		input(title: string, placeholder?: string): Promise<string | undefined>;
+	},
 	params: Params,
 ): Promise<QuestionnaireResult> {
 	const answers: QuestionAnswer[] = [];
 	let cancelled = false;
 
 	for (let i = 0; i < params.questions.length; i++) {
-		const q = params.questions[i]!;
+		const q = params.questions[i];
+		if (!q) break;
 		const header = q.header;
 
 		if (q.multiSelect) {
@@ -69,7 +73,7 @@ export async function rpcFallback(
 				const opt = q.options.find(
 					(o) =>
 						chosen === o.label || `${o.label} — ${o.description}` === chosen,
-				)!;
+				);
 				answers.push({
 					questionIndex: i,
 					question: q.question,

@@ -2,6 +2,7 @@
  * Model resolution: exact match ("provider/modelId") with fuzzy fallback.
  */
 
+import type { Api, Model } from "@earendil-works/pi-ai";
 import { lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
 
 export interface ModelEntry {
@@ -11,9 +12,9 @@ export interface ModelEntry {
 }
 
 export interface ModelRegistry {
-	find(provider: string, modelId: string): any;
-	getAll(): any[];
-	getAvailable?(): any[];
+	find(provider: string, modelId: string): Model<Api> | undefined;
+	getAll(): Model<Api>[];
+	getAvailable?(): Model<Api>[];
 }
 
 /**
@@ -24,7 +25,7 @@ export interface ModelRegistry {
 export function resolveModel(
 	input: string,
 	registry: ModelRegistry,
-): any | string {
+): Model<Api> | string {
 	// Available models (those with auth configured)
 	const all = (registry.getAvailable?.() ?? registry.getAll()) as ModelEntry[];
 	const availableSet = new Set(

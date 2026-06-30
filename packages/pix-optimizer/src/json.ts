@@ -182,7 +182,8 @@ export function isUniformObjectArray(arr: unknown[]): boolean {
 		for (let i = 0; i < keys.length; i++) {
 			if (elKeys[i] !== keys[i]) return false;
 			// values must be primitive for a clean tabular row
-			if (isObjectLike((el as Record<string, unknown>)[keys[i]!])) return false;
+			if (isObjectLike((el as Record<string, unknown>)[keys[i] as string]))
+				return false;
 		}
 		return true;
 	});

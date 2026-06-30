@@ -191,14 +191,20 @@ afterAll(() => {
 function makeHost(toolNames: string[]) {
 	const handlers: Record<string, Array<(p: unknown) => unknown>> = {};
 	let active: string[] = [...toolNames];
-	const commands: Array<{ name: string; handler: Function }> = [];
+	const commands: Array<{
+		name: string;
+		handler: (...args: unknown[]) => unknown;
+	}> = [];
 	const pi = {
 		on(ev: string, fn: (p: unknown) => unknown) {
-			(handlers[ev] ??= []).push(fn);
+			if (!handlers[ev]) handlers[ev] = [];
+			handlers[ev].push(fn);
 		},
 		emit(ev: string, payload: unknown, ctx?: unknown) {
 			return Promise.all(
-				(handlers[ev] ?? []).map((f) => (f as Function)(payload, ctx)),
+				(handlers[ev] ?? []).map((f) =>
+					(f as (...args: unknown[]) => unknown)(payload, ctx),
+				),
 			);
 		},
 		getAllTools() {
@@ -220,12 +226,19 @@ function makeHost(toolNames: string[]) {
 		},
 		appendEntry() {},
 		registerTool() {},
-		registerCommand(name: string, def: { handler: Function }) {
+		registerCommand(
+			name: string,
+			def: { handler: (...args: unknown[]) => unknown },
+		) {
 			commands.push({ name, handler: def.handler });
 		},
 	} as never;
 	const emit = (ev: string, payload: unknown, ctx?: unknown) =>
-		Promise.all((handlers[ev] ?? []).map((f) => (f as Function)(payload, ctx)));
+		Promise.all(
+			(handlers[ev] ?? []).map((f) =>
+				(f as (...args: unknown[]) => unknown)(payload, ctx),
+			),
+		);
 	return {
 		pi,
 		emit,

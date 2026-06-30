@@ -122,9 +122,10 @@ export default async function registerProvider(
 		api: "openai-completions",
 		headers: { "User-Agent": "pi-coding-agent" },
 		models: models.map((model) => {
-			const devModel = lookupInIndex(model.id!, devIndex);
+			const id = model.id ?? "";
+			const devModel = lookupInIndex(id, devIndex);
 			return {
-				id: model.id!,
+				id,
 				name: getModelName(model, devModel),
 				reasoning: getReasoning(model, devModel),
 				input: getInputTypes(model, devModel),
