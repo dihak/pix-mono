@@ -17,19 +17,16 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
-			"style": {
-				"noNonNullAssertion": "off"
-			},
 			"suspicious": {
-				"noExplicitAny": "off",
-				"noControlCharactersInRegex": "off",
-				"noAssignInExpressions": "off"
-			},
-			"complexity": {
-				"noBannedTypes": "off"
+				"noControlCharactersInRegex": "off"
 			},
 			"correctness": {
-				"noUnusedPrivateClassMembers": "off"
+				"noUnusedImports": "error",
+				"noUnusedVariables": "error",
+				"noUnusedPrivateClassMembers": "error"
+			},
+			"performance": {
+				"noAccumulatingSpread": "error"
 			}
 		}
 	},
