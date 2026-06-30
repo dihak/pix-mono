@@ -69,10 +69,11 @@ describe("sortModels", () => {
 		{ provider: "a", id: "m3", name: "Middle", score: null },
 		{ provider: "a", id: "m4", name: "Beta", score: 80 },
 	];
+	type ModelEntry = (typeof models)[number];
 
 	it("sorts by score descending", () => {
 		const sorted = sortModels(models);
-		expect(sorted[0].name).toBe("Alpha"); // score 95
+		expect((sorted[0] as ModelEntry).name).toBe("Alpha"); // score 95
 	});
 
 	it("breaks score ties alphabetically by name", () => {
@@ -84,7 +85,7 @@ describe("sortModels", () => {
 
 	it("puts null score models last", () => {
 		const sorted = sortModels(models);
-		expect(sorted[sorted.length - 1].name).toBe("Middle");
+		expect((sorted[sorted.length - 1] as ModelEntry).name).toBe("Middle");
 	});
 
 	it("does not mutate the original array", () => {

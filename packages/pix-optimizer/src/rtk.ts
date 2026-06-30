@@ -156,7 +156,7 @@ export function splitChain(command: string): string[] | null {
 	let quote: "'" | '"' | null = null;
 
 	for (let i = 0; i < command.length; i++) {
-		const c = command[i] as string;
+		const c = command[i] ?? "";
 		const next = command[i + 1];
 
 		if (quote) {

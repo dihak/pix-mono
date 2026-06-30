@@ -114,7 +114,7 @@ export function buildInvocationTags(invocation: AgentInvocation | undefined): {
  */
 function truncateLine(text: string, len = 16): string {
 	const lines = text.split("\n").filter((l) => l.trim());
-	const line = lines.length ? lines[lines.length - 1].trim() : "";
+	const line = lines.length ? (lines[lines.length - 1] ?? "").trim() : "";
 	if (line.length <= len) return line;
 	return `…${line.slice(-len)}`;
 }
@@ -289,7 +289,7 @@ export class AgentWidget {
 		const headingColor = hasActive ? "accent" : "dim";
 		// ○ hollow = incomplete (still running), ● filled disk = complete (all done).
 		const headingIcon = hasActive ? "○" : "●";
-		const frame = SPINNER[this.widgetFrame % SPINNER.length];
+		const frame = SPINNER[this.widgetFrame % SPINNER.length] ?? "";
 
 		const finishedLines: string[] = [];
 		for (const a of finished) {
@@ -385,7 +385,7 @@ export class AgentWidget {
 			// Fix last connector ├─ → └─
 			if (lines.length > 1) {
 				const last = lines.length - 1;
-				lines[last] = lines[last].replace("├─", "└─");
+				lines[last] = (lines[last] ?? "").replace("├─", "└─");
 			}
 		} else {
 			let budget = maxBody - 1;

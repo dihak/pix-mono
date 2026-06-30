@@ -106,7 +106,7 @@ export default function registerAsk(pi: ExtensionAPI): void {
 			renderCall(args, theme) {
 				const questions = Array.isArray(args.questions) ? args.questions : [];
 				const count = questions.length;
-				const firstQ = (questions[0]?.question ?? "") as string;
+				const firstQ = questions[0]?.question ?? "";
 				let text = theme.fg("toolTitle", theme.bold(`ask (${count}) `));
 				text += theme.fg("muted", firstQ);
 				if (count > 1) text += theme.fg("dim", ` +${count - 1} more`);

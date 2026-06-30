@@ -88,7 +88,13 @@ export default function (pi: ExtensionAPI): void {
 	});
 
 	// ── Unified bash gate (path + command concerns in ONE dialog) ───────────
-	const SEVERITY_TIER: Record<string, number> = {
+	const SEVERITY_TIER: {
+		critical: number;
+		block: number;
+		dangerous: number;
+		warn: number;
+		risky: number;
+	} = {
 		critical: 5,
 		block: 4,
 		dangerous: 3,

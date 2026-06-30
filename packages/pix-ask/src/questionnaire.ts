@@ -172,7 +172,7 @@ export class AskQuestionnaire extends Container {
 		} else if (item.kind === "next") {
 			const selected = Array.from(this.multiChecked)
 				.sort((a, b) => a - b)
-				.map((i) => this.currentQ.options[i]?.label);
+				.map((i) => this.currentQ.options[i]?.label ?? "");
 			if (selected.length === 0) {
 				this.cancel();
 				return;

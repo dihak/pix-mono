@@ -81,7 +81,8 @@ describe("renderCheck", () => {
 
 describe("LOGO_ROWS", () => {
 	it("has 6 rows", () => expect(LOGO_ROWS.length).toBe(6));
-	it("starts with empty tag", () => expect(LOGO_ROWS[0][1]).toBe(""));
+	it("starts with empty tag", () =>
+		expect((LOGO_ROWS[0] as string[])[1]).toBe(""));
 	it("has heading, model, cwd, ready tags", () => {
 		const tags = LOGO_ROWS.map((r) => r[1]);
 		expect(tags).toContain("heading");

@@ -36,7 +36,7 @@ export async function rpcFallback(
 				.split(",")
 				.map((s) => Number(s.trim()))
 				.filter((n) => n >= 1 && n <= q.options.length);
-			const selected = indices.map((n) => q.options[n - 1]?.label);
+			const selected = indices.map((n) => q.options[n - 1]?.label ?? "");
 			if (selected.length > 0) {
 				answers.push({
 					questionIndex: i,

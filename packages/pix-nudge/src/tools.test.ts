@@ -194,6 +194,7 @@ describe("nudgeReason", () => {
 });
 
 describe("registerToolsNudge handler", () => {
+	type Notice = { msg: string; type?: string };
 	test("warns yellow and does NOT block the command", async () => {
 		const handler = makeHandler();
 		const { ctx, notices } = makeCtx();
@@ -204,8 +205,9 @@ describe("registerToolsNudge handler", () => {
 		expect(result).toBeUndefined();
 		// Surfaced as a single yellow warning.
 		expect(notices).toHaveLength(1);
-		expect(notices[0].type).toBe("warning");
-		expect(notices[0].msg).toContain("Use `read` instead");
+		const n0 = notices[0] as Notice;
+		expect(n0.type).toBe("warning");
+		expect(n0.msg).toContain("Use `read` instead");
 	});
 
 	test("warns once per category, silent thereafter", async () => {
@@ -218,7 +220,7 @@ describe("registerToolsNudge handler", () => {
 
 		await handler(bashEvent("grep x y"), ctx); // new category → new warning
 		expect(notices).toHaveLength(2);
-		expect(notices[1].msg).toContain("Use `grep` instead");
+		expect((notices[1] as Notice).msg).toContain("Use `grep` instead");
 	});
 
 	test("ignores commands with no tool stand-in", async () => {
@@ -237,7 +239,8 @@ describe("registerToolsNudge handler", () => {
 		const result = await handler(bashEvent("ls -la"), ctx);
 
 		expect(result).toBeUndefined();
-		expect(notices[0].type).toBe("warning");
-		expect(notices[0].msg).toContain('toolbox(action:"enable", name:"ls")');
+		const gn0 = notices[0] as Notice;
+		expect(gn0.type).toBe("warning");
+		expect(gn0.msg).toContain('toolbox(action:"enable", name:"ls")');
 	});
 });

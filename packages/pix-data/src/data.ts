@@ -551,7 +551,7 @@ function lookupBenchlmScore(
 
 	// Best entry = highest overallScore. Sort by score desc, then by slug
 	// length asc (prefer base name over suffix variants on a tie).
-	const best = [...candidates].sort((a, b) => {
+	const sorted = [...candidates].sort((a, b) => {
 		const sa = a.overallScore ?? -Infinity;
 		const sb = b.overallScore ?? -Infinity;
 		if (sa !== sb) return sb - sa;
@@ -559,7 +559,9 @@ function lookupBenchlmScore(
 			normalizeBenchlmName(a.model).length -
 			normalizeBenchlmName(b.model).length
 		);
-	})[0];
+	});
+	const best = sorted[0];
+	if (!best) return null;
 	return best.overallScore ?? null;
 }
 

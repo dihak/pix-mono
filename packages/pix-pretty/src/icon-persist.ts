@@ -16,6 +16,10 @@ import { dirname, join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { ICON_MODES, type IconMode, setIconMode } from "./icon-catalog.js";
 
+function isIconMode(m: string): m is IconMode {
+	return (ICON_MODES as readonly string[]).includes(m);
+}
+
 function statePath(): string {
 	return join(getAgentDir(), "pretty.json");
 }
@@ -27,9 +31,8 @@ export function loadIconMode(): IconMode | undefined {
 		if (!existsSync(p)) return undefined;
 		const raw = JSON.parse(readFileSync(p, "utf-8")) as { icons?: string };
 		const mode = raw?.icons;
-		return ICON_MODES.includes(mode as IconMode)
-			? (mode as IconMode)
-			: undefined;
+		if (mode == null) return undefined;
+		return isIconMode(mode) ? mode : undefined;
 	} catch {
 		return undefined;
 	}

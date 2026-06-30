@@ -126,7 +126,13 @@ export async function promptPathDecision(
 }
 
 /** Tier for dialog behavior — higher = more restrictive (deny-first, shorter timeout). */
-const SEVERITY_TIER: Record<string, number> = {
+const SEVERITY_TIER: {
+	critical: number;
+	block: number;
+	dangerous: number;
+	warn: number;
+	risky: number;
+} = {
 	critical: 5,
 	block: 4,
 	dangerous: 3,
@@ -146,6 +152,8 @@ export async function promptMergedGateDecision(
 	// Sort by tier desc so the highest-severity concern drives dialog behavior.
 	const sorted = [...concerns].sort((a, b) => b.tier - a.tier);
 	const highest = sorted[0];
+	if (!highest)
+		throw new Error("promptMergedGateDecision requires at least one concern");
 	const isRestrictive = highest.tier >= SEVERITY_TIER.block; // block or critical
 
 	// Title: unique severity types, joined with " + "

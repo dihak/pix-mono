@@ -131,8 +131,9 @@ describe("buildRules", () => {
 
 	test("autoApprove strings compile to regexes", () => {
 		const { autoApprove } = buildRules({ autoApprove: ["^npm publish"] });
-		expect(autoApprove[0].test("npm publish --access public")).toBe(true);
-		expect(autoApprove[0].test("yarn publish")).toBe(false);
+		const rule0 = autoApprove[0] as RegExp;
+		expect(rule0.test("npm publish --access public")).toBe(true);
+		expect(rule0.test("yarn publish")).toBe(false);
 	});
 
 	test("defaults included when disableDefaults absent", () => {

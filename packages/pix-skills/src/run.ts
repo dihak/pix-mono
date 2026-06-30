@@ -34,7 +34,8 @@ export function runArgv(argv: string[], opts: RunOptions): Promise<string> {
 
 		let child: ReturnType<typeof spawn>;
 		try {
-			child = spawn(argv[0] as string, argv.slice(1), {
+			const cmd = argv[0] ?? "";
+			child = spawn(cmd, argv.slice(1), {
 				cwd: opts.cwd,
 				stdio: ["ignore", "pipe", "pipe"],
 			});

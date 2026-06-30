@@ -92,7 +92,7 @@ export function renderTree(text: string, _basePath: string): string {
 	const show = lines.slice(0, MAX_PREVIEW_LINES);
 
 	for (let i = 0; i < show.length; i++) {
-		const entry = show[i].trim();
+		const entry = (show[i] ?? "").trim();
 		const isLast = i === show.length - 1 && total <= MAX_PREVIEW_LINES;
 		const prefix = isLast ? "└── " : "├── ";
 		const connector = `${FG_RULE}${prefix}${RST}`;

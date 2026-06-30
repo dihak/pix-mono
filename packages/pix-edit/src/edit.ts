@@ -136,12 +136,14 @@ export function registerEditTool(
 			const { diffs, summary } = summarizeEditOperations(operations);
 
 			if (operations.length === 1) {
+				const op0 = operations[0];
+				if (!op0) return result;
 				setResultDetails(result, {
 					_type: "editInfo",
 					summary,
-					editLine: opEditLine(fp, operations[0].newText),
-					oldContent: operations[0].oldText,
-					newContent: operations[0].newText,
+					editLine: opEditLine(fp, op0.newText),
+					oldContent: op0.oldText,
+					newContent: op0.newText,
 					language: fileLang,
 					filePath: fp,
 				});

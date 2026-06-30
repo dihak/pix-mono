@@ -464,9 +464,12 @@ function injectBg(
 				continue;
 			}
 		}
-		while (ri < ranges.length && vis >= ranges[ri][1]) ri++;
+		while (ri < ranges.length && vis >= (ranges[ri] as [number, number])[1])
+			ri++;
 		const want =
-			ri < ranges.length && vis >= ranges[ri][0] && vis < ranges[ri][1];
+			ri < ranges.length &&
+			vis >= (ranges[ri] as [number, number])[0] &&
+			vis < (ranges[ri] as [number, number])[1];
 		if (want !== inHL) {
 			inHL = want;
 			out += inHL ? hlBg : baseBg;
@@ -495,6 +498,12 @@ function plainWordDiff(
 		}
 	}
 	return { old: o, new: n };
+}
+
+/** Type-safe index into an array that noUncheckedIndexedAccess marks as T|undefined.
+ *  Only call when the index is provably in-bounds (loop condition, length check, etc.). */
+function at<T>(arr: T[], i: number): T {
+	return arr[i] as T;
 }
 
 // ---------------------------------------------------------------------------
@@ -605,7 +614,7 @@ export async function renderUnified(
 	}
 
 	while (idx < vis.length) {
-		const l = vis[idx];
+		const l = at(vis, idx);
 
 		if (l.type === "sep") {
 			const gap = l.newNum;
@@ -638,29 +647,35 @@ export async function renderUnified(
 		}
 
 		const dels: Array<{ l: DiffLine; hl: string }> = [];
-		while (idx < vis.length && vis[idx].type === "del") {
-			dels.push({ l: vis[idx], hl: oldHL[oI] ?? vis[idx].content });
+		while (idx < vis.length) {
+			const entry = at(vis, idx);
+			if (entry.type !== "del") break;
+			dels.push({ l: entry, hl: oldHL[oI] ?? entry.content });
 			oI++;
 			idx++;
 		}
 		const adds: Array<{ l: DiffLine; hl: string }> = [];
-		while (idx < vis.length && vis[idx].type === "add") {
-			adds.push({ l: vis[idx], hl: newHL[nI] ?? vis[idx].content });
+		while (idx < vis.length) {
+			const entry = at(vis, idx);
+			if (entry.type !== "add") break;
+			adds.push({ l: entry, hl: newHL[nI] ?? entry.content });
 			nI++;
 			idx++;
 		}
 
 		const isPaired = dels.length === 1 && adds.length === 1;
 		const wd = isPaired
-			? wordDiffAnalysis(dels[0].l.content, adds[0].l.content)
+			? wordDiffAnalysis(at(dels, 0).l.content, at(adds, 0).l.content)
 			: null;
 		const wdBalanced = wd && wd.oldRanges.length > 0 && wd.newRanges.length > 0;
 
 		if (isPaired && wdBalanced && wd.similarity >= WORD_DIFF_MIN_SIM && canHL) {
-			const delBody = injectBg(dels[0].hl, wd.oldRanges, BG_DEL, BG_DEL_W);
-			const addBody = injectBg(adds[0].hl, wd.newRanges, BG_ADD, BG_ADD_W);
+			const del0 = at(dels, 0);
+			const add0 = at(adds, 0);
+			const delBody = injectBg(del0.hl, wd.oldRanges, BG_DEL, BG_DEL_W);
+			const addBody = injectBg(add0.hl, wd.newRanges, BG_ADD, BG_ADD_W);
 			emitRow(
-				dels[0].l.oldNum,
+				del0.l.oldNum,
 				"-",
 				BG_GUTTER_DEL,
 				`${dc.fgDel}${BOLD}`,
@@ -668,7 +683,7 @@ export async function renderUnified(
 				BG_DEL,
 			);
 			emitRow(
-				adds[0].l.newNum,
+				add0.l.newNum,
 				"+",
 				BG_GUTTER_ADD,
 				`${dc.fgAdd}${BOLD}`,
@@ -683,9 +698,11 @@ export async function renderUnified(
 			wd.similarity >= WORD_DIFF_MIN_SIM &&
 			!canHL
 		) {
-			const pwd = plainWordDiff(dels[0].l.content, adds[0].l.content);
+			const del0 = at(dels, 0);
+			const add0 = at(adds, 0);
+			const pwd = plainWordDiff(del0.l.content, add0.l.content);
 			emitRow(
-				dels[0].l.oldNum,
+				del0.l.oldNum,
 				"-",
 				BG_GUTTER_DEL,
 				`${dc.fgDel}${BOLD}`,
@@ -693,7 +710,7 @@ export async function renderUnified(
 				BG_DEL,
 			);
 			emitRow(
-				adds[0].l.newNum,
+				add0.l.newNum,
 				"+",
 				BG_GUTTER_ADD,
 				`${dc.fgAdd}${BOLD}`,
@@ -755,7 +772,7 @@ export async function renderSplit(
 	const rows: Row[] = [];
 	let i = 0;
 	while (i < diff.lines.length) {
-		const l = diff.lines[i];
+		const l = at(diff.lines, i);
 		if (l.type === "sep" || l.type === "ctx") {
 			rows.push({ left: l, right: l });
 			i++;
@@ -763,12 +780,16 @@ export async function renderSplit(
 		}
 		const dels: DiffLine[] = [];
 		const adds: DiffLine[] = [];
-		while (i < diff.lines.length && diff.lines[i].type === "del") {
-			dels.push(diff.lines[i]);
+		while (i < diff.lines.length) {
+			const entry = at(diff.lines, i);
+			if (entry.type !== "del") break;
+			dels.push(entry);
 			i++;
 		}
-		while (i < diff.lines.length && diff.lines[i].type === "add") {
-			adds.push(diff.lines[i]);
+		while (i < diff.lines.length) {
+			const entry = at(diff.lines, i);
+			if (entry.type !== "add") break;
+			adds.push(entry);
 			i++;
 		}
 		const n = Math.max(dels.length, adds.length);

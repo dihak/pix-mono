@@ -89,7 +89,7 @@ export function openProgress(
 						width: mw,
 						lines: [
 							theme.fg(accent, theme.bold(title)),
-							`${theme.fg(accent, SPINNER[frame])} ${theme.fg("muted", labelValue)}`,
+							`${theme.fg(accent, SPINNER[frame] ?? "")} ${theme.fg("muted", labelValue)}`,
 						],
 						color: (s) => theme.fg(accent, s),
 						bg: (s) => theme.bg("customMessageBg", s),

@@ -107,14 +107,14 @@ export function extractDescription(content: string): string | null {
 	const m = content.match(/^---\s*\n([\s\S]*?)\n---/);
 	if (!m) return null;
 	const dm = m[1]?.match(/^description\s*:\s*["']?(.+?)["']?\s*$/m);
-	return dm ? dm[1]?.trim() : null;
+	return dm ? (dm[1]?.trim() ?? null) : null;
 }
 
 export function extractName(content: string): string | null {
 	const m = content.match(/^---\s*\n([\s\S]*?)\n---/);
 	if (!m) return null;
 	const nm = m[1]?.match(/^name\s*:\s*["']?(.+?)["']?\s*$/m);
-	return nm ? nm[1]?.trim() : null;
+	return nm ? (nm[1]?.trim() ?? null) : null;
 }
 
 // ─── Command directive interpolation ───────────────────────────────────────────

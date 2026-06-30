@@ -136,7 +136,7 @@ export function registerOptCommand(
 						const values = handles[tool].values;
 						const cur = values.indexOf(handles[tool].current());
 						const next = (cur + direction + values.length) % values.length;
-						handles[tool].run(values[next] as string, ctx);
+						handles[tool].run(values[next] ?? "", ctx);
 					};
 
 					const move = (direction: -1 | 1) => {

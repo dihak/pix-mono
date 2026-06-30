@@ -504,6 +504,7 @@ describe("todo actions", () => {
 // ─── Persistence ────────────────────────────────────────────────────────────
 
 describe("persistence", () => {
+	type AppendCall = { type: string; data: unknown };
 	test("set persists todos", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
@@ -515,8 +516,9 @@ describe("persistence", () => {
 		host.appendCalls.length = 0;
 		await run(host.execute, { action: "set", items: "alpha\nbravo" });
 		expect(host.appendCalls.length).toBe(1);
-		expect(host.appendCalls[0].type).toBe("todo-state");
-		const data = host.appendCalls[0].data as {
+		const ac0 = host.appendCalls[0] as AppendCall;
+		expect(ac0.type).toBe("todo-state");
+		const data = ac0.data as {
 			todos: Array<{ id: number; text: string; status: string }>;
 			nextTodoId: number;
 		};
@@ -564,7 +566,7 @@ describe("persistence", () => {
 		host.appendCalls.length = 0;
 		await run(host.execute, { action: "clear" });
 		expect(host.appendCalls.length).toBe(1);
-		const data = host.appendCalls[0].data as {
+		const data = (host.appendCalls[0] as AppendCall).data as {
 			todos: Array<unknown>;
 			nextTodoId: number;
 		};

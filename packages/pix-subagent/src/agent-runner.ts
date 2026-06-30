@@ -318,8 +318,11 @@ function collectResponseText(session: AgentSession) {
 function getLastAssistantText(session: AgentSession): string {
 	for (let i = session.messages.length - 1; i >= 0; i--) {
 		const msg = session.messages[i];
-		if (msg.role !== "assistant") continue;
-		const text = extractText(msg.content).trim();
+		// biome-ignore lint/complexity/useOptionalChain: msg may be undefined; optional chain would not skip undefined entries
+		if (!msg || msg.role !== "assistant") continue;
+		const text = extractText(
+			(msg as { content: Parameters<typeof extractText>[0] }).content,
+		).trim();
 		if (text) return text;
 	}
 	return "";
