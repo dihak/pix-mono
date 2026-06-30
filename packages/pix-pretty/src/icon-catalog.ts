@@ -74,6 +74,9 @@ const CATALOG = {
 	"opt.toon": { nerd: "\u{F05C0}", unicode: `\u2662${VS}`, ascii: "Tn" },
 	"opt.ponytail": { nerd: "\u{F0190}", unicode: `\u2667${VS}`, ascii: "Pt" },
 	"opt.title": { nerd: "\u{F0DAB}", unicode: `\u25C8${VS}`, ascii: "*" },
+
+	// ── subagent widget (pix-subagent) ────────────────────────────────────
+	agent: { nerd: "\u{F0BA0}", unicode: `\u2699${VS}`, ascii: "@" },
 } as const;
 
 /** Every valid semantic icon key. */

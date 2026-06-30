@@ -9,6 +9,7 @@
  */
 
 import { truncateToWidth } from "@earendil-works/pi-tui";
+import { icon } from "@xynogen/pix-pretty/icon-catalog";
 import type { AgentManager } from "../agent-manager.ts";
 import { getConfig } from "../agent-types.ts";
 import type { AgentActivity, AgentDetails, Theme } from "../tools.ts";
@@ -472,7 +473,7 @@ export class AgentWidget {
 			if (runningCount > 0) parts.push(`${runningCount} running`);
 			if (queuedCount > 0) parts.push(`${queuedCount} queued`);
 			const total = runningCount + queuedCount;
-			newStatusText = `${parts.join(", ")} agent${total === 1 ? "" : "s"}`;
+			newStatusText = `${icon("agent")} ${parts.join(", ")} agent${total === 1 ? "" : "s"}`;
 		}
 		if (newStatusText !== this.lastStatusText) {
 			this.uiCtx.setStatus("subagents", newStatusText);
