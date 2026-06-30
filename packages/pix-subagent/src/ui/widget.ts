@@ -82,7 +82,7 @@ export function formatSessionTokens(
 	}
 	if (compactions > 0) annot.push(theme.fg("dim", `⇊${compactions}`));
 	if (annot.length === 0) return tokenStr;
-	return `${tokenStr} (${annot.join(" · ")})`;
+	return `${tokenStr} ${theme.fg("dim", "(")}${annot.join(theme.fg("dim", " · "))}${theme.fg("dim", ")")}`;
 }
 
 export function getDisplayName(type: SubagentType): string {
@@ -201,6 +201,7 @@ export class AgentWidget {
 			compactionCount?: number;
 			turnCount?: number;
 			maxTurns?: number;
+			streamingMs?: number;
 		},
 		theme: Theme,
 	): string {
@@ -259,7 +260,10 @@ export class AgentWidget {
 			);
 		}
 		parts.push(duration);
-		const speed = formatSpeed(a.lifetimeUsage?.output ?? 0, durationMs);
+		const speed = formatSpeed(
+			a.lifetimeUsage?.output ?? 0,
+			a.streamingMs ?? durationMs,
+		);
 		if (speed) parts.push(speed);
 
 		return `${icon} ${theme.fg("dim", name)}${modelLabel}${modeTag}  ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`;
@@ -337,7 +341,7 @@ export class AgentWidget {
 			parts.push(elapsed);
 			const liveSpeed = formatSpeed(
 				bg?.lifetimeUsage.output ?? 0,
-				Date.now() - a.startedAt,
+				bg?.streamingMs ?? 0,
 			);
 			if (liveSpeed) parts.push(liveSpeed);
 			const statsText = parts.join(" · ");

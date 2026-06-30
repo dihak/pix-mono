@@ -50,6 +50,8 @@ export interface AgentActivity {
 	turnCount: number;
 	maxTurns?: number;
 	lifetimeUsage: LifetimeUsage;
+	/** Cumulative milliseconds spent streaming output (not idle/tool time). */
+	streamingMs: number;
 }
 
 export interface AgentDetails {
@@ -60,9 +62,11 @@ export interface AgentDetails {
 	tokens: string;
 	/** Context-window utilization 0–100, or null/undefined when unavailable. */
 	contextPercent?: number | null;
-	/** Raw output tokens — for t/s = outputTokens / durationMs. */
+	/** Raw output tokens — for t/s = outputTokens / streamingMs. */
 	outputTokens?: number;
 	durationMs: number;
+	/** Cumulative streaming-only milliseconds (for accurate t/s). */
+	streamingMs?: number;
 	status:
 		| "queued"
 		| "running"
@@ -350,7 +354,7 @@ export function createAgentTool(
 					: theme.fg("success", "✓");
 				const speed = formatSpeed(
 					details.outputTokens ?? 0,
-					details.durationMs,
+					details.streamingMs ?? details.durationMs,
 				);
 				let line =
 					icon +
@@ -767,9 +771,11 @@ function createActivityTracker(maxTurns?: number, onStreamUpdate?: () => void) {
 		responseText: "",
 		session: undefined,
 		lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
+		streamingMs: 0,
 		durationMs: 0,
 	};
 	const startedAt = Date.now();
+	let streamStart: number | null = null;
 
 	const callbacks = {
 		onToolActivity: (activity: { type: "start" | "end"; toolName: string }) => {
@@ -790,6 +796,7 @@ function createActivityTracker(maxTurns?: number, onStreamUpdate?: () => void) {
 			onStreamUpdate?.();
 		},
 		onTextDelta: (_delta: string, fullText: string) => {
+			if (streamStart === null) streamStart = Date.now();
 			state.responseText = fullText;
 			state.durationMs = Date.now() - startedAt;
 			onStreamUpdate?.();
@@ -806,6 +813,11 @@ function createActivityTracker(maxTurns?: number, onStreamUpdate?: () => void) {
 			output: number;
 			cacheWrite: number;
 		}) => {
+			// Finalize the streaming window for this turn.
+			if (streamStart !== null) {
+				state.streamingMs += Date.now() - streamStart;
+				streamStart = null;
+			}
 			state.lifetimeUsage.input += usage.input;
 			state.lifetimeUsage.output += usage.output;
 			state.lifetimeUsage.cacheWrite += usage.cacheWrite;
@@ -842,6 +854,7 @@ function buildDetails(
 		tokens: totalTokens > 0 ? formatTokens(totalTokens) : "",
 		contextPercent,
 		outputTokens: record.lifetimeUsage.output,
+		streamingMs: activity?.streamingMs,
 		turnCount: activity?.turnCount,
 		maxTurns: activity?.maxTurns,
 		durationMs:

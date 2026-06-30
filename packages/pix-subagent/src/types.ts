@@ -94,6 +94,8 @@ export interface AgentRecord {
 	turnCount: number;
 	/** Turn cap, if any — for the ↻N≤M display. */
 	maxTurns?: number;
+	/** Cumulative milliseconds spent streaming output (for accurate t/s). */
+	streamingMs: number;
 	/** Resolved spawn params, captured for UI display. */
 	invocation?: AgentInvocation;
 }

@@ -85,6 +85,8 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 	const manager = new AgentManager(
 		// onComplete — fire subagent-notification nudge for each finished bg agent
 		(record) => {
+			const act = agentActivity.get(record.id);
+			if (act) record.streamingMs = act.streamingMs;
 			agentActivity.delete(record.id);
 
 			if (record.resultConsumed) {

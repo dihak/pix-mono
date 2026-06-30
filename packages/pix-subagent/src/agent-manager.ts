@@ -181,6 +181,7 @@ export class AgentManager {
 			lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
 			compactionCount: 0,
 			turnCount: 0,
+			streamingMs: 0,
 			maxTurns: options.maxTurns,
 			invocation: options.invocation,
 		};
