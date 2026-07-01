@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { mkdtempSync } from "node:fs";
-import { mkdir, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmod, readFile, rm } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -9,6 +9,7 @@ import {
 	mimeType,
 	parseTranscriptionResponse,
 	resolveOutputPath,
+	validateOutputPath,
 	writeTranscriptionFile,
 } from "./transcribe.js";
 
@@ -287,9 +288,145 @@ describe("buildTranscriptionResult", () => {
 	it("cleanup", async () => {
 		await rm(tmpRoot, { recursive: true, force: true });
 	});
+});
 
-	// silence unused-import warning for mkdir (we use it implicitly via writeTranscriptionFile)
-	it("mkdir import sanity", () => {
-		expect(typeof mkdir).toBe("function");
+// ── validateOutputPath ───────────────────────────────────────────────────────
+
+describe("validateOutputPath", () => {
+	const tmpRoot = mkdtempSync(join(tmpdir(), "pix-validate-"));
+
+	it("accepts a fresh path under a writable parent", async () => {
+		const result = await validateOutputPath(join(tmpRoot, "fresh.txt"));
+		expect(result.ok).toBe(true);
+		if (result.ok) expect(result.path).toBe(join(tmpRoot, "fresh.txt"));
+	});
+
+	it("accepts a fresh path several levels deep", async () => {
+		const result = await validateOutputPath(
+			join(tmpRoot, "a", "b", "c", "deep.txt"),
+		);
+		expect(result.ok).toBe(true);
+	});
+
+	it("rejects null bytes", async () => {
+		const result = await validateOutputPath(join(tmpRoot, "x\0y.txt"));
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.reason).toContain("null byte");
+	});
+
+	it.each([
+		"/etc",
+		"/etc/passwd",
+		"/etc/cron.daily/x",
+		"/proc/cpuinfo",
+		"/sys/kernel/x",
+		"/boot/efi/x",
+		`${homedir()}/.ssh/authorized_keys`,
+		`${homedir()}/.aws/credentials`,
+		`${homedir()}/.gnupg/gpg.conf`,
+		`${homedir()}/.config/gh/hosts.yml`,
+	])("rejects sensitive prefix %s", async (bad) => {
+		const result = await validateOutputPath(bad);
+		expect(result.ok).toBe(false);
+		if (!result.ok) {
+			expect(result.reason).toMatch(/refusing to write/);
+		}
+	});
+
+	it("rejects when no ancestor directory exists at all", async () => {
+		// Deep path under a non-existent tree with no existing ancestor
+		const result = await validateOutputPath("/no-such-root-xyz/abc/def/x.txt");
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.reason).toMatch(/no existing ancestor/);
+	});
+
+	it("rejects when parent is not writable", async () => {
+		const readOnlyParent = join(tmpRoot, "ro");
+		mkdirSync(readOnlyParent);
+		await chmod(readOnlyParent, 0o555);
+		try {
+			const result = await validateOutputPath(join(readOnlyParent, "x.txt"));
+			expect(result.ok).toBe(false);
+			if (!result.ok) expect(result.reason).toMatch(/no writable ancestor/);
+		} finally {
+			// restore so cleanup can rm -rf
+			await chmod(readOnlyParent, 0o755);
+		}
+	});
+
+	it("rejects when target is a symlink", async () => {
+		const real = join(tmpRoot, "real.txt");
+		writeFileSync(real, "x");
+		const link = join(tmpRoot, "link.txt");
+		symlinkSync(real, link);
+		const result = await validateOutputPath(link);
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.reason).toMatch(/symlink/);
+	});
+
+	it("rejects when target is an existing directory", async () => {
+		const dir = join(tmpRoot, "isadir");
+		mkdirSync(dir);
+		const result = await validateOutputPath(dir);
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.reason).toMatch(/directory/);
+	});
+
+	it("rejects when a parent in the chain is a symlink", async () => {
+		const realSubdir = join(tmpRoot, "real-sub");
+		mkdirSync(realSubdir);
+		const symlinkedParent = join(tmpRoot, "fake-parent");
+		symlinkSync(realSubdir, symlinkedParent);
+		const result = await validateOutputPath(join(symlinkedParent, "x.txt"));
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.reason).toMatch(/parent is a symlink/);
+	});
+
+	it("accepts a path inside an existing file's parent (overwrite OK)", async () => {
+		const existing = join(tmpRoot, "exists.txt");
+		writeFileSync(existing, "old");
+		const result = await validateOutputPath(existing);
+		expect(result.ok).toBe(true);
+	});
+
+	it("cleanup", async () => {
+		await rm(tmpRoot, { recursive: true, force: true });
+	});
+});
+
+// ── writeTranscriptionFile — rejection propagation ───────────────────────────
+
+describe("writeTranscriptionFile — rejection propagation", () => {
+	it("throws on sensitive prefix", async () => {
+		await expect(writeTranscriptionFile("/etc/some-file", "x")).rejects.toThrow(
+			/refusing to write under \/etc/,
+		);
+	});
+
+	it("throws on null byte", async () => {
+		await expect(
+			writeTranscriptionFile("/tmp/pix-test-\0x.txt", "x"),
+		).rejects.toThrow(/null byte/);
+	});
+});
+
+// ── buildTranscriptionResult — write failure path ───────────────────────────
+
+describe("buildTranscriptionResult — write failure path", () => {
+	it("returns isError + inline fallback when output_file is rejected", async () => {
+		const text = "the actual transcription that was successfully produced";
+		const result = await buildTranscriptionResult(
+			text,
+			"dg/nova-3",
+			"api",
+			"/etc/passwd",
+		);
+		expect(result.isError).toBe(true);
+		expect(result.details.write_error).toMatch(/refusing to write/);
+		expect(result.details.output_path).toBeUndefined();
+		// inline text is still included so the model doesn't lose the result
+		const joined = result.content.map((c) => c.text).join("\n");
+		expect(joined).toContain(text);
+		expect(joined).toContain("/etc/passwd");
 	});
 });
