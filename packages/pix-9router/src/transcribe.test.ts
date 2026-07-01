@@ -1,37 +1,16 @@
 import { describe, expect, it } from "bun:test";
-import { extname } from "node:path";
+import { mkdtempSync } from "node:fs";
+import { mkdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-// ── Re-export internal helpers for testing via module augmentation ────────────
-// transcribe.ts exports only the default fn; we test the pure logic
-// inline here to avoid coupling tests to private internals.
-
-// ── mimeType (copied from transcribe.ts) ─────────────────────────────────────
-
-function mimeType(filePath: string): string {
-	const ext = extname(filePath).toLowerCase();
-	const types: Record<string, string> = {
-		".mp3": "audio/mpeg",
-		".wav": "audio/wav",
-		".flac": "audio/flac",
-		".ogg": "audio/ogg",
-		".m4a": "audio/mp4",
-		".webm": "audio/webm",
-		".mp4": "audio/mp4",
-		".mpga": "audio/mpeg",
-	};
-	return types[ext] ?? "application/octet-stream";
-}
-
-// ── parseTranscriptionResponse (extracted logic from execute) ─────────────────
-
-function parseTranscriptionResponse(raw: string): string {
-	try {
-		const parsed = JSON.parse(raw) as { text?: string };
-		return parsed.text ?? raw;
-	} catch {
-		return raw;
-	}
-}
+import {
+	buildTranscriptionResult,
+	mimeType,
+	parseTranscriptionResponse,
+	resolveOutputPath,
+	writeTranscriptionFile,
+} from "./transcribe.js";
 
 // ── mimeType ─────────────────────────────────────────────────────────────────
 
@@ -156,5 +135,161 @@ describe("parseTranscriptionResponse", () => {
 
 	it("handles empty string input", () => {
 		expect(parseTranscriptionResponse("")).toBe("");
+	});
+});
+
+// ── resolveOutputPath ────────────────────────────────────────────────────────
+
+describe("resolveOutputPath", () => {
+	it("keeps absolute paths as-is", () => {
+		const abs = "/tmp/foo/bar.txt";
+		expect(resolveOutputPath(abs)).toBe(abs);
+	});
+
+	it("resolves relative paths against cwd", () => {
+		const rel = "transcripts/out.txt";
+		const result = resolveOutputPath(rel);
+		expect(result.endsWith("transcripts/out.txt")).toBe(true);
+		expect(result.startsWith(process.cwd())).toBe(true);
+	});
+});
+
+// ── writeTranscriptionFile ───────────────────────────────────────────────────
+
+describe("writeTranscriptionFile", () => {
+	const tmpRoot = mkdtempSync(join(tmpdir(), "pix-transcribe-test-"));
+
+	it("writes text to the given file path", async () => {
+		const file = join(tmpRoot, "simple.txt");
+		const abs = await writeTranscriptionFile(file, "hello world");
+		expect(abs).toBe(file);
+		expect(await readFile(file, "utf-8")).toBe("hello world");
+	});
+
+	it("creates parent directories recursively", async () => {
+		const file = join(tmpRoot, "deep", "nested", "dir", "out.txt");
+		const abs = await writeTranscriptionFile(file, "deep content");
+		expect(abs).toBe(file);
+		expect(await readFile(file, "utf-8")).toBe("deep content");
+	});
+
+	it("preserves full unicode without truncation", async () => {
+		const text = `日本語のテスト\n${"x".repeat(100_000)}`;
+		const file = join(tmpRoot, "huge.txt");
+		await writeTranscriptionFile(file, text);
+		const got = await readFile(file, "utf-8");
+		expect(got.length).toBe(text.length);
+		expect(got).toBe(text);
+	});
+
+	it("overwrites an existing file", async () => {
+		const file = join(tmpRoot, "overwrite.txt");
+		await writeTranscriptionFile(file, "first");
+		await writeTranscriptionFile(file, "second");
+		expect(await readFile(file, "utf-8")).toBe("second");
+	});
+
+	// cleanup tmp root
+	it("cleanup", async () => {
+		await rm(tmpRoot, { recursive: true, force: true });
+	});
+});
+
+// ── buildTranscriptionResult ─────────────────────────────────────────────────
+
+describe("buildTranscriptionResult", () => {
+	const tmpRoot = mkdtempSync(join(tmpdir(), "pix-transcribe-result-"));
+
+	it("returns inline text (truncated at 50_000) when no output_file is set", async () => {
+		const text = "a".repeat(60_000);
+		const result = await buildTranscriptionResult(
+			text,
+			"dg/nova-3",
+			"api",
+			undefined,
+		);
+		expect(result.content).toHaveLength(1);
+		expect(result.content[0]?.type).toBe("text");
+		expect(result.content[0]?.text.length).toBe(50_000);
+		expect(result.details).toEqual({
+			source: "api",
+			model: "dg/nova-3",
+			chars: 60_000,
+		});
+	});
+
+	it("returns inline text (untruncated) when short and no output_file", async () => {
+		const text = "short transcript";
+		const result = await buildTranscriptionResult(
+			text,
+			"dg/nova-3",
+			"api",
+			undefined,
+		);
+		expect(result.content[0]?.text).toBe("short transcript");
+		expect(result.details.chars).toBe(text.length);
+	});
+
+	it("writes full text to file and returns short path summary when output_file is set", async () => {
+		const text = "a".repeat(100_000); // way over 50k
+		const file = join(tmpRoot, "result-a.txt");
+		const result = await buildTranscriptionResult(
+			text,
+			"dg/nova-3",
+			"api",
+			file,
+		);
+
+		// content is a short summary, not the full text
+		expect(result.content).toHaveLength(1);
+		const summary = result.content[0]?.text ?? "";
+		expect(summary.length).toBeLessThan(200);
+		expect(summary).toContain("100000");
+		expect(summary).toContain(file);
+
+		// full text was written verbatim
+		const onDisk = await readFile(file, "utf-8");
+		expect(onDisk.length).toBe(100_000);
+		expect(onDisk).toBe(text);
+
+		// details includes resolved absolute path
+		expect(result.details.output_path).toBe(file);
+		expect(result.details.chars).toBe(100_000);
+		expect(result.details.source).toBe("api");
+	});
+
+	it("passes through curl-fallback source label", async () => {
+		const text = "hi";
+		const result = await buildTranscriptionResult(
+			text,
+			"dg/nova-3",
+			"curl-fallback",
+			undefined,
+		);
+		expect(result.details.source).toBe("curl-fallback");
+	});
+
+	it("relative output_file is resolved against cwd and created", async () => {
+		const text = "relative path content";
+		const relDir = join(tmpRoot, "rel", "sub");
+		const relFile = join(relDir, "out.txt");
+		const result = await buildTranscriptionResult(
+			text,
+			"dg/nova-3",
+			"api",
+			relFile,
+		);
+
+		expect(result.details.output_path).toBe(relFile);
+		expect(await readFile(relFile, "utf-8")).toBe("relative path content");
+	});
+
+	it("cleanup", async () => {
+		await rm(tmpRoot, { recursive: true, force: true });
+	});
+
+	// silence unused-import warning for mkdir (we use it implicitly via writeTranscriptionFile)
+	it("mkdir import sanity", () => {
+		expect(typeof mkdir).toBe("function");
 	});
 });

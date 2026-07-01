@@ -12,13 +12,14 @@
  */
 
 import { type ExecFileException, execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import { basename, extname } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, extname, isAbsolute, resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { routerBaseUrl } from "./data.js";
 
 const REQUEST_TIMEOUT_MS = 120_000; // audio transcription can take longer
+const CHAT_TRUNCATE_LIMIT = 50_000; // only when no output_file is provided
 const DEFAULT_MODEL = "dg/nova-3";
 
 function auth(): string | undefined {
@@ -26,7 +27,7 @@ function auth(): string | undefined {
 }
 
 /** Map file extension to MIME type for common audio formats. */
-function mimeType(filePath: string): string {
+export function mimeType(filePath: string): string {
 	const ext = extname(filePath).toLowerCase();
 	const types: Record<string, string> = {
 		".mp3": "audio/mpeg",
@@ -104,25 +105,101 @@ function curl(args: string[]): Promise<string> {
 	});
 }
 
+/** Extract the `text` field from a JSON envelope, or return the raw string. */
+export function parseTranscriptionResponse(raw: string): string {
+	try {
+		const parsed = JSON.parse(raw) as { text?: string };
+		return parsed.text ?? raw;
+	} catch {
+		return raw;
+	}
+}
+
+/** Resolve a possibly-relative `output_file` to an absolute path. */
+export function resolveOutputPath(outputFile: string): string {
+	return isAbsolute(outputFile)
+		? outputFile
+		: resolve(process.cwd(), outputFile);
+}
+
+/** Write transcription text to disk, creating parent directories as needed. */
+export async function writeTranscriptionFile(
+	outputFile: string,
+	text: string,
+): Promise<string> {
+	const abs = resolveOutputPath(outputFile);
+	await mkdir(dirname(abs), { recursive: true });
+	await writeFile(abs, text, "utf-8");
+	return abs;
+}
+
+/**
+ * Build the tool return value from a successful transcription.
+ * - If `outputFile` is set: write the full text verbatim and return a short summary.
+ * - Otherwise: return the text inline, truncated to fit chat.
+ */
+export async function buildTranscriptionResult(
+	text: string,
+	model: string,
+	source: "api" | "curl-fallback",
+	outputFile: string | undefined,
+): Promise<{
+	content: { type: "text"; text: string }[];
+	details: Record<string, unknown>;
+}> {
+	const details: Record<string, unknown> = {
+		source,
+		model,
+		chars: text.length,
+	};
+
+	if (outputFile) {
+		const abs = await writeTranscriptionFile(outputFile, text);
+		details.output_path = abs;
+		return {
+			content: [
+				{
+					type: "text",
+					text: `Transcribed ${text.length} chars → ${abs}`,
+				},
+			],
+			details,
+		};
+	}
+
+	return {
+		content: [{ type: "text", text: text.slice(0, CHAT_TRUNCATE_LIMIT) }],
+		details,
+	};
+}
+
 export default function registerTranscribe(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "transcribe",
 		label: "Transcribe",
 		description:
-			"Convert speech to text. Transcribes an audio file using the 9Router audio transcription API (Deepgram Nova 3).",
+			"Convert speech to text. Transcribes an audio file using the 9Router audio transcription API (Deepgram Nova 3). Optionally writes the full text to a file on disk.",
 		promptSnippet:
-			"transcribe(file, model?, language?) — Transcribe an audio file to text. Supports mp3, wav, flac, ogg, m4a, webm. Default model: dg/nova-3.",
+			"transcribe(file, output_file?, model?, language?) — Transcribe an audio file to text. Supports mp3, wav, flac, ogg, m4a, webm. Default model: dg/nova-3. If output_file is set, the full text is written to that path (parent dirs created) and only a short path summary is returned to the model.",
 		promptGuidelines: [
 			"Use transcribe when you need to convert speech/audio to text.",
 			"The file parameter should be an absolute or relative path to an audio file on disk.",
 			"Supports common audio formats: mp3, wav, flac, ogg, m4a, webm, mp4.",
 			"Default model is dg/nova-3 (Deepgram Nova 3). Override with model parameter if needed.",
 			"Optionally specify language as ISO 639-1 code (e.g. 'en', 'es', 'fr') for better accuracy.",
+			"Pass output_file to write the full transcription to disk — useful when the result is long, when it will be re-read or piped to another tool, or to keep chat context small. Relative paths are resolved against the current working directory.",
+			"Without output_file the transcribed text is returned inline (truncated to 50,000 chars).",
 		],
 		parameters: Type.Object({
 			file: Type.String({
 				description: "Path to the audio file to transcribe",
 			}),
+			output_file: Type.Optional(
+				Type.String({
+					description:
+						"Write the full transcription text to this path (parent dirs are created). Relative paths resolve against cwd. When set, content returned to the model is just a short path summary.",
+				}),
+			),
 			model: Type.Optional(
 				Type.String({
 					description: "Transcription model to use (default: dg/nova-3)",
@@ -140,7 +217,16 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 		async execute(_toolCallId, params, signal, onUpdate) {
 			const model = params.model ?? DEFAULT_MODEL;
 			const filePath = params.file;
+			const outputFile = params.output_file;
 			let apiMsg = "";
+
+			const run = async (source: "api" | "curl-fallback", raw: string) =>
+				buildTranscriptionResult(
+					parseTranscriptionResponse(raw),
+					model,
+					source,
+					outputFile,
+				);
 
 			try {
 				onUpdate?.({
@@ -161,23 +247,7 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 					signal,
 				);
 
-				// The API may return JSON {"text": "..."} or plain text
-				let text: string;
-				try {
-					const parsed = JSON.parse(raw) as { text?: string };
-					text = parsed.text ?? raw;
-				} catch {
-					text = raw;
-				}
-
-				return {
-					content: [{ type: "text", text: text.slice(0, 50_000) }],
-					details: {
-						source: "api",
-						model,
-						chars: text.length,
-					},
-				};
+				return await run("api", raw);
 			} catch (apiErr: unknown) {
 				apiMsg = apiErr instanceof Error ? apiErr.message : String(apiErr);
 				onUpdate?.({
@@ -206,24 +276,7 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 				];
 
 				const raw = await curl(curlArgs);
-
-				let text: string;
-				try {
-					const parsed = JSON.parse(raw) as { text?: string };
-					text = parsed.text ?? raw;
-				} catch {
-					text = raw;
-				}
-
-				return {
-					content: [
-						{
-							type: "text",
-							text: `[FALLBACK — curl] API called via curl instead of fetch.\n\n${text.slice(0, 49_500)}`,
-						},
-					],
-					details: { source: "curl-fallback", model },
-				};
+				return await run("curl-fallback", raw);
 			} catch (curlErr: unknown) {
 				const curlMsg =
 					curlErr instanceof Error ? curlErr.message : String(curlErr);
