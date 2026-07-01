@@ -469,11 +469,9 @@ export class AgentWidget {
 
 		let newStatusText: string | undefined;
 		if (hasActive) {
-			const parts: string[] = [];
-			if (runningCount > 0) parts.push(`${runningCount} running`);
-			if (queuedCount > 0) parts.push(`${queuedCount} queued`);
-			const total = runningCount + queuedCount;
-			newStatusText = `${icon("agent")} ${parts.join(", ")} agent${total === 1 ? "" : "s"}`;
+			const r = runningCount > 0 ? `${runningCount}` : "";
+			const q = queuedCount > 0 ? `+${queuedCount}` : "";
+			newStatusText = `${icon("agent")} ${r}${q}`;
 		}
 		if (newStatusText !== this.lastStatusText) {
 			this.uiCtx.setStatus("subagents", newStatusText);
