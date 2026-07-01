@@ -74,7 +74,7 @@ heuristic = 0.30·coding_score + 0.60·agentic_score + 0.10·reasoning_score
 score     = round(clamp₀₁₀₀(120.6·heuristic − 10.6))   // fitted to the index
 ```
 
-3. **benchlm.ai fallback** — if the model exists in benchlm but modelgrep has
+1. **benchlm.ai fallback** — if the model exists in benchlm but modelgrep has
    no AA index and no raw benches, look up the benchlm `overallScore` (0–100)
    and use it verbatim. Match strategy (in `lookupBenchlmScore`): exact
    normalized slug, then prefix overlap either way, then take the
@@ -119,6 +119,89 @@ place if your priorities differ.
 | `lookupModelsDev` | Sync lookup by id from in-memory cache (joined on slug) |
 | `lookupBenchmark` | Sync lookup a model by id — returns score + rank + pricing |
 | `benchScoreColor` | Map a 0–100 score to a `success`/`warning`/`error`/`muted` token |
+| `pixConfig` | `@xynogen/pix-data/pix-config` — load/access the unified `pix.json` config |
+| `reloadPixConfig` | Force a fresh read of `pix.json` from disk |
+| `shouldCollapse` | `@xynogen/pix-data/collapse` — whether a tool's output card should auto-collapse |
+| `collapseDelayMs` | Configured delay (ms) before a card collapses (default 10 000) |
+| `tickCollapse` | Call in `renderResult` to schedule the timed auto-collapse for a card |
+
+## Unified config — `~/.pi/agent/pix.json`
+
+pix-data hosts the **single shared config file** consumed by every `pix-*` package. The file is auto-created with defaults on the first session that loads pix-data — you never need to create it manually.
+
+**Location:** `~/.pi/agent/pix.json`
+
+### Full schema
+
+```jsonc
+{
+  // Auto-collapse for tool output cards (pix-bash, pix-read, pix-grep, …)
+  "collapse": {
+    "enabled": true,          // master switch
+    "delayMs": 10000,         // ms before collapse fires (default 10s)
+    "tools": {
+      // per-tool overrides — set false to disable for a specific tool
+      "bash":  true,
+      "read":  true,
+      "grep":  true,
+      "edit":  true,
+      "write": true,
+      "find":  true,
+      "ls":    true,
+      "todo":  true
+    }
+  },
+
+  // Rendering options (pix-pretty)
+  "pretty": {
+    "theme": "monokai",       // syntax-highlight theme (overrides PRETTY_THEME)
+    "icons": "nerd",          // icon mode: nerd | unicode | ascii (overrides PRETTY_ICONS)
+    "maxPreviewLines": 50,    // overrides PRETTY_MAX_PREVIEW_LINES
+    "diffColors": true        // colored diff output
+  },
+
+  // Optimizer initial state (pix-optimizer)
+  "optimizer": {
+    "caveman": "off",         // off | lite | full | ultra | micro
+    "rtk":     false,
+    "toon":    false,
+    "ponytail": "off"         // off | lite | full | ultra
+  },
+
+  // Gate rules (pix-gate)
+  "gate": {
+    "disableDefaults": false,
+    "extraRules": [],          // same shape as pix-gate.json extraRules
+    "autoApprove": []          // regex strings that skip the dialog
+  }
+}
+```
+
+All sections are optional — missing keys fall back to the defaults shown above. Environment variables (e.g. `PRETTY_THEME`) still take precedence over `pix.json` values.
+
+### API — `@xynogen/pix-data/pix-config`
+
+```ts
+import { pixConfig, reloadPixConfig } from "@xynogen/pix-data/pix-config";
+
+const cfg = pixConfig();          // returns cached PixConfig (loaded once per session)
+await reloadPixConfig();          // force re-read from disk (e.g. after /config reload)
+```
+
+### API — `@xynogen/pix-data/collapse`
+
+```ts
+import { shouldCollapse, collapseDelayMs, tickCollapse } from "@xynogen/pix-data/collapse";
+
+// In a tool's renderResult:
+if (shouldCollapse("bash")) {
+  tickCollapse(card, collapseDelayMs());  // schedules timed collapse
+}
+```
+
+- `shouldCollapse(tool)` — returns `true` when `collapse.enabled` is true and the named tool is not opted out.
+- `collapseDelayMs()` — returns `collapse.delayMs` from config (default `10000`).
+- `tickCollapse(card, delayMs)` — sets a timeout that calls `card.collapse()` after the delay. Safe to call multiple times — only the first registered timeout fires.
 
 ## Install
 

@@ -6,6 +6,22 @@ Pi tool — file read with syntax highlighting.
 
 Replaces Pi's default `read` tool with an enhanced version backed by `pix-pretty`. File content is syntax-highlighted using `cli-highlight` (highlight.js-backed) with language auto-detection. The call label shows the shortened file path, with optional `from line N` and `(N lines)` hints. Images are displayed with mime type and byte size and a type icon. Long files are shown with a line count and truncation notice; expanded mode reveals the full content. Depends on `@xynogen/pix-pretty`, installed automatically as a dependency.
 
+## Auto-collapse
+
+After a configurable delay (default 10 seconds) the output card automatically collapses. Controlled via the `collapse` section of `~/.pi/agent/pix.json`:
+
+```jsonc
+{
+  "collapse": {
+    "enabled": true,
+    "delayMs": 10000,
+    "tools": { "read": true }
+  }
+}
+```
+
+Set `collapse.tools.read: false` to disable for this tool only. See `@xynogen/pix-data/collapse` for the full API.
+
 ## Install
 
 ```bash

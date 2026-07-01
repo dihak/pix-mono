@@ -35,17 +35,23 @@ rules as the bash tool (auto-deny on match, no prompt).
 
 ## Configuration
 
-`~/.pi/agent/pix-gate.json`:
+Gate rules are read from the **`gate` section of `~/.pi/agent/pix.json`** (the unified config file). The legacy `~/.pi/agent/pix-gate.json` file is no longer used.
 
-```json
+`~/.pi/agent/pix.json` — `gate` section:
+
+```jsonc
 {
-  "disableDefaults": false,
-  "extraRules": [
-    { "pattern": "rm -rf /my-dir", "severity": "critical", "reason": "Deletes project root" }
-  ],
-  "autoApprove": ["^echo "]
+  "gate": {
+    "disableDefaults": false,
+    "extraRules": [
+      { "pattern": "rm -rf /my-dir", "severity": "critical", "reason": "Deletes project root" }
+    ],
+    "autoApprove": ["^echo "]
+  }
 }
 ```
+
+The schema is identical to the old `pix-gate.json` — move your existing config into `pix.json` under the `gate` key.
 
 ## Full distro
 

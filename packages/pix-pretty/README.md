@@ -61,7 +61,24 @@ pi install npm:@xynogen/pix-pretty
 
 ## Configuration
 
-### Environment Variables
+Configuration is read from **`~/.pi/agent/pix.json`** (the unified config file hosted by `@xynogen/pix-data/pix-config`). The `pretty` section of that file sets the defaults for theme, icon mode, and preview lines. Environment variables still override `pix.json` values.
+
+> **Note:** `pix-config.ts` and `collapse.ts` previously shipped with `pix-pretty` — they have moved to `pix-data` (`@xynogen/pix-data/pix-config` and `@xynogen/pix-data/collapse`). Update any direct imports.
+
+### `pix.json` — `pretty` section
+
+```jsonc
+{
+  "pretty": {
+    "theme": "monokai",       // syntax-highlight theme
+    "icons": "nerd",          // nerd | unicode | ascii
+    "maxPreviewLines": 50,
+    "diffColors": true
+  }
+}
+```
+
+### Environment Variables (override `pix.json`)
 
 - `PRETTY_THEME` — color theme for syntax highlighting
 - `PRETTY_MAX_HL_CHARS` — max characters to highlight (default: 80000)

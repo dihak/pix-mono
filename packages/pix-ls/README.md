@@ -6,6 +6,22 @@ Pi tool — directory listing with tree view.
 
 Replaces Pi's default `ls` tool with an enhanced version backed by `pix-pretty`. Output is rendered as an indented tree with file/directory icons and a total entry-count header. Call labels show the target path inline. Depends on `@xynogen/pix-pretty`, installed automatically as a dependency.
 
+## Auto-collapse
+
+After a configurable delay (default 10 seconds) the output card automatically collapses. Controlled via the `collapse` section of `~/.pi/agent/pix.json`:
+
+```jsonc
+{
+  "collapse": {
+    "enabled": true,
+    "delayMs": 10000,
+    "tools": { "ls": true }
+  }
+}
+```
+
+Set `collapse.tools.ls: false` to disable for this tool only. See `@xynogen/pix-data/collapse` for the full API.
+
 ## Install
 
 ```bash

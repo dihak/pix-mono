@@ -6,6 +6,22 @@ Pi tool — precise text replacement edit with diff rendering.
 
 Replaces Pi's default `edit` tool with an enhanced version that renders a side-by-side split diff after every edit. The diff is syntax-highlighted with gutter markers, line numbers, and a change summary produced by `pix-pretty`'s diff engine. Batched edits (multiple `{oldText, newText}` pairs in one call) each render their own diff block. Call labels show the target file path and the number of edits being applied. Depends on `@xynogen/pix-pretty`, installed automatically as a dependency.
 
+## Auto-collapse
+
+After a configurable delay (default 10 seconds) the diff card automatically collapses. Controlled via the `collapse` section of `~/.pi/agent/pix.json`:
+
+```jsonc
+{
+  "collapse": {
+    "enabled": true,
+    "delayMs": 10000,
+    "tools": { "edit": true }
+  }
+}
+```
+
+Set `collapse.tools.edit: false` to disable for this tool only. See `@xynogen/pix-data/collapse` for the full API.
+
 ## Install
 
 ```bash

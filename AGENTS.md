@@ -12,7 +12,7 @@ packages/
   # ── Aggregator ──────────────────────────────────────────────────────────
   pix-core/        # Meta-package — bundles + activates the core distro (depends on the packages below)
   # ── Shared layers ───────────────────────────────────────────────────────
-  pix-data/        # Shared model data layer (modelgrep catalog + BenchLM scores), cached at ~/.cache/pi
+  pix-data/        # Shared model data layer (modelgrep catalog + BenchLM scores), cached at ~/.cache/pi; also hosts the unified pix.json config loader (pix-config.ts) and auto-collapse helper (collapse.ts)
   pix-pretty/      # Shared rendering lib (highlight, diff, icons, fff) + FFF slash commands
   pix-themes/      # Theme pack — 7 dark themes
   # ── UI / UX extensions (bundled by pix-core) ────────────────────────────
@@ -174,7 +174,7 @@ The tag, not the commit, triggers publishing. Only packages with a new version s
 
 Each package is intended to be **independently installable and usable**.
 
-- **No cross-package imports unless unavoidable.** Three packages are sanctioned shared layers, each a different kind: `pix-data` (shared **data** — models.dev + BenchLM cache), `pix-pretty` (shared **render code** — highlight/diff/icons/fff; most tool packages depend on it), and `pix-core` (the **aggregator** that bundles the rest). Depending on these is intentional. Beyond them, keep packages self-contained.
+- **No cross-package imports unless unavoidable.** Three packages are sanctioned shared layers, each a different kind: `pix-data` (shared **data** — models.dev + BenchLM cache, unified `pix.json` config, and auto-collapse helper), `pix-pretty` (shared **render code** — highlight/diff/icons/fff; most tool packages depend on it), and `pix-core` (the **aggregator** that bundles the rest). Depending on these is intentional. Beyond them, keep packages self-contained.
 - **Prefer duplicating small utilities over adding a cross-package dep.** A shared dep creates a hard install coupling.
 - **Each package has its own `package.json` version.** Bump only the package(s) actually changed — unrelated packages keep their version and are skipped at publish time.
 - **Pi host is always a `peerDependency`**, never a direct dep. Users already have Pi installed.
@@ -202,6 +202,23 @@ icon("paste.image") // → glyph for paste image chip
 - `onIconModeChange(cb)` — observer for pushed-status consumers (e.g. `OptimizerStatus`) that only repaint on explicit calls, not continuous re-render.
 
 **When adding a new icon:** add a key to the `CATALOG` in `icon-catalog.ts` with `nerd`/`unicode`/`ascii` variants. Never add raw codepoints to consumer packages.
+
+---
+
+## Unified Config — `~/.pi/agent/pix.json`
+
+All `pix-*` packages share a **single config file** at `~/.pi/agent/pix.json`. It is auto-created with defaults on the first session start — no manual setup needed.
+
+Top-level sections:
+
+| Section | Consumed by |
+|---|---|
+| `collapse` | pix-bash, pix-read, pix-grep, pix-edit, pix-write, pix-find, pix-ls, pix-todo |
+| `pretty` | pix-pretty (theme, icons, preview lines, diff colors) |
+| `optimizer` | pix-optimizer (initial caveman/rtk/toon/ponytail state) |
+| `gate` | pix-gate (rules, auto-approve patterns) |
+
+The loader (`@xynogen/pix-data/pix-config`) and the auto-collapse helper (`@xynogen/pix-data/collapse`) are both exported from `pix-data`. See `packages/pix-data/README.md` for the full schema and API.
 
 ---
 
