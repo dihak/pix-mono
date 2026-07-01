@@ -9,6 +9,14 @@
  * - allowed_tools[] intersects the resolved tool set (never widens).
  * - modelName is ALWAYS populated (the pix twist — shown even when same as parent).
  * - renderCall/renderResult ported from tintinweb/pi-subagents (MIT).
+ *
+ * Token-cost note: the `agent` tool is the most expensive call the LLM makes
+ * (a detailed `prompt` field alone is 50-200 output tokens). Parameter keys are
+ * kept short (`type`, `turns`, `background`) and rare options (`isolated`,
+ * `inherit_context`) are intentionally absent from the schema — they bloat
+ * every call with `false` fillers yet are almost never used. They remain
+ * configurable via custom agent .md frontmatter (../custom-agents.ts) for the
+ * rare case that needs them.
  */
 
 import { defineTool, getAgentDir } from "@earendil-works/pi-coding-agent";
@@ -192,7 +200,7 @@ export function buildAgentToolDescription(modelList: string[]): string {
 
 	const toolsText = `\nAvailable tools (for allowed_tools[]): ${BUILTIN_TOOL_NAMES.join(", ")}`;
 
-	return `Launch a new agent to handle complex, multi-step tasks autonomously. Each agent type has specific capabilities and tools.
+	return `Launch a new agent to handle complex, multi-step tasks autonomously.
 
 Available agent types and their tools:
 ${typeList}
@@ -205,26 +213,17 @@ ${toolsText}
 If the target is already known, use a direct tool — \`read\` for a known path, \`grep\`/\`find\` for a specific symbol. Reserve this tool for open-ended questions or tasks that span the codebase.
 
 ## Usage notes
-- Always include a short (3-5 word) description summarizing what the agent will do (shown in UI).
-- When you launch multiple agents for independent work, send them in a single message with multiple tool uses, so they run concurrently.
-- When the agent is done, it returns a single message. The result is not visible to the user — to show the user, send a text message with a concise summary.
-- Trust but verify: an agent's summary describes what it intended to do, not what it did. When an agent writes or edits code, check the actual changes before reporting work as done.
-- Use run_in_background: true only when you explicitly do not need to see the output inline (e.g. fire-and-forget background tasks). Default is foreground — the agent streams inline and you see its work as it runs.
-- Use resume with an agent ID to continue a previous agent's work.
-- Use agent_steer to send mid-run messages to a running background agent.
-- Use model to specify a model from the available models list above (provider/id or fuzzy e.g. "haiku").
-- Type sets the tool allowlist and persona only — never the model. Pick the model yourself via \`model:\` (see Available models above); omit to inherit the parent's. For mechanical/read-only work prefer a cheap tier; for hard reasoning match or exceed the parent.
-- Use allowed_tools[] to restrict which tools the sub-agent can use (useful for scoping work). Omit for the agent type's default tool set.
-- Use thinking to control extended thinking level: off|minimal|low|medium|high|xhigh.
-- Use inherit_context if the agent needs the parent conversation history.
+- Always include a short (3-5 word) \`description\` (shown in UI).
+- Launch independent agents concurrently: send multiple \`agent\` tool calls in one message.
+- The agent's result is not visible to the user — summarize it in a text message. Trust but verify: check the actual changes before reporting done.
+- \`background: true\` only for fire-and-forget work. Default is foreground (streams inline).
+- \`resume\` with an agent ID to continue a prior agent's work; \`agent_steer\` to redirect a running background agent.
+- Pick the model yourself via \`model:\` (provider/id or fuzzy e.g. "haiku"). For mechanical/read-only work prefer a cheap tier; for hard reasoning match or exceed the parent. Type sets the tool belt + persona only — never the model.
+- \`thinking\`: off|minimal|low|medium|high|xhigh.
+- Only \`general-purpose\` has an open tool belt — use \`allowed_tools\` to narrow it. Explore/Plan and custom agents already have a fixed belt; omit \`allowed_tools\` for those.
 
 ## Writing the prompt
-Provide clear, detailed prompts so the agent can work autonomously. Brief it like a smart colleague who just walked into the room — it hasn't seen this conversation, doesn't know what you've tried.
-- Explain what you're trying to accomplish and why.
-- Include file paths, line numbers, what specifically to change.
-- If you need a short response, say so.
-
-**Never delegate understanding.** Write prompts that prove you understood: include file paths, line numbers, what specifically to change.`;
+Brief it like a smart colleague who just walked into the room — it hasn't seen this conversation. Include what to accomplish, why, file paths, line numbers, what specifically to change, and whether a short response is fine. **Never delegate understanding.**`;
 }
 
 // ── the 3 tools ──────────────────────────────────────────────────────────────
@@ -250,7 +249,7 @@ export function createAgentTool(
 				description:
 					"A short (3-5 word) description of the task (shown in UI).",
 			}),
-			subagent_type: Type.String({
+			type: Type.String({
 				description: `The type of specialized agent to use. Available: ${getAvailableTypes().join(", ")}. Custom agents from .pi/agents/*.md are also available.`,
 			}),
 			model: Type.Optional(
@@ -261,7 +260,7 @@ export function createAgentTool(
 			),
 			allowed_tools: Type.Optional(
 				Type.Array(Type.String(), {
-					description: `Restrict the sub-agent to a subset of tools. Intersected with the agent type's default set (never widens). Available: ${BUILTIN_TOOL_NAMES.join(", ")}. Omit for the type's full default set.`,
+					description: `Restrict the sub-agent to a subset of tools. General-purpose only — other types already have a fixed belt. Intersected with the type's default set (never widens). Available: ${BUILTIN_TOOL_NAMES.join(", ")}. Omit for the type's default set.`,
 				}),
 			),
 			thinking: Type.Optional(
@@ -269,14 +268,14 @@ export function createAgentTool(
 					description: "Thinking level: off|minimal|low|medium|high|xhigh.",
 				}),
 			),
-			max_turns: Type.Optional(
+			turns: Type.Optional(
 				Type.Number({
 					description:
 						"Maximum agentic turns before stopping. Omit for unlimited.",
 					minimum: 1,
 				}),
 			),
-			run_in_background: Type.Optional(
+			background: Type.Optional(
 				Type.Boolean({
 					description:
 						"true = background (returns ID immediately, notifies on completion). false (default) = foreground (streams inline).",
@@ -287,22 +286,11 @@ export function createAgentTool(
 					description: "Agent ID to resume from. Continues previous context.",
 				}),
 			),
-			isolated: Type.Optional(
-				Type.Boolean({
-					description: "true = no extension/MCP tools, builtins only.",
-				}),
-			),
-			inherit_context: Type.Optional(
-				Type.Boolean({
-					description: "true = fork parent conversation into the sub-agent.",
-				}),
-			),
 		}),
 
 		renderCall(args, theme) {
-			const displayName = args.subagent_type
-				? getConfig(args.subagent_type as string).displayName
-				: "Agent";
+			const typeName = resolveTypeName(args);
+			const displayName = typeName ? getConfig(typeName).displayName : "Agent";
 			const desc = args.description ?? "";
 			return new Text(
 				"▸ " +
@@ -406,8 +394,15 @@ export function createAgentTool(
 		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			reloadCustomAgents();
 
-			// Resolve agent type
-			const rawType = params.subagent_type as string;
+			// Resolve agent type — accept the new `type` key, with the legacy
+			// `subagent_type` spelling kept as a fallback so RPC/older callers
+			// and persisted invocations don't break. The typed schema no longer
+			// declares the legacy key, so read it via a loose record view.
+			const looseParams = params as Record<string, unknown>;
+			const rawType =
+				(params.type as string | undefined) ??
+				(looseParams.subagent_type as string | undefined) ??
+				"general-purpose";
 			const resolvedKey =
 				getAvailableTypes().find(
 					(t) => t.toLowerCase() === rawType.toLowerCase(),
@@ -420,13 +415,16 @@ export function createAgentTool(
 
 			const displayName = getConfig(subagentType).displayName;
 			const customConfig = getAgentConfig(subagentType);
+
+			// Accept new short keys plus the legacy long spellings (backward compat).
 			const resolvedConfig = resolveAgentInvocationConfig(customConfig, {
 				model: params.model as string | undefined,
 				thinking: params.thinking as string | undefined,
-				max_turns: params.max_turns as number | undefined,
-				run_in_background: params.run_in_background as boolean | undefined,
-				inherit_context: params.inherit_context as boolean | undefined,
-				isolated: params.isolated as boolean | undefined,
+				turns: params.turns as number | undefined,
+				background: params.background as boolean | undefined,
+				// Legacy spellings — read via the loose view since the schema dropped them.
+				max_turns: looseParams.max_turns as number | undefined,
+				run_in_background: looseParams.run_in_background as boolean | undefined,
 			});
 
 			// Resolve model — ALWAYS compute modelName (the pix twist)
@@ -596,6 +594,18 @@ export function createAgentTool(
 			return textResult(resultText, buildDetails(detailBase, record, fgState));
 		},
 	});
+}
+
+/**
+ * Read the agent-type name from renderCall args, accepting the new `type` key
+ * and the legacy `subagent_type` spelling. Returns undefined if neither is set.
+ */
+function resolveTypeName(args: Record<string, unknown>): string | undefined {
+	const t = args.type;
+	if (typeof t === "string" && t) return t;
+	const legacy = args.subagent_type;
+	if (typeof legacy === "string" && legacy) return legacy;
+	return undefined;
 }
 
 // ── agent_result tool ────────────────────────────────────────────────────────
