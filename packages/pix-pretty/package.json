@@ -58,7 +58,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-data": "^0.2.5",
+		"@xynogen/pix-data": "workspace:*",
 		"cli-highlight": "^2.1.11",
 		"@ff-labs/fff-node": "^0.5.2",
 		"diff": "^7.0.0"
