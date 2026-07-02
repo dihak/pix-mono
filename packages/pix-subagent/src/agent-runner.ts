@@ -33,6 +33,7 @@ import {
 import { buildParentContext, extractText } from "./context.ts";
 import { DEFAULT_AGENTS } from "./default-agents.ts";
 import { detectEnv } from "./env.ts";
+import { resolveModel } from "./model-resolver.ts";
 import { buildAgentPrompt, type PromptExtras } from "./prompts.ts";
 import type { SubagentType, ThinkingLevel } from "./types.ts";
 
@@ -179,40 +180,6 @@ export function setGraceTurns(n: number): void {
 	graceTurns = Math.max(1, n);
 }
 
-/**
- * Try to find the right model for an agent type.
- * Priority: explicit option > config.model > parent model.
- */
-function resolveDefaultModel(
-	parentModel: Model<Api> | undefined,
-	registry: {
-		find(provider: string, modelId: string): Model<Api> | undefined;
-		getAvailable?(): Model<Api>[];
-	},
-	configModel?: string,
-): Model<Api> | undefined {
-	if (configModel) {
-		const slashIdx = configModel.indexOf("/");
-		if (slashIdx !== -1) {
-			const provider = configModel.slice(0, slashIdx);
-			const modelId = configModel.slice(slashIdx + 1);
-
-			// Build a set of available model keys for fast lookup
-			const available = registry.getAvailable?.();
-			const availableKeys = available
-				? new Set(available.map((m) => `${m.provider}/${m.id}`))
-				: undefined;
-			const isAvailable = (p: string, id: string) =>
-				!availableKeys || availableKeys.has(`${p}/${id}`);
-
-			const found = registry.find(provider, modelId);
-			if (found && isAvailable(provider, modelId)) return found;
-		}
-	}
-
-	return parentModel;
-}
-
 /** Info about a tool event in the subagent. */
 export interface ToolActivity {
 	type: "start" | "end";
@@ -248,6 +215,8 @@ export interface RunOptions {
 	configCwd?: string;
 	/** Called on tool start/end with activity info. */
 	onToolActivity?: (activity: ToolActivity) => void;
+	/** Called for config warnings (unknown tool names, extension misconfig). */
+	onWarning?: (message: string) => void;
 	/** Called on streaming text deltas from the assistant response. */
 	onTextDelta?: (delta: string, fullText: string) => void;
 	onSessionCreated?: (session: AgentSession) => void;
@@ -312,6 +281,111 @@ function collectResponseText(session: AgentSession) {
 		}
 	});
 	return { getText: () => text, unsubscribe };
+}
+
+/** Result of the turn-limit subscription returned by `attachTurnLimit`. */
+export interface TurnLimitHandle {
+	unsubscribe: () => void;
+	/** True if the agent was hard-aborted (soft limit + grace window exceeded). */
+	wasAborted: () => boolean;
+	/** True if the soft-limit steer was sent (agent may still finish in time). */
+	wasSteered: () => boolean;
+}
+
+/**
+ * Subscribe to a session's turn/text/tool/usage/compaction events and enforce
+ * a soft turn limit + grace abort window. Shared by `runAgent` (initial run)
+ * and `resumeAgent` (resumed prompt).
+ *
+ * Turn counting starts at 0 for each attachment — when resuming, the original
+ * run's count is a display stat on the record; re-applying the cap per-resume
+ * is the sane semantic (the resumed prompt is a fresh task).
+ */
+export function attachTurnLimit(
+	session: AgentSession,
+	options: {
+		maxTurns?: number;
+		graceTurns?: number;
+		onTurnEnd?: (turnCount: number) => void;
+		onTextDelta?: (delta: string, fullText: string) => void;
+		onToolActivity?: (activity: ToolActivity) => void;
+		onAssistantUsage?: (usage: {
+			input: number;
+			output: number;
+			cacheWrite: number;
+		}) => void;
+		onCompaction?: (info: {
+			reason: "manual" | "threshold" | "overflow";
+			tokensBefore: number;
+		}) => void;
+	},
+): TurnLimitHandle {
+	let turnCount = 0;
+	let softLimitReached = false;
+	let aborted = false;
+	let currentMessageText = "";
+	const effectiveGrace = options.graceTurns ?? graceTurns;
+
+	const unsubscribe = session.subscribe((event: AgentSessionEvent) => {
+		if (event.type === "turn_end") {
+			turnCount++;
+			options.onTurnEnd?.(turnCount);
+			if (options.maxTurns != null) {
+				if (!softLimitReached && turnCount >= options.maxTurns) {
+					softLimitReached = true;
+					session.steer(
+						"You have reached your turn limit. Wrap up immediately \u2014 provide your final answer now.",
+					);
+				} else if (
+					softLimitReached &&
+					turnCount >= options.maxTurns + effectiveGrace
+				) {
+					aborted = true;
+					session.abort();
+				}
+			}
+		}
+		if (event.type === "message_start") {
+			currentMessageText = "";
+		}
+		if (
+			event.type === "message_update" &&
+			event.assistantMessageEvent.type === "text_delta"
+		) {
+			currentMessageText += event.assistantMessageEvent.delta;
+			options.onTextDelta?.(
+				event.assistantMessageEvent.delta,
+				currentMessageText,
+			);
+		}
+		if (event.type === "tool_execution_start") {
+			options.onToolActivity?.({ type: "start", toolName: event.toolName });
+		}
+		if (event.type === "tool_execution_end") {
+			options.onToolActivity?.({ type: "end", toolName: event.toolName });
+		}
+		if (event.type === "message_end" && event.message.role === "assistant") {
+			const u = (event.message as AssistantMessage).usage;
+			if (u)
+				options.onAssistantUsage?.({
+					input: u.input ?? 0,
+					output: u.output ?? 0,
+					cacheWrite: u.cacheWrite ?? 0,
+				});
+		}
+		if (event.type === "compaction_end" && !event.aborted && event.result) {
+			options.onCompaction?.({
+				reason: event.reason,
+				tokensBefore: event.result.tokensBefore,
+			});
+		}
+	});
+
+	return {
+		unsubscribe,
+		wasAborted: () => aborted,
+		wasSteered: () => softLimitReached,
+	};
 }
 
 /** Get the last assistant text from the completed session history. */
@@ -502,10 +576,9 @@ export async function runAgent(
 		const knownBuiltins = new Set(BUILTIN_TOOL_NAMES);
 		for (const name of agentConfig.builtinToolNames) {
 			if (!knownBuiltins.has(name)) {
-				options.onToolActivity?.({
-					type: "end",
-					toolName: `tools-error:tool "${name}" requested by agent "${type}" is not a known built-in`,
-				});
+				options.onWarning?.(
+					`tool "${name}" requested by agent "${type}" is not a known built-in`,
+				);
 			}
 		}
 	}
@@ -521,10 +594,9 @@ export async function runAgent(
 	// An exclude_extensions: alongside extensions: false is contradictory — nothing
 	// loads, so there is nothing to exclude.
 	if (hasExcludes && noExtensions) {
-		options.onToolActivity?.({
-			type: "end",
-			toolName: `extension-error:exclude_extensions has no effect for agent "${type}" — extensions: false loads nothing`,
-		});
+		options.onWarning?.(
+			`exclude_extensions has no effect for agent "${type}" — extensions: false loads nothing`,
+		);
 	}
 	// Exclude typo check: compares against the PRE-filter discovered set (an excluded
 	// name absent from the surviving set is the exclude working as intended). Also
@@ -532,10 +604,9 @@ export async function runAgent(
 	if (hasExcludes && discoveredNames) {
 		for (const name of excludeNames) {
 			if (!discoveredNames.has(name)) {
-				options.onToolActivity?.({
-					type: "end",
-					toolName: `extension-error:exclude_extensions: "${name}" for agent "${type}" did not match any discovered extension`,
-				});
+				options.onWarning?.(
+					`exclude_extensions: "${name}" for agent "${type}" did not match any discovered extension`,
+				);
 			}
 		}
 	}
@@ -547,28 +618,39 @@ export async function runAgent(
 		);
 		for (const name of keepNames) {
 			if (!survivingNames.has(name)) {
-				options.onToolActivity?.({
-					type: "end",
-					toolName: excludeNames.has(name)
-						? `extension-error:extension "${name}" is in both extensions: and exclude_extensions: for agent "${type}" — exclude wins`
-						: `extension-error:extension "${name}" requested by agent "${type}" was not loaded`,
-				});
+				options.onWarning?.(
+					excludeNames.has(name)
+						? `extension "${name}" is in both extensions: and exclude_extensions: for agent "${type}" — exclude wins`
+						: `extension "${name}" requested by agent "${type}" was not loaded`,
+				);
 			}
 		}
 		for (const name of extNames) {
 			if (!survivingNames.has(name)) {
-				options.onToolActivity?.({
-					type: "end",
-					toolName: `extension-error:ext:${name} referenced by agent "${type}" but extension "${name}" is not loaded (check extensions:/exclude_extensions:)`,
-				});
+				options.onWarning?.(
+					`ext:${name} referenced by agent "${type}" but extension "${name}" is not loaded (check extensions:/exclude_extensions:)`,
+				);
 			}
 		}
 	}
 
-	// Resolve model: explicit option > config.model > parent model
-	const model =
-		options.model ??
-		resolveDefaultModel(ctx.model, ctx.modelRegistry, agentConfig?.model);
+	// Resolve model: explicit option > config.model > parent model.
+	// Uses the shared resolveModel() (fuzzy + exact) so config.model strings
+	// like "haiku" resolve the same way as tool-path model params.
+	let model = options.model;
+	if (!model && agentConfig?.model) {
+		const resolved = resolveModel(agentConfig.model, ctx.modelRegistry);
+		if (typeof resolved === "string") {
+			// Unresolvable config model — fall back to parent silently, warn caller.
+			options.onWarning?.(
+				`agent "${type}" config.model "${agentConfig.model}" could not be resolved — using parent model`,
+			);
+			model = ctx.model;
+		} else {
+			model = resolved;
+		}
+	}
+	if (!model) model = ctx.model;
 
 	// Resolve thinking level: explicit option > agent config > undefined (inherit)
 	const thinkingLevel = options.thinkingLevel ?? agentConfig?.thinking;
@@ -644,74 +726,23 @@ export async function runAgent(
 	// post-bind filter is needed. All ExtensionBindings fields are optional.
 	await session.bindExtensions({
 		onError: (err) => {
-			options.onToolActivity?.({
-				type: "end",
-				toolName: `extension-error:${err.extensionPath}`,
-			});
+			options.onWarning?.(`extension error: ${err.extensionPath}`);
 		},
 	});
 
 	options.onSessionCreated?.(session);
 
-	// Track turns for graceful max_turns enforcement
-	let turnCount = 0;
+	// Track turns for graceful max_turns enforcement via the shared helper.
 	const maxTurns = normalizeMaxTurns(
 		options.maxTurns ?? agentConfig?.maxTurns ?? defaultMaxTurns,
 	);
-	let softLimitReached = false;
-	let aborted = false;
-
-	let currentMessageText = "";
-	const unsubTurns = session.subscribe((event: AgentSessionEvent) => {
-		if (event.type === "turn_end") {
-			turnCount++;
-			options.onTurnEnd?.(turnCount);
-			if (maxTurns != null) {
-				if (!softLimitReached && turnCount >= maxTurns) {
-					softLimitReached = true;
-					session.steer(
-						"You have reached your turn limit. Wrap up immediately — provide your final answer now.",
-					);
-				} else if (softLimitReached && turnCount >= maxTurns + graceTurns) {
-					aborted = true;
-					session.abort();
-				}
-			}
-		}
-		if (event.type === "message_start") {
-			currentMessageText = "";
-		}
-		if (
-			event.type === "message_update" &&
-			event.assistantMessageEvent.type === "text_delta"
-		) {
-			currentMessageText += event.assistantMessageEvent.delta;
-			options.onTextDelta?.(
-				event.assistantMessageEvent.delta,
-				currentMessageText,
-			);
-		}
-		if (event.type === "tool_execution_start") {
-			options.onToolActivity?.({ type: "start", toolName: event.toolName });
-		}
-		if (event.type === "tool_execution_end") {
-			options.onToolActivity?.({ type: "end", toolName: event.toolName });
-		}
-		if (event.type === "message_end" && event.message.role === "assistant") {
-			const u = (event.message as AssistantMessage).usage;
-			if (u)
-				options.onAssistantUsage?.({
-					input: u.input ?? 0,
-					output: u.output ?? 0,
-					cacheWrite: u.cacheWrite ?? 0,
-				});
-		}
-		if (event.type === "compaction_end" && !event.aborted && event.result) {
-			options.onCompaction?.({
-				reason: event.reason,
-				tokensBefore: event.result.tokensBefore,
-			});
-		}
+	const turnLimit = attachTurnLimit(session, {
+		maxTurns,
+		onTurnEnd: options.onTurnEnd,
+		onTextDelta: options.onTextDelta,
+		onToolActivity: options.onToolActivity,
+		onAssistantUsage: options.onAssistantUsage,
+		onCompaction: options.onCompaction,
 	});
 
 	const collector = collectResponseText(session);
@@ -729,23 +760,44 @@ export async function runAgent(
 	try {
 		await session.prompt(effectivePrompt);
 	} finally {
-		unsubTurns();
+		turnLimit.unsubscribe();
 		collector.unsubscribe();
 		cleanupAbort();
 	}
 
 	const responseText =
 		collector.getText().trim() || getLastAssistantText(session);
-	return { responseText, session, aborted, steered: softLimitReached };
+	return {
+		responseText,
+		session,
+		aborted: turnLimit.wasAborted(),
+		steered: turnLimit.wasSteered(),
+	};
+}
+
+/** Result shape for `resumeAgent` — mirrors the essential fields of `RunResult`. */
+export interface ResumeResult {
+	responseText: string;
+	/** True if the agent was hard-aborted (max_turns + grace exceeded). */
+	aborted: boolean;
+	/** True if the agent was steered to wrap up (hit soft turn limit) but finished in time. */
+	steered: boolean;
 }
 
 /**
  * Send a new prompt to an existing session (resume).
+ *
+ * Turn counting starts fresh at 0 for each resume — the original run's count
+ * is a display stat on the record; re-applying the cap per-resume is the sane
+ * semantic (the resumed prompt is a fresh task).
  */
 export async function resumeAgent(
 	session: AgentSession,
 	prompt: string,
 	options: {
+		maxTurns?: number;
+		onTurnEnd?: (turnCount: number) => void;
+		onTextDelta?: (delta: string, fullText: string) => void;
 		onToolActivity?: (activity: ToolActivity) => void;
 		onAssistantUsage?: (usage: {
 			input: number;
@@ -758,54 +810,35 @@ export async function resumeAgent(
 		}) => void;
 		signal?: AbortSignal;
 	} = {},
-): Promise<string> {
+): Promise<ResumeResult> {
 	const collector = collectResponseText(session);
 	const cleanupAbort = forwardAbortSignal(session, options.signal);
 
-	const unsubEvents =
-		options.onToolActivity || options.onAssistantUsage || options.onCompaction
-			? session.subscribe((event: AgentSessionEvent) => {
-					if (event.type === "tool_execution_start")
-						options.onToolActivity?.({
-							type: "start",
-							toolName: event.toolName,
-						});
-					if (event.type === "tool_execution_end")
-						options.onToolActivity?.({ type: "end", toolName: event.toolName });
-					if (
-						event.type === "message_end" &&
-						event.message.role === "assistant"
-					) {
-						const u = (event.message as AssistantMessage).usage;
-						if (u)
-							options.onAssistantUsage?.({
-								input: u.input ?? 0,
-								output: u.output ?? 0,
-								cacheWrite: u.cacheWrite ?? 0,
-							});
-					}
-					if (
-						event.type === "compaction_end" &&
-						!event.aborted &&
-						event.result
-					) {
-						options.onCompaction?.({
-							reason: event.reason,
-							tokensBefore: event.result.tokensBefore,
-						});
-					}
-				})
-			: () => {};
+	// Reuse the shared turn-limit helper — same soft steer + grace abort as runAgent.
+	const turnLimit = attachTurnLimit(session, {
+		maxTurns: normalizeMaxTurns(options.maxTurns),
+		onTurnEnd: options.onTurnEnd,
+		onTextDelta: options.onTextDelta,
+		onToolActivity: options.onToolActivity,
+		onAssistantUsage: options.onAssistantUsage,
+		onCompaction: options.onCompaction,
+	});
 
 	try {
 		await session.prompt(prompt);
 	} finally {
+		turnLimit.unsubscribe();
 		collector.unsubscribe();
-		unsubEvents();
 		cleanupAbort();
 	}
 
-	return collector.getText().trim() || getLastAssistantText(session);
+	const responseText =
+		collector.getText().trim() || getLastAssistantText(session);
+	return {
+		responseText,
+		aborted: turnLimit.wasAborted(),
+		steered: turnLimit.wasSteered(),
+	};
 }
 
 /**
@@ -821,8 +854,16 @@ export async function steerAgent(
 
 /**
  * Get the subagent's conversation messages as formatted text.
+ *
+ * A character cap (`maxChars`, default 30 000) prevents verbose output from
+ * flooding the parent's context window. The cap is tail-anchored: the MOST
+ * RECENT parts are kept, oldest are dropped, and a marker line indicates how
+ * many entries were omitted (same pattern as `buildParentContext`).
  */
-export function getAgentConversation(session: AgentSession): string {
+export function getAgentConversation(
+	session: AgentSession,
+	maxChars = 30_000,
+): string {
 	const parts: string[] = [];
 
 	for (const msg of session.messages) {
@@ -851,5 +892,24 @@ export function getAgentConversation(session: AgentSession): string {
 		}
 	}
 
-	return parts.join("\n\n");
+	if (parts.length === 0) return "";
+
+	// Tail-anchored budget: walk from the end, keeping the most recent parts.
+	let budget = maxChars;
+	let firstKept = parts.length;
+	for (let i = parts.length - 1; i >= 0; i--) {
+		const cost = parts[i].length + (i < parts.length - 1 ? 2 : 0);
+		if (budget - cost < 0) break;
+		budget -= cost;
+		firstKept = i;
+	}
+
+	const omitted = firstKept;
+	const kept = parts.slice(firstKept);
+	const marker =
+		omitted > 0
+			? `[\u2026truncated: ${omitted} earlier ${omitted === 1 ? "entry" : "entries"} omitted]\n\n`
+			: "";
+
+	return marker + kept.join("\n\n");
 }

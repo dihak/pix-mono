@@ -24,6 +24,8 @@ export const DEFAULT_AGENT_NAMES = [
 /** Unified agent configuration — used for both default and user-defined agents. */
 export interface AgentConfig {
 	name: string;
+	/** Populated at load time for invalid frontmatter values (e.g. unknown thinking level). */
+	warnings?: string[];
 	displayName?: string;
 	description: string;
 	builtinToolNames?: string[];

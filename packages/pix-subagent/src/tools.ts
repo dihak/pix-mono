@@ -456,7 +456,7 @@ export function createAgentTool(
 			const agentInvocation: AgentInvocation = {
 				modelName, // always set
 				thinking,
-				maxTurns: normalizeMaxTurns(resolvedConfig.maxTurns),
+				maxTurns: effectiveMaxTurns,
 				isolated,
 				inheritContext,
 				runInBackground,
@@ -470,8 +470,12 @@ export function createAgentTool(
 				tags: [] as string[],
 			};
 
-			if (falling_back_note(fellBack))
-				detailBase.tags.push("(unknown type → general-purpose)");
+			// Surface any config-load warnings (e.g. invalid thinking level)
+			if (customConfig?.warnings?.length) {
+				for (const w of customConfig.warnings) detailBase.tags.push(w);
+			}
+
+			if (fellBack) detailBase.tags.push("(unknown type → general-purpose)");
 			if (thinking) detailBase.tags.push(`thinking: ${thinking}`);
 			if (isolated) detailBase.tags.push("isolated");
 
@@ -532,6 +536,9 @@ export function createAgentTool(
 						thinkingLevel: thinking,
 						isBackground: true,
 						invocation: agentInvocation,
+						// Intentionally no `signal` here: the tool-call signal is aborted
+						// when the parent turn ends, which would kill the background agent
+						// prematurely — bg agents are meant to outlive the spawning turn.
 						allowedToolNames,
 						...bgCallbacks,
 					});
@@ -555,21 +562,22 @@ export function createAgentTool(
 			}
 
 			// Foreground execution — streams via onUpdate
-			const { state: fgState, callbacks: fgCallbacks } = createActivityTracker(
-				effectiveMaxTurns,
-				() => {
-					if (!onUpdate) return;
-					onUpdate({
-						content: [{ type: "text", text: fgState.responseText }],
-						details: buildDetails(detailBase, {
-							...fgState,
-							status: "running",
-							toolUses: fgState.toolUses,
-							startedAt: Date.now() - fgState.durationMs,
-						}) as unknown,
-					});
-				},
-			);
+			const {
+				state: fgState,
+				callbacks: fgCallbacks,
+				getWarnings: fgWarnings,
+			} = createActivityTracker(effectiveMaxTurns, () => {
+				if (!onUpdate) return;
+				onUpdate({
+					content: [{ type: "text", text: fgState.responseText }],
+					details: buildDetails(detailBase, {
+						...fgState,
+						status: "running",
+						toolUses: fgState.toolUses,
+						startedAt: Date.now() - fgState.durationMs,
+					}) as unknown,
+				});
+			});
 
 			const record = await manager.spawnAndWait(
 				pi,
@@ -585,9 +593,14 @@ export function createAgentTool(
 					thinkingLevel: thinking,
 					invocation: agentInvocation,
 					allowedToolNames,
+					signal,
 					...fgCallbacks,
 				},
 			);
+
+			// Surface any config warnings collected during the run (fg-only; bg
+			// warnings are stored on state but not surfaced via notifications).
+			for (const w of fgWarnings()) detailBase.tags.push(w);
 
 			const resultText =
 				record.result?.trim() || record.error?.trim() || "No output.";
@@ -764,30 +777,37 @@ export function createAgentSteerTool(manager: AgentManager) {
 
 // ── shared helpers ───────────────────────────────────────────────────────────
 
-/** No-op helper to clearly name the fallback for TypeScript narrowing. */
-function falling_back_note(b: boolean): b is true {
-	return b;
-}
-
 /**
  * Create an AgentActivity state and spawn callbacks for tracking tool usage.
+ *
+ * `onWarning` pushes messages into `state.warnings` and triggers a stream update.
+ * The fg path surfaces warnings via `detailBase.tags` when building final details;
+ * bg agents store warnings on the state but don't surface them via notifications —
+ * the notification path doesn't carry tags, and retrofitting it is non-trivial.
+ * Fg-only surfacing is acceptable: bg warnings are rare config errors that also
+ * appear in the parent's agent config diagnostics.
  */
 function createActivityTracker(maxTurns?: number, onStreamUpdate?: () => void) {
-	const state: AgentActivity & { durationMs: number } = {
+	const state: AgentActivity & { durationMs: number; warnings: string[] } = {
 		activeTools: new Map(),
 		toolUses: 0,
-		turnCount: 1,
+		turnCount: 0,
 		maxTurns,
 		responseText: "",
 		session: undefined,
 		lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
 		streamingMs: 0,
 		durationMs: 0,
+		warnings: [],
 	};
 	const startedAt = Date.now();
 	let streamStart: number | null = null;
 
 	const callbacks = {
+		onWarning: (message: string) => {
+			state.warnings.push(message);
+			onStreamUpdate?.();
+		},
 		onToolActivity: (activity: { type: "start" | "end"; toolName: string }) => {
 			if (activity.type === "start") {
 				state.activeTools.set(
@@ -835,7 +855,7 @@ function createActivityTracker(maxTurns?: number, onStreamUpdate?: () => void) {
 		},
 	};
 
-	return { state, callbacks };
+	return { state, callbacks, getWarnings: () => state.warnings };
 }
 
 function buildDetails(

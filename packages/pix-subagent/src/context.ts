@@ -16,8 +16,16 @@ export function extractText(content: unknown[]): string {
  * Build a text representation of the parent conversation context.
  * Used when inherit_context is true to give the subagent visibility
  * into what has been discussed/done so far.
+ *
+ * A character cap (`maxChars`, default 40 000 ≈ 10k tokens) prevents the
+ * serialized context from blowing the subagent's first prompt. The cap is
+ * applied tail-anchored: the MOST RECENT parts are kept, oldest are dropped,
+ * and a marker line indicates how many entries were omitted.
  */
-export function buildParentContext(ctx: ExtensionContext): string {
+export function buildParentContext(
+	ctx: ExtensionContext,
+	maxChars = 40_000,
+): string {
 	const entries = ctx.sessionManager.getBranch();
 	if (!entries || entries.length === 0) return "";
 
@@ -47,11 +55,30 @@ export function buildParentContext(ctx: ExtensionContext): string {
 
 	if (parts.length === 0) return "";
 
+	// Tail-anchored budget: walk from the end, accumulating lengths (each part
+	// separated by "\n\n"), until the budget is exhausted.
+	let budget = maxChars;
+	let firstKept = parts.length; // index of the first part we keep
+	for (let i = parts.length - 1; i >= 0; i--) {
+		// Account for the "\n\n" separator between parts (except the last one)
+		const cost = parts[i].length + (i < parts.length - 1 ? 2 : 0);
+		if (budget - cost < 0) break;
+		budget -= cost;
+		firstKept = i;
+	}
+
+	const omitted = firstKept;
+	const kept = parts.slice(firstKept);
+	const marker =
+		omitted > 0
+			? `[…earlier context omitted (${omitted} older ${omitted === 1 ? "entry" : "entries"})]\n\n`
+			: "";
+
 	return `# Parent Conversation Context
 The following is the conversation history from the parent session that spawned you.
 Use this context to understand what has been discussed and decided so far.
 
-${parts.join("\n\n")}
+${marker}${kept.join("\n\n")}
 
 ---
 # Your Task (below)

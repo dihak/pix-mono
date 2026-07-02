@@ -79,6 +79,50 @@ test("caller params.model always wins over agentConfig.model", () => {
 	expect(r3.modelFromParams).toBe(false);
 });
 
+test("caller params.thinking always wins over agentConfig.thinking", () => {
+	const customConfig: AgentConfig = {
+		name: "test-thinking",
+		description: "test",
+		extensions: true,
+		skills: true,
+		systemPrompt: "",
+		promptMode: "append",
+		thinking: "low" as AgentConfig["thinking"],
+	};
+
+	// Caller passes high → high wins, not the low baked into the config
+	const r1 = resolveAgentInvocationConfig(customConfig, { thinking: "high" });
+	expect(r1.thinking).toBe("high");
+
+	// Caller silent → config thinking applies as default
+	const r2 = resolveAgentInvocationConfig(customConfig, {});
+	expect(r2.thinking).toBe("low");
+});
+
+test("caller params.turns always wins over agentConfig.maxTurns", () => {
+	const customConfig: AgentConfig = {
+		name: "test-turns",
+		description: "test",
+		extensions: true,
+		skills: true,
+		systemPrompt: "",
+		promptMode: "append",
+		maxTurns: 10,
+	};
+
+	// Caller passes turns: 5 → 5 wins over config's 10
+	const r1 = resolveAgentInvocationConfig(customConfig, { turns: 5 });
+	expect(r1.maxTurns).toBe(5);
+
+	// Legacy max_turns spelling also wins
+	const r2 = resolveAgentInvocationConfig(customConfig, { max_turns: 3 });
+	expect(r2.maxTurns).toBe(3);
+
+	// Caller silent → config maxTurns applies as default
+	const r3 = resolveAgentInvocationConfig(customConfig, {});
+	expect(r3.maxTurns).toBe(10);
+});
+
 test("defaults resolve with no model — caller inherits parent", () => {
 	registerAgents(new Map());
 	for (const name of getAvailableTypes()) {

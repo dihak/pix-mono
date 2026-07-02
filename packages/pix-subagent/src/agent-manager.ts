@@ -15,7 +15,32 @@ import type {
 	ExtensionAPI,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import { resumeAgent, runAgent, type ToolActivity } from "./agent-runner.ts";
+import {
+	resumeAgent as _resumeAgentReal,
+	runAgent as _runAgentReal,
+	type ToolActivity,
+} from "./agent-runner.ts";
+
+// ── Test-only injection point ────────────────────────────────────────────────
+// Allows tests to replace runAgent/resumeAgent with controllable fakes without
+// requiring flaky module-level mocking. Production code never calls the setter.
+let _runAgentImpl: typeof _runAgentReal = _runAgentReal;
+let _resumeAgentImpl: typeof _resumeAgentReal = _resumeAgentReal;
+
+/** @internal Test-only: replace the runAgent implementation. */
+export function __setRunAgentForTests(fn: typeof _runAgentReal): void {
+	_runAgentImpl = fn;
+}
+/** @internal Test-only: replace the resumeAgent implementation. */
+export function __setResumeAgentForTests(fn: typeof _resumeAgentReal): void {
+	_resumeAgentImpl = fn;
+}
+/** @internal Test-only: restore the real implementations. */
+export function __resetAgentRunnersForTests(): void {
+	_runAgentImpl = _runAgentReal;
+	_resumeAgentImpl = _resumeAgentReal;
+}
+
 import type {
 	AgentInvocation,
 	AgentRecord,
@@ -110,6 +135,8 @@ interface SpawnOptions {
 	onCompaction?: (info: CompactionInfo) => void;
 	/** Caller-supplied tool-name subset — intersected (never widens). Omit → type default. */
 	allowedToolNames?: string[];
+	/** Called for config warnings (unknown tool names, extension misconfig). */
+	onWarning?: (message: string) => void;
 }
 
 export class AgentManager {
@@ -119,8 +146,8 @@ export class AgentManager {
 	private onStart?: OnAgentStart;
 	private onCompact?: OnAgentCompact;
 	private maxConcurrent: number;
-	/** Base repos worktrees were created from — so dispose() can prune them all,
-	 *  not just the parent repo (caller-supplied cwd can target other repos). */
+	/** Completed-record retention: records older than this are cleaned up. */
+	private retentionMs = 10 * 60_000;
 	/** Queue of background agents waiting to start. */
 	private queue: { id: string; args: SpawnArgs }[] = [];
 	/** Number of currently running background agents. */
@@ -136,7 +163,7 @@ export class AgentManager {
 		this.onStart = onStart;
 		this.onCompact = onCompact;
 		this.maxConcurrent = maxConcurrent;
-		// Cleanup completed agents after 10 minutes (but keep sessions for resume)
+		// Periodically clean up completed agents older than retentionMs
 		this.cleanupInterval = setInterval(() => this.cleanup(), 60_000);
 		this.cleanupInterval.unref();
 	}
@@ -150,6 +177,15 @@ export class AgentManager {
 
 	getMaxConcurrent(): number {
 		return this.maxConcurrent;
+	}
+
+	/** Set completed-record retention in ms (minimum 1 minute). */
+	setRetentionMs(n: number) {
+		this.retentionMs = Math.max(60_000, n);
+	}
+
+	getRetentionMs(): number {
+		return this.retentionMs;
 	}
 
 	/**
@@ -240,7 +276,7 @@ export class AgentManager {
 			detachParentSignal = undefined;
 		};
 
-		const promise = runAgent(ctx, type, prompt, {
+		const promise = _runAgentImpl(ctx, type, prompt, {
 			pi,
 			agentId: id,
 			model: options.model,
@@ -256,6 +292,7 @@ export class AgentManager {
 			cwd: customCwd,
 			configCwd: customCwd !== undefined ? ctx.cwd : undefined,
 			allowedToolNames: options.allowedToolNames,
+			onWarning: options.onWarning,
 			signal: record.abortController?.signal,
 			onToolActivity: (activity) => {
 				if (activity.type === "end") record.toolUses++;
@@ -396,20 +433,29 @@ export class AgentManager {
 		record.error = undefined;
 
 		try {
-			const responseText = await resumeAgent(record.session, prompt, {
-				onToolActivity: (activity) => {
-					if (activity.type === "end") record.toolUses++;
+			const { responseText, aborted, steered } = await _resumeAgentImpl(
+				record.session,
+				prompt,
+				{
+					// Re-apply the original spawn's turn cap for this resume window.
+					maxTurns: record.maxTurns,
+					onTurnEnd: (turnCount) => {
+						record.turnCount = turnCount;
+					},
+					onToolActivity: (activity) => {
+						if (activity.type === "end") record.toolUses++;
+					},
+					onAssistantUsage: (usage) => {
+						addUsage(record.lifetimeUsage, usage);
+					},
+					onCompaction: (info) => {
+						record.compactionCount++;
+						this.onCompact?.(record, info);
+					},
+					signal,
 				},
-				onAssistantUsage: (usage) => {
-					addUsage(record.lifetimeUsage, usage);
-				},
-				onCompaction: (info) => {
-					record.compactionCount++;
-					this.onCompact?.(record, info);
-				},
-				signal,
-			});
-			record.status = "completed";
+			);
+			record.status = aborted ? "aborted" : steered ? "steered" : "completed";
 			record.result = responseText;
 			record.completedAt = Date.now();
 		} catch (err) {
@@ -456,7 +502,7 @@ export class AgentManager {
 	}
 
 	private cleanup() {
-		const cutoff = Date.now() - 10 * 60_000;
+		const cutoff = Date.now() - this.retentionMs;
 		for (const [id, record] of this.agents) {
 			if (record.status === "running" || record.status === "queued") continue;
 			if ((record.completedAt ?? 0) >= cutoff) continue;

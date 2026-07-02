@@ -54,6 +54,7 @@ const TOOL_DISPLAY: Record<string, string> = {
 // ── UICtx type ────────────────────────────────────────────────────────────────
 
 export type UICtx = {
+	theme: Theme;
 	setStatus(key: string, text: string | undefined): void;
 	setWidget(
 		key: string,
@@ -91,7 +92,7 @@ export function getDisplayName(type: SubagentType): string {
 }
 
 export function getPromptModeLabel(type: SubagentType): string | undefined {
-	return getConfig(type).promptMode === "append" ? "twin" : undefined;
+	return getConfig(type).promptMode === "append" ? "fork" : undefined;
 }
 
 export function buildInvocationTags(invocation: AgentInvocation | undefined): {
@@ -146,6 +147,7 @@ export class AgentWidget {
 	private uiCtx: UICtx | undefined;
 	private widgetFrame = 0;
 	private widgetInterval: ReturnType<typeof setInterval> | undefined;
+	private lingerTimeout: ReturnType<typeof setTimeout> | undefined;
 	private static readonly FINISHED_LINGER_MS = 5_000;
 	private static readonly ERROR_LINGER_MS = 15_000;
 	private widgetRegistered = false;
@@ -171,6 +173,11 @@ export class AgentWidget {
 	}
 
 	ensureTimer() {
+		// Cancel any pending linger-only timeout — the fast interval supersedes it.
+		if (this.lingerTimeout) {
+			clearTimeout(this.lingerTimeout);
+			this.lingerTimeout = undefined;
+		}
 		if (!this.widgetInterval) {
 			this.widgetInterval = setInterval(() => this.update(), 80);
 		}
@@ -267,7 +274,7 @@ export class AgentWidget {
 		);
 		if (speed) parts.push(speed);
 
-		return `${icon} ${theme.fg("dim", name)}${modelLabel}${modeTag}  ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`;
+		return `${icon} ${theme.fg("dim", name)}${modelLabel}${modeTag} ${theme.fg("dim", "·")} ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`;
 	}
 
 	private renderWidget(
@@ -335,7 +342,8 @@ export class AgentWidget {
 					: "";
 
 			const parts: string[] = [];
-			if (bg) parts.push(formatTurns(bg.turnCount, bg.maxTurns));
+			if (bg && bg.turnCount > 0)
+				parts.push(formatTurns(bg.turnCount, bg.maxTurns));
 			if (toolUses > 0)
 				parts.push(`${toolUses} tool use${toolUses === 1 ? "" : "s"}`);
 			if (tokenText) parts.push(tokenText);
@@ -357,7 +365,7 @@ export class AgentWidget {
 			runningLines.push(
 				truncate(
 					theme.fg("dim", "├─") +
-						` ${theme.fg("accent", frame)} ${theme.fg("dim", activity)} ${theme.fg("dim", "·")} ${theme.fg("toolTitle", theme.bold(name))}${modelLabel}${modeTag}  ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)}`,
+						` ${theme.fg("accent", frame)} ${theme.fg("dim", activity)} ${theme.fg("dim", "·")} ${theme.fg("toolTitle", theme.bold(name))}${modelLabel}${modeTag} ${theme.fg("dim", "·")} ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)}`,
 				),
 			);
 		}
@@ -460,18 +468,45 @@ export class AgentWidget {
 				this.uiCtx.setStatus("subagents", undefined);
 				this.lastStatusText = undefined;
 			}
+			this.clearTimers();
+			return;
+		}
+
+		// When only lingering finished agents remain (no active spinner to animate),
+		// drop the 80ms polling interval and schedule a one-shot timeout for the
+		// earliest linger expiry. This avoids ~12 wasted ticks/s during the 5–15s
+		// finished-linger window. ensureTimer() re-arms the fast interval when a
+		// new agent starts during the linger window.
+		if (!hasActive && hasFinished) {
 			if (this.widgetInterval) {
 				clearInterval(this.widgetInterval);
 				this.widgetInterval = undefined;
 			}
-			return;
+			if (!this.lingerTimeout) {
+				// Find earliest linger expiry across all finished agents
+				let earliest = Number.POSITIVE_INFINITY;
+				for (const a of allAgents) {
+					if (a.status === "running" || a.status === "queued") continue;
+					if (a.completedAt == null) continue;
+					const linger = ERROR_STATUSES.has(a.status)
+						? AgentWidget.ERROR_LINGER_MS
+						: AgentWidget.FINISHED_LINGER_MS;
+					const expiry = a.completedAt + linger;
+					if (expiry < earliest) earliest = expiry;
+				}
+				const delay = Math.max(50, earliest - Date.now() + 50); // +50ms epsilon
+				this.lingerTimeout = setTimeout(() => {
+					this.lingerTimeout = undefined;
+					this.update();
+				}, delay);
+			}
 		}
 
 		let newStatusText: string | undefined;
 		if (hasActive) {
 			const r = runningCount > 0 ? `${runningCount}` : "";
 			const q = queuedCount > 0 ? `+${queuedCount}` : "";
-			newStatusText = `${icon("agent")} ${r}${q}`;
+			newStatusText = `${icon("agent")} ${this.uiCtx.theme.fg("dim", `${r}${q}`)}`;
 		}
 		if (newStatusText !== this.lastStatusText) {
 			this.uiCtx.setStatus("subagents", newStatusText);
@@ -510,11 +545,19 @@ export class AgentWidget {
 		}
 	}
 
-	dispose() {
+	private clearTimers() {
 		if (this.widgetInterval) {
 			clearInterval(this.widgetInterval);
 			this.widgetInterval = undefined;
 		}
+		if (this.lingerTimeout) {
+			clearTimeout(this.lingerTimeout);
+			this.lingerTimeout = undefined;
+		}
+	}
+
+	dispose() {
+		this.clearTimers();
 		if (this.uiCtx) {
 			this.uiCtx.setWidget("agents", undefined);
 			this.uiCtx.setStatus("subagents", undefined);

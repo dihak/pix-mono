@@ -1,6 +1,9 @@
 /**
  * invocation-config.ts — Resolve per-call agent invocation options.
  *
+ * Precedence is uniform across ALL fields:
+ *   explicit call param  >  agent config default  >  global default
+ *
  * Ported from tintinweb/pi-subagents (MIT). Trimmed: dropped isolation/joinMode.
  */
 
@@ -32,22 +35,23 @@ export function resolveAgentInvocationConfig(
 	runInBackground: boolean;
 	isolated: boolean;
 } {
-	// Caller's explicit `params.model` always wins; agentConfig?.model is a
-	// caller-overridable default for users who set one in .pi/agents/*.md.
+	// Uniform precedence: caller params always win, config values are defaults.
+	// The tool schema advertises these params unconditionally, so the LLM's
+	// explicit choices must never be silently overridden by config.
 	return {
 		modelInput: params.model ?? agentConfig?.model,
 		modelFromParams: params.model != null,
-		thinking: (agentConfig?.thinking ?? params.thinking) as
+		thinking: (params.thinking ?? agentConfig?.thinking) as
 			| ThinkingLevel
 			| undefined,
-		maxTurns: agentConfig?.maxTurns ?? params.turns ?? params.max_turns,
+		maxTurns: params.turns ?? params.max_turns ?? agentConfig?.maxTurns,
 		inheritContext:
-			agentConfig?.inheritContext ?? params.inherit_context ?? false,
+			params.inherit_context ?? agentConfig?.inheritContext ?? false,
 		runInBackground:
-			agentConfig?.runInBackground ??
 			params.background ??
 			params.run_in_background ??
+			agentConfig?.runInBackground ??
 			false,
-		isolated: agentConfig?.isolated ?? params.isolated ?? false,
+		isolated: params.isolated ?? agentConfig?.isolated ?? false,
 	};
 }

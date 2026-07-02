@@ -95,7 +95,6 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 			}
 
 			const totalTokens = getLifetimeTotal(record.lifetimeUsage);
-			const activity = agentActivity.get(record.id);
 			const resultPreview = record.result
 				? record.result.length > 500
 					? `${record.result.slice(0, 500)}…`
@@ -108,8 +107,8 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 				status: record.status,
 				modelName: record.invocation?.modelName,
 				toolUses: record.toolUses,
-				turnCount: activity?.turnCount ?? 0,
-				maxTurns: activity?.maxTurns,
+				turnCount: record.turnCount,
+				maxTurns: record.maxTurns,
 				totalTokens,
 				durationMs: record.completedAt
 					? record.completedAt - record.startedAt
@@ -155,9 +154,9 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 	// ── Build initial tool description with model list ─────────────────────────
 	// Model list is empty until session_start provides a modelRegistry.
 	// Tools are registered once; the description is rebuilt on session_start via
-	// re-registering (pi.registerTool replaces by name — verify this at smoke test).
-	// ponytail: if re-register isn't supported mid-session, the list stays empty
-	// first session; acceptable until we find a hook to refresh.
+	// re-registering. Verified: pi.registerTool replaces by name (upstream docs:
+	// "Extensions can override built-in tools by registering a tool with the same
+	// name" and tools are "refreshed immediately in the same session").
 	let currentModelList: string[] = [];
 
 	function registerTools() {
@@ -185,13 +184,8 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 		const newList = listAvailable(ctx.modelRegistry);
 		if (newList.join(",") !== currentModelList.join(",")) {
 			currentModelList = newList;
-			// Re-register tools with fresh description
-			// ponytail: if pi throws on duplicate tool names, skip the re-register
-			try {
-				registerTools();
-			} catch {
-				/* description may be stale; non-fatal */
-			}
+			// Re-register tools with fresh description — registerTool replaces by name.
+			registerTools();
 		}
 	});
 
