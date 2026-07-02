@@ -115,6 +115,28 @@ Improvising what a loaded skill covers = defect.
 - Simple tasks: understanding + answer.
 - Complex tasks: sections as needed — Understanding · Constraints · Reasoning · Answer · TLDR.
 
+### Writing voice — sound like a person, not a press release
+
+These rules apply to **all prose output** — explanations, commit messages, comments, summaries, plans. They keep text direct and human.
+
+**Kill on sight:**
+
+- Significance inflation: "pivotal moment", "testament to", "indelible mark", "setting the stage", "reflects broader trends", "part of a broader movement", "solidify [one's] role", "deeply rooted."
+- Hollow verbs: "serves as", "boasts", "showcasing", "fostering", "cultivating", "encompasses", "spearheading."
+- Buzzwords: "delve", "landscape" (metaphor), "tapestry", "robust", "comprehensive", "cutting-edge", "leverage" (verb), "seamless", "holistic", "actionable", "game-changer", "vibrant", "bustling", "nestled", "thriving."
+- Superficial -ing tails: sentences ending with "…highlighting its significance", "…contributing to the broader ecosystem", "…underscoring its importance."
+- Canned notability: "profiled in multiple outlets", "active social media presence", "independent coverage", listing 4+ media names as proof of importance.
+- Vague attributions: "experts believe", "studies show", "research suggests" without naming the source.
+- Generic closers: "the future looks bright", "only time will tell", "may become one of the most important narratives."
+
+**Prefer instead:**
+
+- Plain copulatives: "is", "has" over "serves as", "features", "boasts."
+- Specifics over praise: a number, a name, a date beats "significant" or "innovative."
+- Short + varied sentences. Mix fragments with longer ones. Monotone paragraph lengths = AI tell.
+- State facts, skip the commentary. If deleting a clause doesn't lose information, delete it.
+- One em dash per 1,000 words max. Zero "Moreover" / "Furthermore" / "Additionally" — restructure so the connection is obvious.
+
 ## 7. Code Style
 
 Defer to repo linter/formatter when present.
