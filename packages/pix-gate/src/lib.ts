@@ -2,7 +2,7 @@
  * Pure helpers for pix-gate — no Pi API deps, fully unit-testable.
  */
 
-import { pixConfig, type GateRuleConfig } from "@xynogen/pix-data/pix-config";
+import { type GateRuleConfig, pixConfig } from "@xynogen/pix-data/pix-config";
 
 export type Severity = "critical" | "dangerous" | "risky";
 
