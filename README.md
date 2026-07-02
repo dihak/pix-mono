@@ -95,7 +95,7 @@ Straight from GitHub (no clone needed):
 curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
 ```
 
-Or from a local checkout:
+Or from a local clones:
 
 ```bash
 sh scripts/install.sh   # or: bun run distro:install

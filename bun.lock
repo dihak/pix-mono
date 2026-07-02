@@ -17,7 +17,7 @@
     },
     "packages/pix-9router": {
       "name": "@xynogen/pix-9router",
-      "version": "0.2.7",
+      "version": "0.3.1",
       "dependencies": {
         "@xynogen/pix-data": "^0.1.0",
         "typebox": "^1.1.38",
@@ -41,9 +41,10 @@
     },
     "packages/pix-bash": {
       "name": "@xynogen/pix-bash",
-      "version": "0.1.8",
+      "version": "0.1.9",
       "dependencies": {
-        "@xynogen/pix-pretty": "*",
+        "@xynogen/pix-data": "^0.2.5",
+        "@xynogen/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -93,7 +94,7 @@
     },
     "packages/pix-data": {
       "name": "@xynogen/pix-data",
-      "version": "0.2.5",
+      "version": "0.3.0",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
       },
@@ -119,9 +120,10 @@
     },
     "packages/pix-edit": {
       "name": "@xynogen/pix-edit",
-      "version": "0.1.10",
+      "version": "0.1.11",
       "dependencies": {
-        "@xynogen/pix-pretty": "*",
+        "@xynogen/pix-data": "^0.2.5",
+        "@xynogen/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -130,9 +132,10 @@
     },
     "packages/pix-find": {
       "name": "@xynogen/pix-find",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "dependencies": {
-        "@xynogen/pix-pretty": "*",
+        "@xynogen/pix-data": "^0.2.5",
+        "@xynogen/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -152,9 +155,10 @@
     },
     "packages/pix-gate": {
       "name": "@xynogen/pix-gate",
-      "version": "0.1.12",
+      "version": "0.1.13",
       "dependencies": {
-        "@xynogen/pix-pretty": "*",
+        "@xynogen/pix-data": "^0.2.5",
+        "@xynogen/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -163,9 +167,10 @@
     },
     "packages/pix-grep": {
       "name": "@xynogen/pix-grep",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "dependencies": {
-        "@xynogen/pix-pretty": "*",
+        "@xynogen/pix-data": "^0.2.5",
+        "@xynogen/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -173,9 +178,10 @@
     },
     "packages/pix-ls": {
       "name": "@xynogen/pix-ls",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "dependencies": {
-        "@xynogen/pix-pretty": "*",
+        "@xynogen/pix-data": "^0.2.5",
+        "@xynogen/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -203,9 +209,10 @@
     },
     "packages/pix-optimizer": {
       "name": "@xynogen/pix-optimizer",
-      "version": "1.1.13",
+      "version": "1.1.14",
       "dependencies": {
-        "@xynogen/pix-pretty": "*",
+        "@xynogen/pix-data": "^0.2.5",
+        "@xynogen/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -214,9 +221,10 @@
     },
     "packages/pix-pretty": {
       "name": "@xynogen/pix-pretty",
-      "version": "1.7.11",
+      "version": "1.7.13",
       "dependencies": {
         "@ff-labs/fff-node": "^0.5.2",
+        "@xynogen/pix-data": "^0.2.5",
         "cli-highlight": "^2.1.11",
         "diff": "^7.0.0",
       },
@@ -227,16 +235,17 @@
     },
     "packages/pix-prompts": {
       "name": "@xynogen/pix-prompts",
-      "version": "0.1.9",
+      "version": "0.2.0",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
       },
     },
     "packages/pix-read": {
       "name": "@xynogen/pix-read",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "dependencies": {
-        "@xynogen/pix-pretty": "*",
+        "@xynogen/pix-data": "^0.2.5",
+        "@xynogen/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -245,7 +254,7 @@
     },
     "packages/pix-skills": {
       "name": "@xynogen/pix-skills",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "dependencies": {
         "@xynogen/pix-gate": "*",
       },
@@ -256,7 +265,7 @@
     },
     "packages/pix-subagent": {
       "name": "@xynogen/pix-subagent",
-      "version": "0.2.7",
+      "version": "0.2.11",
       "dependencies": {
         "@xynogen/pix-data": "*",
         "@xynogen/pix-pretty": "*",
@@ -286,7 +295,7 @@
     },
     "packages/pix-todo": {
       "name": "@xynogen/pix-todo",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "dependencies": {
         "typebox": "^1.1.38",
       },
@@ -330,9 +339,10 @@
     },
     "packages/pix-write": {
       "name": "@xynogen/pix-write",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "dependencies": {
-        "@xynogen/pix-pretty": "*",
+        "@xynogen/pix-data": "^0.2.5",
+        "@xynogen/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -806,6 +816,26 @@
     "@earendil-works/pi-coding-agent/diff": ["diff@8.0.4", "", {}, "sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw=="],
 
     "@earendil-works/pi-coding-agent/typebox": ["typebox@1.1.38", "", {}, "sha512-pZ0aQPmMmXoUvSbeuWf/Hzsc+avNw/Zd6VeE8CFgkVGWyuHPJvqeJJDeJqLve+K70LvjYIoleGcoJHPT17cWoA=="],
+
+    "@xynogen/pix-bash/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
+
+    "@xynogen/pix-edit/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
+
+    "@xynogen/pix-find/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
+
+    "@xynogen/pix-gate/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
+
+    "@xynogen/pix-grep/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
+
+    "@xynogen/pix-ls/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
+
+    "@xynogen/pix-optimizer/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
+
+    "@xynogen/pix-pretty/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
+
+    "@xynogen/pix-read/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
+
+    "@xynogen/pix-write/@xynogen/pix-data": ["@xynogen/pix-data@0.2.5", "", { "peerDependencies": { "@earendil-works/pi-coding-agent": "*" } }, "sha512-RggLgJ9SXFGabmF88BjWhqiV5Fr4x7kNUo4NQW140wIznncgTgM1NsPLzfPlVaHZqXQrvHcIFAO1hfR2m4Xf0w=="],
 
     "cli-highlight/chalk": ["chalk@4.1.2", "", { "dependencies": { "ansi-styles": "^4.1.0", "supports-color": "^7.1.0" } }, "sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA=="],
 

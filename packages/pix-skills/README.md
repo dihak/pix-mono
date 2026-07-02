@@ -7,7 +7,7 @@ Pi coding agent extension — skill loader tool + skills bundle.
 | Resource | Type | Description |
 |---|---|---|
 | `read_skills` | tool | Browse and load bundled skills. No args → list all. `name` only → description. `name + full=true` → full instructions. |
-| `skills/` | skills | 29 bundled skills (off-context by default — discovered on demand via `read_skills`) |
+| `skills/` | skills | 27 bundled skills (off-context by default — discovered on demand via `read_skills`) |
 
 ## How it works
 
@@ -54,13 +54,11 @@ as `/skill:<name>` slash commands.
 | `finish` | Structured branch completion — verify, decide, clean up |
 | `graphify` | Codebase questions via a persistent knowledge graph |
 | `handoff` | Toggle session handoff — write or read+delete `HANDOFF.md` |
-| `notion` | Efficient Notion workspace retrieval — pages, databases, lists |
 | `plan` | Write detailed, bite-sized implementation plans before coding |
 | `readme` | Create or update a deployment-focused README in a fixed style |
 | `review` | Architectural review and quality assurance |
 | `runner` | Generate or convert a task runner (just/make/mise/task/npm/sh) |
 | `search` | Deep logic discovery and project context mapping |
-| `standup` | Prepare a daily standup update from Notion context |
 | `suggest` | Multi-dimensional optimization and improvement recommendations |
 | `task` | Task orchestration and ambiguity resolution |
 | `test` | Test execution, analysis, and failure resolution via TDD |
