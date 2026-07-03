@@ -2,17 +2,25 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { reloadPixConfig } from "@xynogen/pix-data/pix-config";
 import { getIconMode, setIconMode } from "./icon-catalog.ts";
 import { initIconMode, loadIconMode, saveIconMode } from "./icon-persist.ts";
 
 let tmpAgentDir: string;
+let origHome: string | undefined;
 
 beforeAll(() => {
 	tmpAgentDir = mkdtempSync(join(tmpdir(), "pretty-persist-test-"));
+	origHome = process.env.HOME;
+	// Point HOME at the temp dir so pixConfig() reads from there, not the real ~/.pi/agent/pix.json
+	process.env.HOME = tmpAgentDir;
 	process.env.PI_CODING_AGENT_DIR = tmpAgentDir;
+	// Force pix-config to re-read from the temp HOME (clears cached real config).
+	reloadPixConfig();
 });
 
 afterAll(() => {
+	process.env.HOME = origHome;
 	delete process.env.PI_CODING_AGENT_DIR;
 	try {
 		rmSync(tmpAgentDir, { recursive: true });
@@ -24,8 +32,8 @@ afterAll(() => {
 describe("icon-persist", () => {
 	afterEach(() => setIconMode("nerd"));
 
-	it("returns undefined before anything is saved", () => {
-		expect(loadIconMode()).toBeUndefined();
+	it("returns default (nerd) in a fresh config", () => {
+		expect(loadIconMode()).toBe("nerd");
 	});
 
 	it("round-trips a mode across save/load (new-session sim)", () => {

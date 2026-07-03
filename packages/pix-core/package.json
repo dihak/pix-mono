@@ -38,8 +38,8 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-data": "^0.3.1",
-		"@xynogen/pix-pretty": "^1.7.16",
+		"@xynogen/pix-data": "^0.3.2",
+		"@xynogen/pix-pretty": "^1.7.17",
 		"@xynogen/pix-welcome": "^0.1.14",
 		"@xynogen/pix-footer": "^0.1.14",
 		"@xynogen/pix-diagnostics": "^0.1.6",
