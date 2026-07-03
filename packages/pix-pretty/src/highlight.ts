@@ -1,5 +1,5 @@
 import { normalizeShikiContrast } from "./ansi.js";
-import { CACHE_LIMIT, MAX_HL_CHARS, THEME } from "./config.js";
+import { CACHE_LIMIT, MAX_HL_CHARS } from "./config.js";
 import type { BundledLanguage } from "./types.js";
 
 // Engine: cli-highlight (highlight.js-backed, synchronous ANSI output).
@@ -88,7 +88,7 @@ export async function hlBlock(
 	const hljsLang = toHljsLang(language);
 	if (!hljsLang) return code.split("\n");
 
-	const k = `${THEME}\0${hljsLang}\0${code}`;
+	const k = `${hljsLang}\0${code}`;
 	const hit = _cache.get(k);
 	if (hit) return _touch(k, hit);
 

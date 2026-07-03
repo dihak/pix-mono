@@ -1,47 +1,4 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { pixConfig } from "@xynogen/pix-data/pix-config";
-import type { BundledTheme } from "./types.js";
-
-const DEFAULT_THEME: BundledTheme = "github-dark";
-
-export function getDefaultAgentDir(): string | undefined {
-	const home = process.env.HOME ?? "";
-	return home ? join(home, ".pi/agent") : undefined;
-}
-
-function readThemeFromSettings(agentDir?: string): BundledTheme | undefined {
-	const resolvedAgentDir = agentDir ?? getDefaultAgentDir();
-	if (!resolvedAgentDir) return undefined;
-
-	try {
-		const settings = JSON.parse(readFileSync(join(resolvedAgentDir, "settings.json"), "utf8")) as {
-			theme?: unknown;
-		};
-		return typeof settings.theme === "string" ? (settings.theme as BundledTheme) : undefined;
-	} catch {
-		return undefined;
-	}
-}
-
-function resolvePrettyTheme(agentDir?: string): BundledTheme {
-	// Precedence: env → pix.json → settings.json → default
-	return (
-		(process.env.PRETTY_THEME as BundledTheme | undefined) ??
-		(pixConfig().pretty.syntaxTheme as BundledTheme) ??
-		readThemeFromSettings(agentDir) ??
-		DEFAULT_THEME
-	);
-}
-
-export let THEME: BundledTheme = resolvePrettyTheme();
-
-export function setPrettyTheme(agentDir?: string): void {
-	const resolvedTheme = resolvePrettyTheme(agentDir);
-	if (resolvedTheme === THEME) return;
-	THEME = resolvedTheme;
-}
 
 export function envInt(name: string, fallback: number): number {
 	const v = Number.parseInt(process.env[name] ?? "", 10);

@@ -45,7 +45,6 @@ export interface DiffColors {
 export type LsStyle = "grid" | "tree";
 
 export interface PrettyConfig {
-	syntaxTheme: string;
 	icons: string;
 	/** `"grid"` = horizontal columns (default), `"tree"` = vertical tree view. */
 	lsStyle: LsStyle;
@@ -105,7 +104,6 @@ const DEFAULT_COLLAPSE: CollapseConfig = {
 };
 
 const DEFAULT_PRETTY: PrettyConfig = {
-	syntaxTheme: "github-dark",
 	icons: "nerd",
 	lsStyle: "grid",
 	maxPreviewLines: 80,
@@ -234,7 +232,6 @@ function lsStyle(v: unknown): LsStyle {
 function mergePretty(raw: unknown): PrettyConfig {
 	if (!isObj(raw)) return { ...DEFAULT_PRETTY };
 	return {
-		syntaxTheme: str(raw.syntaxTheme, DEFAULT_PRETTY.syntaxTheme),
 		icons: str(raw.icons, DEFAULT_PRETTY.icons),
 		lsStyle: lsStyle(raw.lsStyle),
 		maxPreviewLines: num(raw.maxPreviewLines, DEFAULT_PRETTY.maxPreviewLines),

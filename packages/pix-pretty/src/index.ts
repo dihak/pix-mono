@@ -8,25 +8,13 @@
  * UI features (paste chips, thinking blocks) live in pix-display.
  */
 
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { registerFffCommands } from "./commands/fff.js";
-import { getDefaultAgentDir, setPrettyTheme } from "./config.js";
 import { fffState } from "./fff.js";
 import { clearHighlightCache } from "./highlight.js";
 import { initIconMode } from "./icon-persist.js";
 import type { PiPrettyApi } from "./types.js";
 
 export default function piPrettyExtension(pi: PiPrettyApi): void {
-	// ── Theme init ──────────────────────────────────────────────────────
-	setPrettyTheme(
-		(() => {
-			try {
-				return getAgentDir?.() ?? getDefaultAgentDir();
-			} catch {
-				return getDefaultAgentDir();
-			}
-		})(),
-	);
 	clearHighlightCache();
 
 	// ── Icon mode ───────────────────────────────────────────

@@ -40,14 +40,6 @@ const SETTINGS: SettingRow[] = [
 	},
 	{
 		section: "Pretty",
-		label: "syntax theme",
-		configSection: "pretty",
-		configKey: "syntaxTheme",
-		values: ["github-dark", "monokai", "min-dark", "dracula", "nord"],
-		read: (c) => c.pretty.syntaxTheme,
-	},
-	{
-		section: "Pretty",
 		label: "ls style",
 		configSection: "pretty",
 		configKey: "lsStyle",
