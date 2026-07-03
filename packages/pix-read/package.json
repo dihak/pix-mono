@@ -1,44 +1,44 @@
 {
-  "name": "@xynogen/pix-read",
-  "version": "0.1.12",
-  "description": "Pi tool — file read with syntax highlight",
-  "type": "module",
-  "main": "src/index.ts",
-  "scripts": {
-    "test": "bun test"
-  },
-  "files": [
-    "src",
-    "README.md",
-    "LICENSE"
-  ],
-  "pi": {
-    "extensions": [
-      "src/extension.ts"
-    ]
-  },
-  "keywords": [
-    "pi",
-    "pi-package",
-    "pi-extension",
-    "read"
-  ],
-  "author": "xynogen",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xynogen/pix-mono.git",
-    "directory": "packages/pix-read"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "dependencies": {
-    "@xynogen/pix-pretty": "^1.7.9",
-    "@xynogen/pix-data": "^0.3.0"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*"
-  }
+	"name": "@xynogen/pix-read",
+	"version": "0.1.12",
+	"description": "Pi tool — file read with syntax highlight",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"src/extension.ts"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"read"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-read"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@xynogen/pix-pretty": "^1.7.9",
+		"@xynogen/pix-data": "^0.3.0"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	}
 }

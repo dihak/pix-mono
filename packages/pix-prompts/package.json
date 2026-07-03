@@ -1,44 +1,44 @@
 {
-  "name": "@xynogen/pix-prompts",
-  "version": "0.2.2",
-  "description": "Pi extension — system-prompt injection (SOP.md + repo directives)",
-  "type": "module",
-  "main": "src/index.ts",
-  "scripts": {
-    "test": "bun test"
-  },
-  "files": [
-    "src",
-    "SOP.md",
-    "README.md",
-    "LICENSE"
-  ],
-  "pi": {
-    "extensions": [
-      "src/extension.ts"
-    ]
-  },
-  "keywords": [
-    "pi",
-    "pi-package",
-    "pi-extension",
-    "pix"
-  ],
-  "author": "xynogen",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/xynogen/pix-mono.git",
-    "directory": "packages/pix-prompts"
-  },
-  "homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-prompts#readme",
-  "bugs": {
-    "url": "https://github.com/xynogen/pix-mono/issues"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
-  }
+	"name": "@xynogen/pix-prompts",
+	"version": "0.2.2",
+	"description": "Pi extension — system-prompt injection (SOP.md + repo directives)",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"SOP.md",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"src/extension.ts"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"pix"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-prompts"
+	},
+	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-prompts#readme",
+	"bugs": {
+		"url": "https://github.com/xynogen/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*"
+	}
 }
