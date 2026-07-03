@@ -36,6 +36,7 @@ import {
 } from "./agent-types.ts";
 import { resolveAgentInvocationConfig } from "./invocation-config.ts";
 import { resolveModel } from "./model-resolver.ts";
+import { lookupBenchmark } from "@xynogen/pix-data";
 import type { AgentInvocation, LifetimeUsage } from "./types.ts";
 import {
 	getLifetimeTotal,
@@ -216,7 +217,7 @@ If the target is already known, use a direct tool — \`read\` for a known path,
 - Always include a short (3-5 word) \`description\` (shown in UI).
 - Launch independent agents concurrently: send multiple \`agent\` tool calls in one message.
 - The agent's result is not visible to the user — summarize it in a text message. Trust but verify: check the actual changes before reporting done.
-- \`background: true\` only for fire-and-forget work. Default is foreground (streams inline).
+- Agents always run in background — the parent is free to continue working while the agent executes.
 - \`resume\` with an agent ID to continue a prior agent's work; \`agent_steer\` to redirect a running background agent.
 - Pick the model yourself via \`model:\` (provider/id or fuzzy e.g. "haiku"). For mechanical/read-only work prefer a cheap tier; for hard reasoning match or exceed the parent. Type sets the tool belt + persona only — never the model.
 - \`thinking\`: off|minimal|low|medium|high|xhigh.
@@ -229,7 +230,7 @@ Brief it like a smart colleague who just walked into the room — it hasn't seen
 // ── the 3 tools ──────────────────────────────────────────────────────────────
 
 export function createAgentTool(
-	pi: Parameters<typeof manager.spawnAndWait>[0],
+	pi: Parameters<typeof manager.spawn>[0],
 	manager: AgentManager,
 	agentActivity: Map<string, AgentActivity>,
 	reloadCustomAgents: () => void,
@@ -273,12 +274,6 @@ export function createAgentTool(
 					description:
 						"Maximum agentic turns before stopping. Omit for unlimited.",
 					minimum: 1,
-				}),
-			),
-			background: Type.Optional(
-				Type.Boolean({
-					description:
-						"true = background (returns ID immediately, notifies on completion). false (default) = foreground (streams inline).",
 				}),
 			),
 			resume: Type.Optional(
@@ -337,9 +332,7 @@ export function createAgentTool(
 				if (!expanded) return new Text("", 0, 0);
 				const duration = formatMs(details.durationMs);
 				const isSteered = details.status === "steered";
-				const icon = isSteered
-					? theme.fg("warning", "✓")
-					: theme.fg("success", "✓");
+				const icon = theme.fg("success", "✓");
 				const speed = formatSpeed(
 					details.outputTokens ?? 0,
 					details.streamingMs ?? details.durationMs,
@@ -354,7 +347,7 @@ export function createAgentTool(
 					(speed ? ` ${theme.fg("dim", "·")} ${theme.fg("dim", speed)}` : "") +
 					// Steered = stopped at turn limit; keep that note inline since the
 					// stats alone don't say why it ended.
-					(isSteered ? ` ${theme.fg("warning", "(turn limit)")}` : "");
+					(isSteered ? ` ${theme.fg("dim", "(turn limit)")}` : "");
 
 				// Expanded view appends the full result below the one-line summary.
 				if (expanded) {
@@ -391,7 +384,7 @@ export function createAgentTool(
 			return new Text(line, 0, 0);
 		},
 
-		async execute(_toolCallId, params, signal, onUpdate, ctx) {
+		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
 			reloadCustomAgents();
 
 			// Resolve agent type — accept the new `type` key, with the legacy
@@ -421,10 +414,8 @@ export function createAgentTool(
 				model: params.model as string | undefined,
 				thinking: params.thinking as string | undefined,
 				turns: params.turns as number | undefined,
-				background: params.background as boolean | undefined,
-				// Legacy spellings — read via the loose view since the schema dropped them.
+				// Legacy spelling — read via the loose view since the schema dropped it.
 				max_turns: looseParams.max_turns as number | undefined,
-				run_in_background: looseParams.run_in_background as boolean | undefined,
 			});
 
 			// Resolve model — ALWAYS compute modelName (the pix twist)
@@ -446,9 +437,37 @@ export function createAgentTool(
 			// Always set modelName (the twist: visible even when same as parent)
 			if (model) modelName = shortModelLabel(model);
 
+			// Mentor guard: reject when the chosen model is weaker than the parent
+			// OR when benchmark data is missing (can't verify it meets the floor).
+			// Equal or higher scores are allowed — same-tier calls (e.g. Opus → Opus)
+			// are useful for a second perspective on critical decisions.
+			if (subagentType === "Mentor" && model && ctx.model) {
+				const childBench = lookupBenchmark(model.id);
+				const parentBench = lookupBenchmark(ctx.model.id);
+				const childScore = childBench?.overallScore ?? null;
+				const parentScore = parentBench?.overallScore ?? null;
+				if (childScore == null || parentScore == null) {
+					const missing = [
+						childScore == null ? `"${modelName}"` : "",
+						parentScore == null ? "current model" : "",
+					]
+						.filter(Boolean)
+						.join(" and ");
+					return textResult(
+						`Cannot verify Mentor model is at least as capable as the parent — no benchmark score for ${missing}. ` +
+							`Pick a model with a known ⚡ score from the available models list so the guard can verify it.`,
+					);
+				}
+				if (childScore < parentScore) {
+					return textResult(
+						`Mentor model "${modelName}" (⚡${childScore}) is weaker than the current model (⚡${parentScore}). ` +
+							`Mentor requires a model at least as capable as the parent (⚡${parentScore}+) — pick one from the available models list.`,
+					);
+				}
+			}
+
 			const thinking = resolvedConfig.thinking;
 			const inheritContext = resolvedConfig.inheritContext;
-			const runInBackground = resolvedConfig.runInBackground;
 			const isolated = resolvedConfig.isolated;
 			const effectiveMaxTurns = normalizeMaxTurns(resolvedConfig.maxTurns);
 
@@ -459,7 +478,6 @@ export function createAgentTool(
 				maxTurns: effectiveMaxTurns,
 				isolated,
 				inheritContext,
-				runInBackground,
 			};
 
 			const detailBase = {
@@ -518,93 +536,48 @@ export function createAgentTool(
 				allowedToolNames = valid.length > 0 ? valid : undefined;
 			}
 
-			// Background execution
-			if (runInBackground) {
-				const { state: bgState, callbacks: bgCallbacks } =
-					createActivityTracker(effectiveMaxTurns, () => {
-						agentActivity.set(id, bgState);
-					});
+			// Always background — spawn and return immediately
+			const { state: bgState, callbacks: bgCallbacks } = createActivityTracker(
+				effectiveMaxTurns,
+				() => {
+					agentActivity.set(id, bgState);
+				},
+			);
 
-				let id: string;
-				try {
-					id = manager.spawn(pi, ctx, subagentType, params.prompt as string, {
-						description: params.description as string,
-						model,
-						maxTurns: effectiveMaxTurns,
-						isolated,
-						inheritContext,
-						thinkingLevel: thinking,
-						isBackground: true,
-						invocation: agentInvocation,
-						// Intentionally no `signal` here: the tool-call signal is aborted
-						// when the parent turn ends, which would kill the background agent
-						// prematurely — bg agents are meant to outlive the spawning turn.
-						allowedToolNames,
-						...bgCallbacks,
-					});
-				} catch (err) {
-					return textResult(err instanceof Error ? err.message : String(err));
-				}
-
-				agentActivity.set(id, bgState);
-
-				return textResult(
-					`Running in background (ID: ${id}). Use agent_result to check progress or agent_steer to redirect.`,
-					{
-						...detailBase,
-						toolUses: 0,
-						tokens: "",
-						durationMs: 0,
-						status: "background",
-						agentId: id,
-					},
-				);
-			}
-
-			// Foreground execution — streams via onUpdate
-			const {
-				state: fgState,
-				callbacks: fgCallbacks,
-				getWarnings: fgWarnings,
-			} = createActivityTracker(effectiveMaxTurns, () => {
-				if (!onUpdate) return;
-				onUpdate({
-					content: [{ type: "text", text: fgState.responseText }],
-					details: buildDetails(detailBase, {
-						...fgState,
-						status: "running",
-						toolUses: fgState.toolUses,
-						startedAt: Date.now() - fgState.durationMs,
-					}) as unknown,
-				});
-			});
-
-			const record = await manager.spawnAndWait(
-				pi,
-				ctx,
-				subagentType,
-				params.prompt as string,
-				{
+			let id: string;
+			try {
+				id = manager.spawn(pi, ctx, subagentType, params.prompt as string, {
 					description: params.description as string,
 					model,
 					maxTurns: effectiveMaxTurns,
 					isolated,
 					inheritContext,
 					thinkingLevel: thinking,
+					isBackground: true,
 					invocation: agentInvocation,
+					// Intentionally no `signal` here: the tool-call signal is aborted
+					// when the parent turn ends, which would kill the background agent
+					// prematurely — bg agents are meant to outlive the spawning turn.
 					allowedToolNames,
-					signal,
-					...fgCallbacks,
+					...bgCallbacks,
+				});
+			} catch (err) {
+				return textResult(err instanceof Error ? err.message : String(err));
+			}
+
+			agentActivity.set(id, bgState);
+
+			return textResult(
+				`Running in background (ID: ${id}). Use agent_result to check progress or agent_steer to redirect.`,
+				{
+					...detailBase,
+					toolUses: 0,
+					tokens: "",
+					durationMs: 0,
+					status: "background",
+					agentId: id,
 				},
 			);
-
-			// Surface any config warnings collected during the run (fg-only; bg
-			// warnings are stored on state but not surfaced via notifications).
-			for (const w of fgWarnings()) detailBase.tags.push(w);
-
-			const resultText =
-				record.result?.trim() || record.error?.trim() || "No output.";
-			return textResult(resultText, buildDetails(detailBase, record, fgState));
 		},
 	});
 }

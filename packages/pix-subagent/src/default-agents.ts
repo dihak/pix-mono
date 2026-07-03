@@ -17,7 +17,7 @@ export const DEFAULT_AGENTS: Map<string, AgentConfig> = new Map([
 			description:
 				"General-purpose agent for researching complex questions, searching for code, and executing multi-step tasks. When you are searching for a keyword or file and are not confident that you will find the right match in the first few tries use this agent to perform the search for you.",
 			// builtinToolNames omitted — means "all available tools" (resolved at lookup time)
-			// inheritContext / runInBackground / isolated omitted — strategy fields, callers decide per-call.
+			// inheritContext / isolated omitted — strategy fields, callers decide per-call.
 			// Setting them to false would lock callsite intent (see resolveAgentInvocationConfig in invocation-config.ts).
 			extensions: true,
 			skills: true,
@@ -118,6 +118,52 @@ You are STRICTLY PROHIBITED from:
 ### Critical Files for Implementation
 List 3-5 files most critical for implementing this plan:
 - /absolute/path/to/file.ts - [Brief reason]`,
+			promptMode: "replace",
+			isDefault: true,
+		},
+	],
+	[
+		"Mentor",
+		{
+			name: "Mentor",
+			displayName: "Mentor",
+			description:
+				'Senior advisor agent for critical decisions. Use when you need a second opinion — architecture choices, contract design, security review, tricky bug diagnosis, or "is this the right approach?" sanity checks. Read-only: reviews code and context, gives recommendations, never edits. The caller MUST pick a model at least as capable as the parent (same or higher ⚡ score). Equal-tier calls (e.g. Opus → Opus) are encouraged for a second perspective on critical decisions. Benchmark scores are shown in the model list; pick one with a ⚡ score equal to or higher than the current model.',
+			builtinToolNames: READ_ONLY_TOOLS,
+			extensions: true,
+			skills: false,
+			systemPrompt: `# CRITICAL: READ-ONLY ADVISORY MODE — NO FILE MODIFICATIONS
+You are a senior technical mentor / advisor. You provide expert-level recommendations,
+architectural guidance, security insights, and code review feedback.
+
+You are STRICTLY PROHIBITED from:
+- Creating, modifying, or deleting any files
+- Running commands that change system state
+- Using redirect operators (>, >>, |) or heredocs to write to files
+- Making any changes — you ADVISE, the caller IMPLEMENTS
+
+# Your Role
+- Review code, architecture, and design decisions with a critical expert eye
+- Identify risks, anti-patterns, edge cases, and missed opportunities
+- Recommend specific, actionable improvements with clear rationale
+- Flag security concerns, performance issues, or maintainability problems
+- When asked "is this the right approach?", give a direct yes/no with reasoning
+- Provide concrete alternatives when you recommend against something
+
+# Tool Usage
+- Use the find tool for file pattern matching (NOT the bash find command)
+- Use the grep tool for content search (NOT bash grep/rg command)
+- Use the read tool for reading files (NOT bash cat/head/tail)
+- Use Bash ONLY for read-only operations: ls, git status, git log, git diff, find
+- Read broadly before advising — understand context before judging
+
+# Output
+- Lead with your assessment (approve / concerns / reject)
+- Be direct and opinionated — you are the expert, not a people-pleaser
+- Prioritize issues by severity: critical > important > nice-to-have
+- Use absolute file paths in all references
+- Do not use emojis
+- Keep recommendations specific and implementable`,
 			promptMode: "replace",
 			isDefault: true,
 		},

@@ -19,6 +19,7 @@ export const DEFAULT_AGENT_NAMES = [
 	"general-purpose",
 	"Explore",
 	"Plan",
+	"Mentor",
 ] as const;
 
 /** Unified agent configuration — used for both default and user-defined agents. */
@@ -46,8 +47,7 @@ export interface AgentConfig {
 	promptMode: "replace" | "append";
 	/** Default for spawn: fork parent conversation. undefined = caller decides. */
 	inheritContext?: boolean;
-	/** Default for spawn: run in background. undefined = caller decides. */
-	runInBackground?: boolean;
+
 	/** Default for spawn: no extension tools. undefined = caller decides. */
 	isolated?: boolean;
 	/** true = this is an embedded default agent (informational) */
@@ -109,7 +109,6 @@ export interface AgentInvocation {
 	maxTurns?: number;
 	isolated?: boolean;
 	inheritContext?: boolean;
-	runInBackground?: boolean;
 }
 
 /** Details attached to custom notification messages for visual rendering. */

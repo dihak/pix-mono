@@ -104,7 +104,7 @@ export function buildInvocationTags(invocation: AgentInvocation | undefined): {
 	if (invocation.thinking) tags.push(`thinking: ${invocation.thinking}`);
 	if (invocation.isolated) tags.push("isolated");
 	if (invocation.inheritContext) tags.push("inherit ctx");
-	if (invocation.runInBackground) tags.push("bg");
+
 	if (invocation.maxTurns != null) tags.push(`max: ${invocation.maxTurns}`);
 	return { modelName: invocation.modelName, tags };
 }
@@ -230,8 +230,8 @@ export class AgentWidget {
 			icon = theme.fg("success", "✓");
 			statusText = "";
 		} else if (a.status === "steered") {
-			icon = theme.fg("warning", "✓");
-			statusText = theme.fg("warning", " (turn limit)");
+			icon = theme.fg("success", "✓");
+			statusText = theme.fg("dim", " (turn limit)");
 		} else if (a.status === "stopped") {
 			icon = theme.fg("dim", "■");
 			statusText = theme.fg("dim", " stopped");
@@ -355,9 +355,8 @@ export class AgentWidget {
 			if (liveSpeed) parts.push(liveSpeed);
 			const statsText = parts.join(" · ");
 
-			// Activity leads (next to the spinner — the moving part by the moving
-			// part), then static identity + cumulative stats. One line per agent so
-			// many concurrent workers stay readable instead of doubling the height.
+			// Activity trails at the end (after stats) so its variable width
+			// doesn't cause the static identity + stats to bounce around.
 			const activity = bg
 				? describeActivity(bg.activeTools, bg.responseText)
 				: "thinking…";
@@ -365,7 +364,7 @@ export class AgentWidget {
 			runningLines.push(
 				truncate(
 					theme.fg("dim", "├─") +
-						` ${theme.fg("accent", frame)} ${theme.fg("dim", activity)} ${theme.fg("dim", "·")} ${theme.fg("toolTitle", theme.bold(name))}${modelLabel}${modeTag} ${theme.fg("dim", "·")} ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)}`,
+						` ${theme.fg("accent", frame)} ${theme.fg("toolTitle", theme.bold(name))}${modelLabel}${modeTag} ${theme.fg("dim", "·")} ${theme.fg("muted", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", statsText)} ${theme.fg("dim", "·")} ${theme.fg("dim", activity)}`,
 				),
 			);
 		}

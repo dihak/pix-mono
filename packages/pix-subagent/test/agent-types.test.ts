@@ -39,9 +39,10 @@ test("no default agent carries a baked-in model", () => {
 	for (const [_name, config] of DEFAULT_AGENTS) {
 		expect(config.model).toBeUndefined();
 	}
-	// Sanity: built-ins are general-purpose, Explore, Plan
+	// Sanity: built-ins are general-purpose, Explore, Plan, Mentor
 	expect([...DEFAULT_AGENTS.keys()].sort()).toEqual([
 		"Explore",
+		"Mentor",
 		"Plan",
 		"general-purpose",
 	]);
