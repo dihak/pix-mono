@@ -4,7 +4,7 @@
  * foreground / blocking execution.
  */
 
-import { expect, test, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { AgentManager } from "../src/agent-manager.ts";
 import { resolveAgentInvocationConfig } from "../src/invocation-config.ts";
 import type { AgentConfig, AgentInvocation } from "../src/types.ts";

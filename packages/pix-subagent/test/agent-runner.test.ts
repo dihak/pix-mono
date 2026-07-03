@@ -4,23 +4,23 @@
  * depends on; hardening them prevents subtle regressions.
  */
 
-import { describe, expect, test, afterEach } from "bun:test";
-import {
-	extensionCanonicalName,
-	normalizeMaxTurns,
-	getDefaultMaxTurns,
-	setDefaultMaxTurns,
-	getGraceTurns,
-	setGraceTurns,
-	narrowTools,
-	parseExtensionsSpec,
-	parseExtSelectors,
-	attachTurnLimit,
-} from "../src/agent-runner.ts";
+import { afterEach, describe, expect, test } from "bun:test";
 import type {
 	AgentSession,
 	AgentSessionEvent,
 } from "@earendil-works/pi-coding-agent";
+import {
+	attachTurnLimit,
+	extensionCanonicalName,
+	getDefaultMaxTurns,
+	getGraceTurns,
+	narrowTools,
+	normalizeMaxTurns,
+	parseExtensionsSpec,
+	parseExtSelectors,
+	setDefaultMaxTurns,
+	setGraceTurns,
+} from "../src/agent-runner.ts";
 
 // ── normalizeMaxTurns ────────────────────────────────────────────────────────
 

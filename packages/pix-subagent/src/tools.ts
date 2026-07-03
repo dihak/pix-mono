@@ -21,6 +21,7 @@
 
 import { defineTool, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { lookupBenchmark } from "@xynogen/pix-data";
 import { Type } from "typebox";
 import type { AgentManager } from "./agent-manager.ts";
 import {
@@ -36,7 +37,6 @@ import {
 } from "./agent-types.ts";
 import { resolveAgentInvocationConfig } from "./invocation-config.ts";
 import { resolveModel } from "./model-resolver.ts";
-import { lookupBenchmark } from "@xynogen/pix-data";
 import type { AgentInvocation, LifetimeUsage } from "./types.ts";
 import {
 	getLifetimeTotal,
