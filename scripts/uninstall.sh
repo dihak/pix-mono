@@ -35,9 +35,11 @@ npm:@xynogen/pix-footer
 npm:@xynogen/pix-commands
 npm:@xynogen/pix-nudge
 npm:@xynogen/pix-diagnostics
+npm:@xynogen/pix-display
 npm:@xynogen/pix-prompts
 npm:@xynogen/pix-skills
 npm:@xynogen/pix-models
+npm:@xynogen/pix-subagent
 "
 
 # EXTENSION module — standalone extension + tool packages.

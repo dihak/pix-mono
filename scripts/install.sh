@@ -2,8 +2,8 @@
 #
 # Install the pix-mono distro into Pi Coding Agent.
 #
-# Self-contained + POSIX sh: installs Pi itself (via Bun), configures theme +
-# tools, then installs every @xynogen/pix-* package from npm. Safe to re-run.
+# Self-contained + POSIX sh: installs Pi itself (via Bun), then installs
+# every @xynogen/pix-* package from npm. Safe to re-run.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
@@ -12,11 +12,6 @@
 #
 # Prerequisites: Bun (https://bun.sh).
 set -eu
-
-PI_ROOT="$HOME/.pi/agent"
-PI_THEME="pix-tokyo-night"
-SETTINGS_FILE="$PI_ROOT/settings.json"
-DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "ask_user", "todo", "read_skills"]'
 
 # The distro installs as two modules:
 #
@@ -38,21 +33,36 @@ DEFAULT_TOOLS='["read", "bash", "edit", "write", "grep", "find", "ls", "ask_user
 #                        One Dark Pro). Not bundled by pix-core but installed
 #                        unconditionally (it carries the distro's default look,
 #                        pix-tokyo-night, not an opt-in capability).
-#   OPTIN_PACKAGES     — standalone extensions NOT bundled by pix-core, each
-#                        carrying a setup cost or sensitive capability (API key,
-#                        root execution, power-user UI). README documents WHY
-#                        each is opt-in; the installer asks per package and
-#                        defaults to NO when it cannot prompt (non-interactive
-#                        `curl | sh`), keeping the default distro lean.
+#   OPTIN_PIX_PACKAGES  — standalone @xynogen/pix-* extensions NOT bundled by
+#                        pix-core, each carrying a setup cost or sensitive
+#                        capability (API key, root execution, power-user UI).
+#   OPTIN_COMMUNITY_PACKAGES — third-party packages (not part of the pix
+#                        distro) offered as optional extras.
+#                        Both opt-in lists default to NO when the installer
+#                        cannot prompt (non-interactive `curl | sh`), keeping
+#                        the default distro lean.
 CORE_PACKAGE="npm:@xynogen/pix-core"
 THEME_PACKAGE="npm:@xynogen/pix-themes"
 
-# Each entry: "<spec>|<why it's opt-in>". The reason is shown in the prompt so
-# the user can make an informed choice (sourced from README "Why it's opt-in").
-OPTIN_PACKAGES="
+# Recommended community packages — installed unless declined.
+# Format: "<spec>|<description>"
+RECOMMENDED_PACKAGES="
+npm:pi-lens|LSP code intelligence — jump-to-definition, references, hover, and proactive diagnostics. (Recommended)
+npm:pi-mcp-adapter|MCP gateway — connect to MCP servers and call their tools from a single unified proxy. (Recommended)
+"
+
+# Opt-in Pix extensions — each carries a setup cost or sensitive capability.
+# Format: "<spec>|<why it's opt-in>"
+OPTIN_PIX_PACKAGES="
 npm:@xynogen/pix-9router|9Router LLM provider + fetch/search tools — needs a 9Router API key, so only useful if you route through 9Router.
 npm:@xynogen/pix-sudo|sudo_run — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode).
 npm:@xynogen/pix-toolbox|/toolbox — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use.
+"
+
+# Opt-in community extensions — third-party packages, not part of the pix distro.
+# Format: "<spec>|<why it's opt-in>"
+OPTIN_COMMUNITY_PACKAGES="
+npm:@agnishc/edb-context-viewer|Context viewer — inspect the system prompt and full LLM context in scrollable overlay popups; a debug/introspection utility.
 "
 
 # --- minimal logging helpers (no external lib dependency) ------------------
@@ -128,23 +138,7 @@ if ! command_exists pi; then
 	exit 1
 fi
 
-# --- 2. configure theme + tools --------------------------------------------
-# Merge theme + tools into settings.json. Reads existing settings first so
-# other keys (auth tokens, model prefs) are preserved.
-info "Configuring Pi environment..."
-mkdir -p "$PI_ROOT"
-
-info "Configuring tools/theme..."
-# Use whichever runtime is available — both are CJS-compatible.
-if command_exists bun; then _rt=bun; else _rt=node; fi
-"$_rt" -e '
-  const fs = require("fs"), f = process.argv[1], t = process.argv[2], tools = JSON.parse(process.argv[3]);
-  let s = {}; try { s = JSON.parse(fs.readFileSync(f, "utf8")); } catch {}
-  s.theme = t; s.tools = tools;
-  fs.writeFileSync(f, JSON.stringify(s, null, 2) + "\n");
-' "$SETTINGS_FILE" "$PI_THEME" "$DEFAULT_TOOLS"
-
-# --- 3. install the pix distro ---------------------------------------------
+# --- 2. install the pix distro ----------------------------------------------
 # `pi install` is idempotent and reports its result on stdout. We must NOT
 # pre-guard with `pi list | grep`: `pi list` emits a TTY-dependent listing —
 # piped (no TTY) it omits the extension packages entirely, so the grep would
@@ -157,38 +151,77 @@ install_pi_pkg() {
 	out=$(pi install "$spec" 2>&1) || true
 	if printf '%s' "$out" | grep -qiF 'installed'; then
 		success "Pi pkg installed: $spec"
+		return 0
 	else
 		error "Failed to install pi pkg: $spec"
+		return 1
 	fi
 }
 
-# Run install_pi_pkg jobs in parallel, then wait for all to finish.
-# $@ = list of specs to install concurrently.
-install_pi_pkgs_parallel() {
-	for spec in "$@"; do
-		install_pi_pkg "$spec" &
-	done
-	wait
-}
+# Parse a "<spec>|<reason>" entry.
+entry_spec() { printf '%s' "${1%%|*}"; }
+entry_reason() { printf '%s' "${1#*|}"; }
 
-# pix-core and pix-themes are independent — install both in parallel.
-# pix-core: npm resolves its dependency tree (all core members + pix-data);
-# the aggregator extension boots them in-process. No per-member install needed.
-info "Installing Pix core + theme modules in parallel..."
-install_pi_pkgs_parallel "$CORE_PACKAGE" "$THEME_PACKAGE"
+# pix-core and pix-themes both install into the same node_modules tree —
+# `pi install` runs npm under the hood, so they must run sequentially.
+info "Installing Pix core + theme modules..."
+install_pi_pkg "$CORE_PACKAGE"
+install_pi_pkg "$THEME_PACKAGE"
 
-# Opt-in extensions — ask per package, with the reason it's opt-in. Each line is
-# "<spec>|<reason>"; split on the first '|'. IFS swap keeps the loop POSIX.
-info "Optional extensions (each carries a setup cost or sensitive capability):"
+# Recommended community packages — installed unless declined.
+printf '\n'
+info "\033[1mRecommended community packages\033[0m (enhances Pi with LSP + MCP capabilities):"
 OLD_IFS=$IFS
 IFS='
 '
-for entry in $OPTIN_PACKAGES; do
+for entry in $RECOMMENDED_PACKAGES; do
 	IFS=$OLD_IFS
 	[ -z "$entry" ] && continue
-	spec=${entry%%|*}
-	reason=${entry#*|}
+	spec=$(entry_spec "$entry")
+	reason=$(entry_reason "$entry")
+	if ask_yes_no "Install ${spec#npm:}?" "$reason"; then
+		install_pi_pkg "$spec"
+	else
+		info "Skipped: $spec"
+	fi
+	IFS='
+'
+done
+IFS=$OLD_IFS
+
+# Opt-in pix extensions — each carries a setup cost or sensitive capability.
+printf '\n'
+info "\033[1mOptional Pix extensions\033[0m (need extra setup or grant sensitive capabilities):"
+OLD_IFS=$IFS
+IFS='
+'
+for entry in $OPTIN_PIX_PACKAGES; do
+	IFS=$OLD_IFS
+	[ -z "$entry" ] && continue
+	spec=$(entry_spec "$entry")
+	reason=$(entry_reason "$entry")
 	if ask_yes_no "Install ${spec#npm:@xynogen/}?" "$reason"; then
+		install_pi_pkg "$spec"
+	else
+		info "Skipped: $spec"
+	fi
+	IFS='
+'
+done
+IFS=$OLD_IFS
+
+# Opt-in community extensions — third-party packages.
+printf '\n'
+info "\033[1mOptional community extensions\033[0m (third-party packages, not part of pix):"
+OLD_IFS=$IFS
+IFS='
+'
+for entry in $OPTIN_COMMUNITY_PACKAGES; do
+	IFS=$OLD_IFS
+	[ -z "$entry" ] && continue
+	spec=$(entry_spec "$entry")
+	reason=$(entry_reason "$entry")
+	if ask_yes_no "Install ${spec#npm:}?" "$reason"; then
 		install_pi_pkg "$spec"
 	else
 		info "Skipped: $spec"
