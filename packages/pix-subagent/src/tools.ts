@@ -127,6 +127,46 @@ export function formatSpeed(outputTokens: number, durationMs: number): string {
 	return `${Math.round(outputTokens / (durationMs / 1000))} t/s`;
 }
 
+// ── Activity description (shared with ui/widget.ts) ──────────────────────────
+
+export const TOOL_DISPLAY: Record<string, string> = {
+	read: "reading",
+	bash: "running command",
+	edit: "editing",
+	write: "writing",
+	grep: "searching",
+	find: "finding files",
+	ls: "listing",
+};
+
+/**
+ * Live tail of agent output: latest non-empty line, tail-anchored to `len`
+ * chars (keeps the moving edge, not the stale first line).
+ */
+function truncateLine(text: string, len = 16): string {
+	const lines = text.split("\n").filter((l) => l.trim());
+	const line = lines.length ? (lines[lines.length - 1] ?? "").trim() : "";
+	if (line.length <= len) return line;
+	return `\u2026${line.slice(-len)}`;
+}
+
+export function describeActivity(activeTools: Map<string, string>, responseText?: string): string {
+	if (activeTools.size > 0) {
+		const groups = new Map<string, number>();
+		for (const toolName of activeTools.values()) {
+			const action = TOOL_DISPLAY[toolName] ?? toolName;
+			groups.set(action, (groups.get(action) ?? 0) + 1);
+		}
+		const parts: string[] = [];
+		for (const [action, count] of groups) {
+			parts.push(count > 1 ? `${action} ${count}\u00d7` : action);
+		}
+		return `${parts.join(", ")}\u2026`;
+	}
+	if (responseText?.trim()) return truncateLine(responseText);
+	return "thinking\u2026";
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function textResult(msg: string, details?: AgentDetails) {
@@ -197,7 +237,10 @@ If the target is already known, use a direct tool — \`read\` for a known path,
 - Always include a short (3-5 word) \`description\` (shown in UI).
 - Launch independent agents concurrently: send multiple \`agent\` tool calls in one message.
 - The agent's result is not visible to the user — summarize it in a text message. Trust but verify: check the actual changes before reporting done.
-- Agents always run in background — the parent is free to continue working while the agent executes.
+- Agents run in **foreground** by default (blocking — waits and returns the result inline). Set \`background: true\` for non-blocking execution.
+- **Foreground** (default): the tool blocks until the agent finishes and returns its result directly. Use when you need the result before proceeding (e.g. Plan, Explore before editing, Mentor review).
+- **Background** (\`background: true\`): the tool returns immediately. The system automatically delivers the result as a follow-up notification when the agent finishes. Use for independent parallel tasks. Do NOT poll or sleep-wait — just continue working.
+- \`agent_result\` is only needed to re-read a past result or get verbose conversation history — never to wait.
 - \`resume\` with an agent ID to continue a prior agent's work; \`agent_steer\` to redirect a running background agent or force-stop it (action: 'stop').
 - Pick the model yourself via \`model:\` (provider/id or fuzzy e.g. "haiku"). For mechanical/read-only work prefer a cheap tier; for hard reasoning match or exceed the parent. Type sets the tool belt + persona only — never the model.
 - \`thinking\`: off|minimal|low|medium|high|xhigh.
@@ -259,15 +302,23 @@ export function createAgentTool(
 					description: "Agent ID to resume from. Continues previous context.",
 				}),
 			),
+			background: Type.Optional(
+				Type.Boolean({
+					description:
+						"Run in background (non-blocking). Default false (foreground — blocks until done). Set true for independent parallel tasks.",
+				}),
+			),
 		}),
 
 		renderCall(args, theme) {
 			const typeName = resolveTypeName(args);
 			const displayName = typeName ? getConfig(typeName).displayName : "Agent";
 			const desc = args.description ?? "";
+			const modelStr = args.model ? ` ${theme.fg("muted", `[${args.model}]`)}` : "";
 			return new Text(
 				"▸ " +
 					theme.fg("toolTitle", theme.bold(displayName)) +
+					modelStr +
 					(desc ? `  ${theme.fg("muted", desc as string)}` : ""),
 				0,
 				0,
@@ -283,16 +334,39 @@ export function createAgentTool(
 
 			const stats = buildStats(details, theme);
 
-			// Streaming / running — live state shown by the ● Agents widget, so the
-			// inline transcript stays empty to avoid stacking one card per agent.
+			// Streaming / running — show a compact live status line so the model
+			// and activity are visible inline in the transcript (the ● Agents
+			// widget carries full detail above the editor).
 			if (isPartial || details.status === "running") {
-				return new Text("", 0, 0);
+				const frame =
+					details.spinnerFrame != null
+						? (SPINNER[details.spinnerFrame % SPINNER.length] ?? "⠋")
+						: "⠋";
+				const modelLabel = details.modelName
+					? ` ${theme.fg("muted", `[${details.modelName}]`)}`
+					: "";
+
+				const parts: string[] = [];
+				if (details.turnCount != null && details.turnCount > 0)
+					parts.push(formatTurns(details.turnCount, details.maxTurns));
+				if (details.toolUses > 0) parts.push(formatToolUses(details.toolUses));
+				if (details.tokens) parts.push(details.tokens);
+				if (details.durationMs > 0) parts.push(formatMs(details.durationMs));
+				if (details.activity) parts.push(details.activity);
+				const statsText =
+					parts.length > 0 ? ` ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}` : "";
+
+				const line =
+					`  ${theme.fg("accent", frame)} ${theme.fg("toolTitle", theme.bold(details.displayName))}${modelLabel}` +
+					` ${theme.fg("dim", "·")} ${theme.fg("muted", details.description)}${statsText}`;
+				return new Text(line, 0, 0);
 			}
 
 			// Background launched
 			if (details.status === "background") {
+				const modelTag = details.modelName ? ` ${theme.fg("muted", `[${details.modelName}]`)}` : "";
 				return new Text(
-					theme.fg("dim", `  ⎿  Running in background (ID: ${details.agentId})`),
+					theme.fg("dim", `  ⎿  Launched${modelTag} — result auto-delivered on completion`),
 					0,
 					0,
 				);
@@ -351,7 +425,7 @@ export function createAgentTool(
 			return new Text(line, 0, 0);
 		},
 
-		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			reloadCustomAgents();
 
 			// Resolve agent type — accept the new `type` key, with the legacy
@@ -492,47 +566,156 @@ export function createAgentTool(
 				allowedToolNames = valid.length > 0 ? valid : undefined;
 			}
 
-			// Always background — spawn and return immediately
-			const { state: bgState, callbacks: bgCallbacks } = createActivityTracker(
+			const isBackground = (params.background as boolean | undefined) === true;
+
+			if (isBackground) {
+				// ── Background mode: spawn and return immediately ──────────
+				const { state: bgState, callbacks: bgCallbacks } = createActivityTracker(
+					effectiveMaxTurns,
+					() => {
+						agentActivity.set(bgId, bgState);
+					},
+				);
+
+				let bgId: string;
+				try {
+					bgId = manager.spawn(pi, ctx, subagentType, params.prompt as string, {
+						description: params.description as string,
+						model,
+						maxTurns: effectiveMaxTurns,
+						isolated,
+						inheritContext,
+						thinkingLevel: thinking,
+						isBackground: true,
+						invocation: agentInvocation,
+						// Intentionally no `signal` here: the tool-call signal is aborted
+						// when the parent turn ends, which would kill the background agent
+						// prematurely — bg agents are meant to outlive the spawning turn.
+						allowedToolNames,
+						...bgCallbacks,
+					});
+				} catch (err) {
+					return textResult(err instanceof Error ? err.message : String(err));
+				}
+
+				agentActivity.set(bgId, bgState);
+
+				return textResult(
+					`Agent launched (ID: ${bgId}). Its result will be delivered automatically when it finishes — do NOT poll or sleep-wait. Continue with other work or respond to the user.`,
+					{
+						...detailBase,
+						toolUses: 0,
+						tokens: "",
+						durationMs: 0,
+						status: "background",
+						agentId: bgId,
+					},
+				);
+			}
+
+			// ── Foreground mode (default): await inline with streaming progress ──
+			let fgSpinnerFrame = 0;
+			const fgStartedAt = Date.now();
+			const fgUpdateInterval = onUpdate
+				? setInterval(() => {
+						fgSpinnerFrame++;
+						const act = agentActivity.get(fgId);
+						const activity = act
+							? describeActivity(act.activeTools, act.responseText)
+							: "thinking…";
+						const tokens = act ? getLifetimeTotal(act.lifetimeUsage) : 0;
+						onUpdate({
+							content: [{ type: "text" as const, text: "" }],
+							details: {
+								...detailBase,
+								toolUses: act?.toolUses ?? 0,
+								tokens: tokens > 0 ? formatTokens(tokens) : "",
+								durationMs: Date.now() - fgStartedAt,
+								status: "running" as const,
+								activity,
+								spinnerFrame: fgSpinnerFrame,
+								turnCount: act?.turnCount,
+								maxTurns: act?.maxTurns,
+							} satisfies AgentDetails,
+						});
+					}, 80)
+				: undefined;
+
+			const { state: fgState, callbacks: fgCallbacks } = createActivityTracker(
 				effectiveMaxTurns,
 				() => {
-					agentActivity.set(id, bgState);
+					agentActivity.set(fgId, fgState);
 				},
 			);
 
-			let id: string;
+			let fgId: string;
 			try {
-				id = manager.spawn(pi, ctx, subagentType, params.prompt as string, {
+				fgId = manager.spawn(pi, ctx, subagentType, params.prompt as string, {
 					description: params.description as string,
 					model,
 					maxTurns: effectiveMaxTurns,
 					isolated,
 					inheritContext,
 					thinkingLevel: thinking,
-					isBackground: true,
+					isBackground: true, // still uses background spawn for concurrency
 					invocation: agentInvocation,
-					// Intentionally no `signal` here: the tool-call signal is aborted
-					// when the parent turn ends, which would kill the background agent
-					// prematurely — bg agents are meant to outlive the spawning turn.
+					signal, // foreground: parent abort kills the agent
 					allowedToolNames,
-					...bgCallbacks,
+					...fgCallbacks,
 				});
 			} catch (err) {
+				if (fgUpdateInterval) clearInterval(fgUpdateInterval);
 				return textResult(err instanceof Error ? err.message : String(err));
 			}
 
-			agentActivity.set(id, bgState);
+			agentActivity.set(fgId, fgState);
+
+			// Emit initial partial so renderResult shows the live line immediately
+			if (onUpdate) {
+				onUpdate({
+					content: [{ type: "text" as const, text: "" }],
+					details: {
+						...detailBase,
+						toolUses: 0,
+						tokens: "",
+						durationMs: 0,
+						status: "running" as const,
+						activity: "starting…",
+						spinnerFrame: 0,
+						turnCount: 0,
+						maxTurns: effectiveMaxTurns,
+					} satisfies AgentDetails,
+				});
+			}
+
+			// Await the agent's promise — this blocks the tool call until the agent finishes
+			const record = manager.getRecord(fgId);
+			if (record?.promise) {
+				await record.promise;
+			}
+
+			if (fgUpdateInterval) clearInterval(fgUpdateInterval);
+
+			// Suppress the completion notification — result is returned inline
+			const finalRecord = manager.getRecord(fgId);
+			if (finalRecord) finalRecord.resultConsumed = true;
+
+			agentActivity.delete(fgId);
+
+			const resultText = finalRecord?.result?.trim() || finalRecord?.error?.trim() || "No output.";
 
 			return textResult(
-				`Running in background (ID: ${id}). Use agent_result to check progress, agent_steer to redirect, or agent_steer with action 'stop' to force-stop.`,
-				{
-					...detailBase,
-					toolUses: 0,
-					tokens: "",
-					durationMs: 0,
-					status: "background",
-					agentId: id,
-				},
+				resultText,
+				buildDetails(
+					detailBase,
+					finalRecord ?? {
+						toolUses: 0,
+						startedAt: Date.now(),
+						status: "error",
+						lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
+					},
+					fgState,
+				),
 			);
 		},
 	});
@@ -560,7 +743,7 @@ export function createAgentResultTool(
 		name: SUBAGENT_TOOL_NAMES.GET_RESULT,
 		label: "Agent Result",
 		description:
-			"Fetch the latest output or full result of a background agent by ID. Call this to retrieve what a background agent produced. Sets resultConsumed so the completion notification is suppressed.",
+			"Fetch the latest output or full result of a background agent by ID. Call this to retrieve what a background agent produced. Sets resultConsumed so the completion notification is suppressed.\n\nNOTE: You do NOT need to call this to wait for an agent. Results are delivered automatically when agents finish. Only use this to re-read a previous result or get verbose conversation history.",
 		parameters: Type.Object({
 			agent_id: Type.String({
 				description: "The agent ID returned by the agent tool.",

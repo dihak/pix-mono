@@ -14,6 +14,7 @@ import type { AgentManager } from "../agent-manager.ts";
 import { getConfig } from "../agent-types.ts";
 import type { AgentActivity, AgentDetails, Theme } from "../tools.ts";
 import {
+	describeActivity,
 	formatMs,
 	formatSpeed,
 	formatTokens,
@@ -25,23 +26,21 @@ import type { AgentInvocation, SubagentType } from "../types.ts";
 import { getLifetimeTotal, getSessionContextPercent, type SessionLike } from "../usage.ts";
 
 export type { AgentActivity, AgentDetails, Theme };
-export { formatMs, formatSpeed, formatTokens, formatToolUses, formatTurns, SPINNER };
+export {
+	describeActivity,
+	formatMs,
+	formatSpeed,
+	formatTokens,
+	formatToolUses,
+	formatTurns,
+	SPINNER,
+};
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
 const MAX_WIDGET_LINES = 12;
 
 export const ERROR_STATUSES = new Set(["error", "aborted", "steered", "stopped"]);
-
-const TOOL_DISPLAY: Record<string, string> = {
-	read: "reading",
-	bash: "running command",
-	edit: "editing",
-	write: "writing",
-	grep: "searching",
-	find: "finding files",
-	ls: "listing",
-};
 
 // ── UICtx type ────────────────────────────────────────────────────────────────
 
@@ -98,34 +97,7 @@ export function buildInvocationTags(invocation: AgentInvocation | undefined): {
 	return { modelName: invocation.modelName, tags };
 }
 
-/**
- * Live tail of agent output: latest non-empty line, tail-anchored to `len`
- * chars (keeps the moving edge, not the stale first line). Leading … marks
- * the clip. e.g. "…ting batch 6".
- */
-function truncateLine(text: string, len = 16): string {
-	const lines = text.split("\n").filter((l) => l.trim());
-	const line = lines.length ? (lines[lines.length - 1] ?? "").trim() : "";
-	if (line.length <= len) return line;
-	return `…${line.slice(-len)}`;
-}
-
-export function describeActivity(activeTools: Map<string, string>, responseText?: string): string {
-	if (activeTools.size > 0) {
-		const groups = new Map<string, number>();
-		for (const toolName of activeTools.values()) {
-			const action = TOOL_DISPLAY[toolName] ?? toolName;
-			groups.set(action, (groups.get(action) ?? 0) + 1);
-		}
-		const parts: string[] = [];
-		for (const [action, count] of groups) {
-			parts.push(count > 1 ? `${action} ${count}×` : action);
-		}
-		return `${parts.join(", ")}…`;
-	}
-	if (responseText?.trim()) return truncateLine(responseText);
-	return "thinking…";
-}
+// describeActivity imported from ../tools.ts
 
 // ── AgentWidget ───────────────────────────────────────────────────────────────
 
