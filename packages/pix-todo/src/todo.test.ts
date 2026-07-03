@@ -63,8 +63,13 @@ function makeHost(
 			if (!handlers[ev]) handlers[ev] = [];
 			handlers[ev].push(fn);
 		},
-		async emit(ev: string, event?: unknown, ctx?: unknown) {
-			for (const fn of handlers[ev] ?? []) await fn(event, ctx);
+		async emit(ev: string, event?: unknown, ctx?: unknown): Promise<unknown> {
+			let last: unknown;
+			for (const fn of handlers[ev] ?? []) {
+				const result = await fn(event, ctx);
+				if (result !== undefined) last = result;
+			}
+			return last;
 		},
 	} as never;
 
@@ -86,8 +91,13 @@ function makeHost(
 			return capturedRender;
 		},
 		appendCalls,
-		async emit(ev: string, event?: unknown, ctx?: unknown) {
-			for (const fn of handlers[ev] ?? []) await fn(event, ctx);
+		async emit(ev: string, event?: unknown, ctx?: unknown): Promise<unknown> {
+			let last: unknown;
+			for (const fn of handlers[ev] ?? []) {
+				const result = await fn(event, ctx);
+				if (result !== undefined) last = result;
+			}
+			return last;
 		},
 	};
 }
@@ -564,6 +574,133 @@ describe("restore", () => {
 		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "list" });
 		expect(text(result)).toBe("(no todos)");
+	});
+});
+
+// ─── Skip-guard ─────────────────────────────────────────────────────────────────────
+
+describe("skip-guard on marking done", () => {
+	test("warns when marking a later item done with earlier pending items", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "a\nb\nc\nd" });
+		// Mark items 1 and 4 done, leaving 2 and 3 pending
+		await run(host.execute, { action: "update", id: 1, status: "done" });
+		const result = await run(host.execute, { action: "update", id: 4, status: "done" });
+		const out = text(result);
+		expect(out).toContain("\u26a0 Earlier items still incomplete");
+		expect(out).toContain("#2 (b)");
+		expect(out).toContain("#3 (c)");
+		expect(out).toContain("Mark each done or blocked before proceeding");
+	});
+
+	test("no warning when all earlier items are done", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "a\nb\nc" });
+		await run(host.execute, { action: "update", id: 1, status: "done" });
+		await run(host.execute, { action: "update", id: 2, status: "done" });
+		const result = await run(host.execute, { action: "update", id: 3, status: "done" });
+		expect(text(result)).not.toContain("\u26a0");
+	});
+
+	test("no warning when marking the first item done", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "a\nb" });
+		const result = await run(host.execute, { action: "update", id: 1, status: "done" });
+		expect(text(result)).not.toContain("\u26a0");
+	});
+
+	test("no warning when earlier items are blocked (only pending/in_progress trigger)", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "a\nb\nc" });
+		await run(host.execute, { action: "update", id: 1, status: "blocked" });
+		await run(host.execute, { action: "update", id: 2, status: "done" });
+		const result = await run(host.execute, { action: "update", id: 3, status: "done" });
+		// blocked is an explicit decision, not incomplete — no warning
+		expect(text(result)).not.toContain("\u26a0");
+	});
+
+	test("warns about in_progress items too (not just pending)", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "a\nb\nc" });
+		await run(host.execute, { action: "update", id: 1, status: "in_progress" });
+		// Mark item 3 done while item 1 is still in_progress
+		const result = await run(host.execute, { action: "update", id: 3, status: "done" });
+		const out = text(result);
+		expect(out).toContain("\u26a0");
+		expect(out).toContain("#1 (a)");
+	});
+
+	test("no skip-guard on in_progress (only on done)", async () => {
+		// in_progress uses cascade-close instead, which is different behavior
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "a\nb\nc" });
+		const result = await run(host.execute, { action: "update", id: 3, status: "in_progress" });
+		// Should cascade-close, not warn
+		expect(text(result)).not.toContain("\u26a0");
+		expect(text(result)).toContain("\u25cf 1. a"); // cascade-closed to done
+		expect(text(result)).toContain("\u25cf 2. b");
+	});
+});
+
+// ─── Turn-based reminder ────────────────────────────────────────────────────────────
+
+describe("turn-based todo reminder", () => {
+	test("injects reminder every 10 turns when incomplete items exist", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "a\nb" });
+
+		// Simulate 10 turns — only the 10th should inject
+		for (let i = 1; i <= 9; i++) {
+			const result = await host.emit("before_agent_start", { systemPrompt: "base" });
+			// before_agent_start returns undefined when no injection
+			expect(result).toBeUndefined();
+		}
+		// 10th turn should inject
+		const result = await host.emit("before_agent_start", { systemPrompt: "base" });
+		expect(result).toBeDefined();
+		const prompt = (result as { systemPrompt: string }).systemPrompt;
+		expect(prompt).toContain("base");
+		expect(prompt).toContain("Todo reminder");
+		expect(prompt).toContain("1. a");
+		expect(prompt).toContain("2. b");
+	});
+
+	test("does not inject when no todos exist", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+
+		for (let i = 1; i <= 10; i++) {
+			const result = await host.emit("before_agent_start", { systemPrompt: "base" });
+			expect(result).toBeUndefined();
+		}
+	});
+
+	test("does not inject when all items are done", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "a" });
+		await run(host.execute, { action: "update", id: 1, status: "done" });
+
+		for (let i = 1; i <= 10; i++) {
+			const result = await host.emit("before_agent_start", { systemPrompt: "base" });
+			expect(result).toBeUndefined();
+		}
 	});
 });
 

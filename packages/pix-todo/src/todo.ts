@@ -123,6 +123,22 @@ export function renderTodoLines(items: TodoItem[], theme: TodoTheme): string {
 	return `${head}\n${lines.join("\n")}`;
 }
 
+/**
+ * Skip-guard: when marking an item done, check for earlier items still
+ * pending or in_progress. Returns a warning string or "" if none skipped.
+ */
+function buildSkipWarning(items: TodoItem[], targetId: number): string {
+	const skipped = items.filter(
+		(o) => o.id < targetId && (o.status === "pending" || o.status === "in_progress"),
+	);
+	if (skipped.length === 0) return "";
+	const ids = skipped.map((s) => `#${s.id} (${s.text})`).join(", ");
+	return (
+		`\n\n\u26a0 Earlier items still incomplete: ${ids}. ` +
+		"Mark each done or blocked before proceeding."
+	);
+}
+
 const parseItems = (raw: string): string[] =>
 	raw
 		.split("\n")
@@ -158,6 +174,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 			promptGuidelines: [
 				"When you start executing a multi-step plan in BUILD mode, seed the todo list with `todo(action:'set', items: <plan Implementation Phases>)`.",
 				"Mark each item in_progress before working it via `todo(action:'update', id, status)`; opening one auto-closes every earlier item, so just open the next and skipped steps mark done themselves.",
+				"When marking an item done, the tool checks for earlier incomplete items and warns you — resolve each skipped item (mark done or blocked) before moving on.",
 				"Call `todo(action:'list')` to recover your place after long runs or context compaction.",
 			],
 			parameters: Type.Object({
@@ -255,6 +272,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 					case "update": {
 						const t = todos.find((x) => x.id === params.id);
 						if (!t) return fail(`No todo with id ${params.id}.`);
+						let skipWarning = "";
 						if (params.status) {
 							// Sequential-progress invariant: opening a task means everything
 							// before it is finished. Cascade-close every earlier pending or
@@ -267,11 +285,14 @@ export default function registerTodo(pi: ExtensionAPI): void {
 										(other.status === "pending" || other.status === "in_progress")
 									)
 										other.status = "done";
+
+							if (params.status === "done") skipWarning = buildSkipWarning(todos, t.id);
+
 							t.status = params.status;
 						}
 						if (params.text) t.text = params.text;
 						persistTodos();
-						return ok(todoSummary());
+						return ok(todoSummary() + skipWarning);
 					}
 
 					case "clear":
@@ -284,6 +305,32 @@ export default function registerTodo(pi: ExtensionAPI): void {
 						return fail(`Unknown action: ${String(params.action)}`);
 				}
 			},
+		});
+
+		// ── Turn-based reminder ─────────────────────────────────────────────
+		// Every TODO_REMINDER_INTERVAL turns, inject the current todo summary
+		// into the system prompt so the model stays aware of pending work and
+		// can't hand-wave or ignore incomplete items.
+		const TODO_REMINDER_INTERVAL = 10;
+		let todoTurnCount = 0;
+
+		pi.on("before_agent_start", async (event) => {
+			todoTurnCount++;
+			// Only inject when there are active (non-empty) todos
+			if (todos.length === 0) return;
+			// Check if any items are still incomplete
+			const hasIncomplete = todos.some((t) => t.status === "pending" || t.status === "in_progress");
+			if (!hasIncomplete) return;
+			// Fire on every Nth turn
+			if (todoTurnCount % TODO_REMINDER_INTERVAL !== 0) return;
+
+			const reminder =
+				"Todo reminder — incomplete items remain:\n" +
+				todoSummary() +
+				"\nCall `todo(action:'list')` to review, then continue working through pending items.";
+
+			const existing = event.systemPrompt ?? "";
+			return { systemPrompt: existing ? `${existing}\n\n${reminder}` : reminder };
 		});
 
 		// Restore the checklist from session entries so it survives restart.
