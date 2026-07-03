@@ -39,7 +39,7 @@
 	},
 	"dependencies": {
 		"@xynogen/pix-data": "^0.3.1",
-		"@xynogen/pix-pretty": "^1.7.15",
+		"@xynogen/pix-pretty": "^1.7.16",
 		"@xynogen/pix-welcome": "^0.1.14",
 		"@xynogen/pix-footer": "^0.1.14",
 		"@xynogen/pix-diagnostics": "^0.1.6",
@@ -57,7 +57,7 @@
 		"@xynogen/pix-grep": "^0.1.12",
 		"@xynogen/pix-ls": "^0.1.12",
 		"@xynogen/pix-bash": "^0.1.11",
-		"@xynogen/pix-todo": "^0.1.11",
+		"@xynogen/pix-todo": "^0.1.12",
 		"@xynogen/pix-ask": "^0.2.7",
 		"@xynogen/pix-optimizer": "^1.1.16",
 		"@xynogen/pix-gate": "^0.1.15",
