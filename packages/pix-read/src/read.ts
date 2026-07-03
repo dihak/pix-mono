@@ -50,13 +50,7 @@ export function registerReadTool(
 			upd: AgentToolUpdateCallback<unknown> | undefined,
 			toolCtx: ExtensionContext,
 		) {
-			const result = (await origRead.execute(
-				tid,
-				params,
-				sig,
-				upd,
-				toolCtx,
-			)) as ToolResultLike;
+			const result = (await origRead.execute(tid, params, sig, upd, toolCtx)) as ToolResultLike;
 
 			const fp = params.path ?? "";
 			const offset = params.offset ?? 1;
@@ -88,19 +82,11 @@ export function registerReadTool(
 			return result;
 		},
 
-		renderCall(
-			args: ReadParams,
-			theme: ThemeLike,
-			renderCtx: RenderContextLike,
-		) {
+		renderCall(args: ReadParams, theme: ThemeLike, renderCtx: RenderContextLike) {
 			const fp = args.path ?? "";
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
-			const offset = args.offset
-				? ` ${theme.fg("muted", `from line ${args.offset}`)}`
-				: "";
-			const limit = args.limit
-				? ` ${theme.fg("muted", `(${args.limit} lines)`)}`
-				: "";
+			const offset = args.offset ? ` ${theme.fg("muted", `from line ${args.offset}`)}` : "";
+			const limit = args.limit ? ` ${theme.fg("muted", `(${args.limit} lines)`)}` : "";
 			text.setText(
 				fillToolBackground(
 					`${theme.fg("toolTitle", theme.bold("read"))} ${theme.fg("accent", sp(fp))}${offset}${limit}`,
@@ -128,9 +114,7 @@ export function registerReadTool(
 			const cs = renderCtx.state as CollapseState;
 			if (tickCollapse("read", cs, renderCtx.invalidate)) {
 				if (d?._type === "readFile") {
-					text.setText(
-						fillToolBackground(`  ${FG_DIM}${d.lineCount} lines${RST}`),
-					);
+					text.setText(fillToolBackground(`  ${FG_DIM}${d.lineCount} lines${RST}`));
 				} else if (d?._type === "readImage") {
 					const byteSize = Math.ceil(((d.data as string).length * 3) / 4);
 					text.setText(
@@ -161,39 +145,24 @@ export function registerReadTool(
 					const info = `${FG_DIM}${d.lineCount} lines${RST}`;
 					renderCtx.state._rt = fillToolBackground(`  ${info}`);
 
-					const maxShow = renderCtx.expanded
-						? (d.lineCount as number)
-						: MAX_PREVIEW_LINES;
-					renderFileContent(
-						d.content as string,
-						d.filePath as string,
-						d.offset as number,
-						maxShow,
-					)
+					const maxShow = renderCtx.expanded ? (d.lineCount as number) : MAX_PREVIEW_LINES;
+					renderFileContent(d.content as string, d.filePath as string, d.offset as number, maxShow)
 						.then((rendered: string) => {
 							if (renderCtx.state._rk !== key) return;
-							renderCtx.state._rt = fillToolBackground(
-								`  ${info}\n${rendered}`,
-							);
+							renderCtx.state._rt = fillToolBackground(`  ${info}\n${rendered}`);
 							renderCtx.invalidate();
 						})
 						.catch(() => {});
 				}
 				text.setText(
-					renderCtx.state._rt ??
-						fillToolBackground(`  ${FG_DIM}${d.lineCount} lines${RST}`),
+					renderCtx.state._rt ?? fillToolBackground(`  ${FG_DIM}${d.lineCount} lines${RST}`),
 				);
 				return text;
 			}
 
 			const fallback = result.content?.[0];
-			const fallbackText =
-				fallback && isTextContent(fallback) ? fallback.text : "read";
-			text.setText(
-				fillToolBackground(
-					`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`,
-				),
-			);
+			const fallbackText = fallback && isTextContent(fallback) ? fallback.text : "read";
+			text.setText(fillToolBackground(`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`));
 			return text;
 		},
 	});

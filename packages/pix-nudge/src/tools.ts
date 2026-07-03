@@ -24,10 +24,7 @@
  * the menu.
  */
 
-import {
-	type ExtensionAPI,
-	isToolCallEventType,
-} from "@earendil-works/pi-coding-agent";
+import { type ExtensionAPI, isToolCallEventType } from "@earendil-works/pi-coding-agent";
 
 /** In-bounds array access that satisfies noUncheckedIndexedAccess without casting. */
 function at<T>(arr: T[], i: number): T {
@@ -172,11 +169,7 @@ export function classifyCompound(command: string): Rule | undefined {
  * straight at it. When it's gated out, point at toolbox to enable it — never
  * imply a gated tool is callable now. Pure + exported for unit testing.
  */
-export function nudgeReason(
-	baseReason: string,
-	tool: string,
-	toolActive: boolean,
-): string {
+export function nudgeReason(baseReason: string, tool: string, toolActive: boolean): string {
 	const how = toolActive
 		? `Use \`${tool}\` instead — it's in the function definitions, call it directly.`
 		: `\`${tool}\` is prompt-hidden — enable it via toolbox(action:"enable", name:"${tool}") to make it known, then call it; bash is fine until then. (All tools are always callable via function definitions.)`;

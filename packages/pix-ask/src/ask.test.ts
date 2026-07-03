@@ -17,11 +17,7 @@ import {
 
 // ── Fixtures ──────────────────────────────────────────────────────────
 
-const opt = (
-	label: string,
-	description = "Test option",
-	preview?: string,
-): OptionData => ({
+const opt = (label: string, description = "Test option", preview?: string): OptionData => ({
 	label,
 	description,
 	...(preview ? { preview } : {}),
@@ -30,10 +26,7 @@ const opt = (
 const qSingle: QuestionData = {
 	question: "Which approach?",
 	header: "Approach",
-	options: [
-		opt("REST", "Traditional REST API"),
-		opt("GraphQL", "Query language for APIs"),
-	],
+	options: [opt("REST", "Traditional REST API"), opt("GraphQL", "Query language for APIs")],
 };
 
 const qMulti: QuestionData = {

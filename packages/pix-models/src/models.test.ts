@@ -16,8 +16,7 @@ describe("fmtCtx", () => {
 });
 
 describe("fmtCost", () => {
-	it("returns — for undefined entry", () =>
-		expect(fmtCost(undefined)).toBe("—"));
+	it("returns — for undefined entry", () => expect(fmtCost(undefined)).toBe("—"));
 	it("returns — when no cost field", () => expect(fmtCost({})).toBe("—"));
 	it("returns free when both 0", () => {
 		expect(fmtCost({ cost: { input: 0, output: 0 } })).toBe("free");
@@ -118,11 +117,6 @@ describe("sortModels", () => {
 			{ provider: "a", id: "m4", name: "Delta", score: 60, tier: 0 },
 		];
 		const sorted = sortModels(mixed);
-		expect(sorted.map((m) => m.name)).toEqual([
-			"Alpha",
-			"Delta",
-			"Beta",
-			"Gamma",
-		]);
+		expect(sorted.map((m) => m.name)).toEqual(["Alpha", "Delta", "Beta", "Gamma"]);
 	});
 });

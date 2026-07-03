@@ -19,8 +19,7 @@ import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-const MODEL_COMMAND_LINE =
-	'{ name: "model", description: "Select model (opens selector UI)" },';
+const MODEL_COMMAND_LINE = '{ name: "model", description: "Select model (opens selector UI)" },';
 
 /** Candidate slash-commands.js paths, most-specific first. */
 function candidatePaths(): string[] {
@@ -51,14 +50,7 @@ function candidatePaths(): string[] {
 	];
 	for (const root of globalRoots) {
 		paths.push(
-			join(
-				root,
-				"@earendil-works",
-				"pi-coding-agent",
-				"dist",
-				"core",
-				"slash-commands.js",
-			),
+			join(root, "@earendil-works", "pi-coding-agent", "dist", "core", "slash-commands.js"),
 		);
 	}
 
@@ -99,10 +91,7 @@ export function patchOutBuiltinModelCommand(): void {
 
 	if (!source.includes(MODEL_COMMAND_LINE)) return; // already patched
 
-	const patched = source.replace(
-		new RegExp(`[ \\t]*${escapeRegExp(MODEL_COMMAND_LINE)}\\n?`),
-		"",
-	);
+	const patched = source.replace(new RegExp(`[ \\t]*${escapeRegExp(MODEL_COMMAND_LINE)}\\n?`), "");
 	if (patched === source) return;
 
 	try {

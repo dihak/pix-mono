@@ -34,10 +34,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import type {
-	ExtensionAPI,
-	ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
 
 // ─── Theme shim (same pattern as footer.ts) ───────────────────────────────────
@@ -85,10 +82,7 @@ const PI_IGNORE_SECTION_HEADER = "# Pix Agent";
 async function checkPiVersion(pi: ExtensionAPI): Promise<CheckResult> {
 	try {
 		const localRes = await pi.exec("pi", ["--version"], { timeout: 2_000 });
-		const local = (localRes.stdout.trim() || localRes.stderr.trim()).replace(
-			/^v/,
-			"",
-		);
+		const local = (localRes.stdout.trim() || localRes.stderr.trim()).replace(/^v/, "");
 		return { label: "PI", status: "ok", detail: local || "installed" };
 	} catch {
 		return { label: "PI", status: "warn", detail: "version unavailable" };
@@ -110,17 +104,10 @@ function execOpts(cwd: string, timeout: number): { timeout?: number } {
 	return { cwd, timeout } as unknown as { timeout?: number };
 }
 
-async function checkPiIgnore(
-	pi: ExtensionAPI,
-	cwd: string,
-): Promise<CheckResult> {
+async function checkPiIgnore(pi: ExtensionAPI, cwd: string): Promise<CheckResult> {
 	try {
 		// Find repo root — avoids creating .gitignore in a subfolder
-		const rootRes = await pi.exec(
-			"git",
-			["rev-parse", "--show-toplevel"],
-			execOpts(cwd, 2_000),
-		);
+		const rootRes = await pi.exec("git", ["rev-parse", "--show-toplevel"], execOpts(cwd, 2_000));
 		if (exitCode(rootRes) !== 0) {
 			return { label: "Ignore", status: "ok", detail: "not git" };
 		}
@@ -131,14 +118,10 @@ async function checkPiIgnore(
 		// (CRLF, trailing whitespace, grep exit-code 2, or grep/node off PATH all
 		// silently degraded to "missing", so the panel rewrote every session).
 		const gitignorePath = `${repoRoot}/.gitignore`;
-		const existing = existsSync(gitignorePath)
-			? readFileSync(gitignorePath, "utf8")
-			: "";
+		const existing = existsSync(gitignorePath) ? readFileSync(gitignorePath, "utf8") : "";
 
 		// Whitespace-tolerant whole-line match (handles CRLF + trailing spaces).
-		const presentLines = new Set(
-			existing.split(/\r?\n/).map((line) => line.trim()),
-		);
+		const presentLines = new Set(existing.split(/\r?\n/).map((line) => line.trim()));
 		const missing = PI_IGNORE_RULES.filter((rule) => !presentLines.has(rule));
 
 		if (missing.length === 0) {
@@ -147,9 +130,7 @@ async function checkPiIgnore(
 
 		// Rewrite .gitignore — strip any existing Pix Agent section, then append
 		// a clean block with all rules under a single header.
-		const stripped = existing
-			.replace(/(?:^|\n)# Pix Agent\n(?:[^\n]*\n)*/g, "\n")
-			.trimEnd();
+		const stripped = existing.replace(/(?:^|\n)# Pix Agent\n(?:[^\n]*\n)*/g, "\n").trimEnd();
 		const block = [PI_IGNORE_SECTION_HEADER, ...PI_IGNORE_RULES].join("\n");
 		const content = `${stripped ? `${stripped}\n\n` : ""}${block}\n`;
 		writeFileSync(gitignorePath, content, "utf8");
@@ -262,8 +243,7 @@ export function countSkillsFromDirs(extraDirs: string[] = []): number {
 
 export function summariseSkills(skills: SkillInfo[]): CheckResult {
 	const total = skills.length;
-	if (total === 0)
-		return { label: "Skills", status: "warn", detail: "none loaded" };
+	if (total === 0) return { label: "Skills", status: "warn", detail: "none loaded" };
 	const manual = skills.filter((s) => s.disableModelInvocation).length;
 	const detail =
 		manual === total
@@ -342,8 +322,7 @@ export const LABEL_WIDTH = 6; // visual chars for label column
 
 export function renderCheck(theme: Theme, c: CheckResult): string {
 	const icon = statusIcon(theme, c.status);
-	const labelColor =
-		c.status === "error" ? "error" : c.status === "warn" ? "warning" : "muted";
+	const labelColor = c.status === "error" ? "error" : c.status === "warn" ? "warning" : "muted";
 	const label = theme.fg(labelColor, c.label.padEnd(LABEL_WIDTH));
 	const detail = c.detail ? theme.fg("text", c.detail) : "";
 	return `${icon} ${label}  ${detail}`;
@@ -458,10 +437,7 @@ export default function (pi: ExtensionAPI) {
 		// next tick so dynamically registered tools are counted.
 		// Skills: scan dirs immediately — no need to wait for before_agent_start.
 		setTimeout(() => {
-			update(
-				3,
-				checkTools(pi as unknown as { getActiveTools?: () => ToolInfo[] }),
-			);
+			update(3, checkTools(pi as unknown as { getActiveTools?: () => ToolInfo[] }));
 			update(4, {
 				label: "Skills",
 				status: "ok",

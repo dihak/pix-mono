@@ -198,8 +198,7 @@ export function formatSkillSummary(text: string, theme: ThemeLike): string {
 const ParamsSchema = Type.Object({
 	name: Type.Optional(
 		Type.String({
-			description:
-				'Skill name, e.g. "commit", "debug". Omit to list all skills.',
+			description: 'Skill name, e.g. "commit", "debug". Omit to list all skills.',
 		}),
 	),
 	full: Type.Optional(
@@ -250,22 +249,16 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 					}
 				});
 
-				return ok(
-					`Available skills (${skills.length}):\n\n${lines.join("\n")}`,
-				);
+				return ok(`Available skills (${skills.length}):\n\n${lines.join("\n")}`);
 			}
 
 			// Resolve skill
 			const skills = discoverSkills();
-			const entry = skills.find(
-				(s) => s.name === name || s.name === name.replace(/\.md$/, ""),
-			);
+			const entry = skills.find((s) => s.name === name || s.name === name.replace(/\.md$/, ""));
 
 			if (!entry) {
 				const names = skills.map((s) => s.name).join(", ");
-				return fail(
-					`Skill "${name}" not found. Available: ${names || "(none)"}`,
-				);
+				return fail(`Skill "${name}" not found. Available: ${names || "(none)"}`);
 			}
 
 			try {
@@ -274,9 +267,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 				// full=false (default) → description only
 				if (!full) {
 					const desc = extractDescription(content);
-					return ok(
-						desc ? `${entry.name}: ${desc}` : `${entry.name}: (no description)`,
-					);
+					return ok(desc ? `${entry.name}: ${desc}` : `${entry.name}: (no description)`);
 				}
 
 				// full=true → interpolate !`cmd` directives (pix-gate-gated, no
@@ -286,9 +277,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 				return ok(expanded);
 			} catch (err) {
 				return fail(
-					`Failed to read skill "${name}": ${
-						err instanceof Error ? err.message : String(err)
-					}`,
+					`Failed to read skill "${name}": ${err instanceof Error ? err.message : String(err)}`,
 				);
 			}
 		},

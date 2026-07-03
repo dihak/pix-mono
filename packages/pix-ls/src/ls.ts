@@ -42,18 +42,10 @@ export function registerLsTool(
 			upd: AgentToolUpdateCallback<unknown> | undefined,
 			toolCtx: ExtensionContext,
 		) {
-			const result = (await origLs.execute(
-				tid,
-				params,
-				sig,
-				upd,
-				toolCtx,
-			)) as ToolResultLike;
+			const result = (await origLs.execute(tid, params, sig, upd, toolCtx)) as ToolResultLike;
 			const textContent = getTextContent(result);
 			const fp = params.path ?? cwd;
-			const entryCount = textContent
-				? textContent.trim().split("\n").filter(Boolean).length
-				: 0;
+			const entryCount = textContent ? textContent.trim().split("\n").filter(Boolean).length : 0;
 
 			setResultDetails(result, {
 				_type: "lsResult",
@@ -93,8 +85,7 @@ export function registerLsTool(
 			const cs = renderCtx.state as CollapseState;
 			if (tickCollapse("ls", cs, renderCtx.invalidate)) {
 				const d2 = result.details as Record<string, unknown> | undefined;
-				const summary =
-					d2?._type === "lsResult" ? `${d2.entryCount} entries` : "listed";
+				const summary = d2?._type === "lsResult" ? `${d2.entryCount} entries` : "listed";
 				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
 				return text;
 			}
@@ -108,9 +99,7 @@ export function registerLsTool(
 			}
 
 			const output = getTextContent(result) || "listed";
-			text.setText(
-				fillToolBackground(`  ${theme.fg("dim", output.slice(0, 120))}`),
-			);
+			text.setText(fillToolBackground(`  ${theme.fg("dim", output.slice(0, 120))}`));
 			return text;
 		},
 	});

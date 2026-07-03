@@ -1,47 +1,47 @@
 {
-	"name": "@xynogen/pix-update",
-	"version": "0.1.12",
-	"description": "Pi extension — /update self-update command",
-	"type": "module",
-	"main": "src/index.ts",
-	"scripts": {
-		"test": "bun test"
-	},
-	"files": [
-		"src",
-		"README.md",
-		"LICENSE"
-	],
-	"pi": {
-		"extensions": [
-			"src/extension.ts"
-		]
-	},
-	"keywords": [
-		"pi",
-		"pi-package",
-		"pi-extension",
-		"pix"
-	],
-	"author": "xynogen",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
-		"directory": "packages/pix-update"
-	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-update#readme",
-	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"dependencies": {
-		"@xynogen/pix-pretty": "^1.7.9"
-	},
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*",
-		"@earendil-works/pi-tui": "*"
-	}
+  "name": "@xynogen/pix-update",
+  "version": "0.1.13",
+  "description": "Pi extension — /update self-update command",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "bun test"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "src/extension.ts"
+    ]
+  },
+  "keywords": [
+    "pi",
+    "pi-package",
+    "pi-extension",
+    "pix"
+  ],
+  "author": "xynogen",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xynogen/pix-mono.git",
+    "directory": "packages/pix-update"
+  },
+  "homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-update#readme",
+  "bugs": {
+    "url": "https://github.com/xynogen/pix-mono/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@xynogen/pix-pretty": "^1.7.9"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  }
 }

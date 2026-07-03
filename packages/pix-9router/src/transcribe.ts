@@ -55,9 +55,7 @@ async function apiMultipart(
 	const key = auth();
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-	const s = signal
-		? AbortSignal.any([signal, controller.signal])
-		: controller.signal;
+	const s = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
 	try {
 		const fileData = await readFile(filePath);
@@ -119,9 +117,7 @@ export function parseTranscriptionResponse(raw: string): string {
 
 /** Resolve a possibly-relative `output_file` to an absolute path. */
 export function resolveOutputPath(outputFile: string): string {
-	return isAbsolute(outputFile)
-		? outputFile
-		: resolve(process.cwd(), outputFile);
+	return isAbsolute(outputFile) ? outputFile : resolve(process.cwd(), outputFile);
 }
 
 /**
@@ -132,9 +128,7 @@ export function resolveOutputPath(outputFile: string): string {
  * Returns a discriminated result so the caller can surface a precise reason to
  * the model without leaking OS internals.
  */
-export type PathValidation =
-	| { ok: true; path: string }
-	| { ok: false; reason: string };
+export type PathValidation = { ok: true; path: string } | { ok: false; reason: string };
 
 /** Block-list of absolute prefixes that should never receive transcription output. */
 function sensitivePrefixes(): string[] {
@@ -151,9 +145,7 @@ function sensitivePrefixes(): string[] {
 	];
 }
 
-export async function validateOutputPath(
-	absPath: string,
-): Promise<PathValidation> {
+export async function validateOutputPath(absPath: string): Promise<PathValidation> {
 	// 1. Null byte injection guard (defence in depth — Node already rejects, fail fast with clear msg)
 	if (absPath.includes("\0")) {
 		return { ok: false, reason: "path contains a null byte" };
@@ -240,10 +232,7 @@ export async function validateOutputPath(
 
 /** Write transcription text to disk, creating parent directories as needed.
  *  Performs pre-flight safety checks; throws on rejection. */
-export async function writeTranscriptionFile(
-	outputFile: string,
-	text: string,
-): Promise<string> {
+export async function writeTranscriptionFile(outputFile: string, text: string): Promise<string> {
 	const abs = resolveOutputPath(outputFile);
 	const validation = await validateOutputPath(abs);
 	if (!validation.ok) {
@@ -289,8 +278,7 @@ export async function buildTranscriptionResult(
 				details,
 			};
 		} catch (writeErr) {
-			const msg =
-				writeErr instanceof Error ? writeErr.message : String(writeErr);
+			const msg = writeErr instanceof Error ? writeErr.message : String(writeErr);
 			details.write_error = msg;
 			return {
 				content: [
@@ -348,8 +336,7 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 			),
 			language: Type.Optional(
 				Type.String({
-					description:
-						"ISO 639-1 language code (e.g. 'en', 'es', 'fr') for better accuracy",
+					description: "ISO 639-1 language code (e.g. 'en', 'es', 'fr') for better accuracy",
 				}),
 			),
 		}),
@@ -361,12 +348,7 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 			let apiMsg = "";
 
 			const run = async (source: "api" | "curl-fallback", raw: string) =>
-				buildTranscriptionResult(
-					parseTranscriptionResponse(raw),
-					model,
-					source,
-					outputFile,
-				);
+				buildTranscriptionResult(parseTranscriptionResponse(raw), model, source, outputFile);
 
 			try {
 				onUpdate?.({
@@ -418,8 +400,7 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 				const raw = await curl(curlArgs);
 				return await run("curl-fallback", raw);
 			} catch (curlErr: unknown) {
-				const curlMsg =
-					curlErr instanceof Error ? curlErr.message : String(curlErr);
+				const curlMsg = curlErr instanceof Error ? curlErr.message : String(curlErr);
 				return {
 					content: [
 						{

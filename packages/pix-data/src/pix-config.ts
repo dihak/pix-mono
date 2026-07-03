@@ -208,10 +208,7 @@ function mergeDiff(raw: unknown): DiffColors {
 	if (!isObj(raw)) return { ...DEFAULT_DIFF };
 	return {
 		splitMinWidth: num(raw.splitMinWidth, DEFAULT_DIFF.splitMinWidth),
-		splitMinCodeWidth: num(
-			raw.splitMinCodeWidth,
-			DEFAULT_DIFF.splitMinCodeWidth,
-		),
+		splitMinCodeWidth: num(raw.splitMinCodeWidth, DEFAULT_DIFF.splitMinCodeWidth),
 		bgAdd: str(raw.bgAdd, DEFAULT_DIFF.bgAdd),
 		bgDel: str(raw.bgDel, DEFAULT_DIFF.bgDel),
 		bgAddHighlight: str(raw.bgAddHighlight, DEFAULT_DIFF.bgAddHighlight),
@@ -230,10 +227,7 @@ function mergePretty(raw: unknown): PrettyConfig {
 		icons: str(raw.icons, DEFAULT_PRETTY.icons),
 		maxPreviewLines: num(raw.maxPreviewLines, DEFAULT_PRETTY.maxPreviewLines),
 		maxRenderLines: num(raw.maxRenderLines, DEFAULT_PRETTY.maxRenderLines),
-		maxHighlightChars: num(
-			raw.maxHighlightChars,
-			DEFAULT_PRETTY.maxHighlightChars,
-		),
+		maxHighlightChars: num(raw.maxHighlightChars, DEFAULT_PRETTY.maxHighlightChars),
 		cacheLimit: num(raw.cacheLimit, DEFAULT_PRETTY.cacheLimit),
 		diff: mergeDiff(raw.diff),
 	};

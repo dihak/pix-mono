@@ -16,19 +16,13 @@ describe("truncate", () => {
 	});
 
 	test("exact-limit line count is not truncated", () => {
-		const text = Array.from(
-			{ length: MAX_OUTPUT_LINES },
-			(_, i) => `line ${i}`,
-		).join("\n");
+		const text = Array.from({ length: MAX_OUTPUT_LINES }, (_, i) => `line ${i}`).join("\n");
 		const result = truncate(text);
 		expect(result.truncated).toBe(false);
 	});
 
 	test("one-over line limit truncates", () => {
-		const text = Array.from(
-			{ length: MAX_OUTPUT_LINES + 1 },
-			(_, i) => `line ${i}`,
-		).join("\n");
+		const text = Array.from({ length: MAX_OUTPUT_LINES + 1 }, (_, i) => `line ${i}`).join("\n");
 		const result = truncate(text);
 		expect(result.truncated).toBe(true);
 		expect(result.text.split("\n")).toHaveLength(MAX_OUTPUT_LINES);
@@ -40,9 +34,7 @@ describe("truncate", () => {
 		const text = [bigLine, bigLine, bigLine, bigLine].join("\n");
 		const result = truncate(text);
 		expect(result.truncated).toBe(true);
-		expect(Buffer.byteLength(result.text, "utf8")).toBeLessThanOrEqual(
-			MAX_OUTPUT_BYTES,
-		);
+		expect(Buffer.byteLength(result.text, "utf8")).toBeLessThanOrEqual(MAX_OUTPUT_BYTES);
 	});
 
 	test("custom maxLines override", () => {
@@ -93,8 +85,7 @@ describe("filterSudoPrompt", () => {
 	});
 
 	test("preserves non-prompt stderr lines", () => {
-		const raw =
-			"real error: file not found\n[sudo] password for x:\nanother line";
+		const raw = "real error: file not found\n[sudo] password for x:\nanother line";
 		const out = filterSudoPrompt(raw);
 		expect(out).toContain("real error: file not found");
 		expect(out).toContain("another line");
@@ -133,9 +124,7 @@ describe("detectAuthFailure", () => {
 	});
 
 	test("detects '3 incorrect password attempts'", () => {
-		expect(detectAuthFailure(1, "sudo: 3 incorrect password attempts")).toBe(
-			true,
-		);
+		expect(detectAuthFailure(1, "sudo: 3 incorrect password attempts")).toBe(true);
 	});
 
 	test("non-zero exit with unrelated stderr is not auth failure", () => {
@@ -221,10 +210,7 @@ type ExecuteFn = (
 	ctx: {
 		hasUI: boolean;
 		ui: {
-			custom: <T>(
-				cb: CustomCb<T>,
-				opts?: { overlay?: boolean },
-			) => Promise<T | undefined>;
+			custom: <T>(cb: CustomCb<T>, opts?: { overlay?: boolean }) => Promise<T | undefined>;
 			notify: (msg: string, level: string) => void;
 			theme: typeof stubTheme;
 		};

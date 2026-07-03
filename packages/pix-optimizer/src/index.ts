@@ -19,11 +19,7 @@ import { json } from "./json.ts";
 import { registerOptCommand } from "./opt.ts";
 import { ponytail } from "./ponytail.ts";
 import { rtk } from "./rtk.ts";
-import {
-	type OptimizerHandle,
-	OptimizerStatus,
-	type OptimizerTool,
-} from "./status.ts";
+import { type OptimizerHandle, OptimizerStatus, type OptimizerTool } from "./status.ts";
 import { filterModelWarnings } from "./tool-result-filter.ts";
 
 export default function optimizer(pi: ExtensionAPI) {

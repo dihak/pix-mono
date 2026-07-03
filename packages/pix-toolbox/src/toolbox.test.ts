@@ -53,12 +53,7 @@ describe("buildRows", () => {
 
 describe("parseTargets", () => {
 	test("splits on commas, spaces, newlines", () => {
-		expect(parseTargets("ls, find  grep\nfetch")).toEqual([
-			"ls",
-			"find",
-			"grep",
-			"fetch",
-		]);
+		expect(parseTargets("ls, find  grep\nfetch")).toEqual(["ls", "find", "grep", "fetch"]);
 	});
 
 	test("dedupes", () => {
@@ -202,9 +197,7 @@ function makeHost(toolNames: string[]) {
 		},
 		emit(ev: string, payload: unknown, ctx?: unknown) {
 			return Promise.all(
-				(handlers[ev] ?? []).map((f) =>
-					(f as (...args: unknown[]) => unknown)(payload, ctx),
-				),
+				(handlers[ev] ?? []).map((f) => (f as (...args: unknown[]) => unknown)(payload, ctx)),
 			);
 		},
 		getAllTools() {
@@ -226,18 +219,13 @@ function makeHost(toolNames: string[]) {
 		},
 		appendEntry() {},
 		registerTool() {},
-		registerCommand(
-			name: string,
-			def: { handler: (...args: unknown[]) => unknown },
-		) {
+		registerCommand(name: string, def: { handler: (...args: unknown[]) => unknown }) {
 			commands.push({ name, handler: def.handler });
 		},
 	} as never;
 	const emit = (ev: string, payload: unknown, ctx?: unknown) =>
 		Promise.all(
-			(handlers[ev] ?? []).map((f) =>
-				(f as (...args: unknown[]) => unknown)(payload, ctx),
-			),
+			(handlers[ev] ?? []).map((f) => (f as (...args: unknown[]) => unknown)(payload, ctx)),
 		);
 	return {
 		pi,

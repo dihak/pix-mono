@@ -27,11 +27,7 @@ import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
 import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
 import { showOverlay } from "@xynogen/pix-pretty/gate-overlay";
 import { renderBashOutput } from "@xynogen/pix-pretty/renderers";
-import type {
-	RenderContextLike,
-	ThemeLike,
-	ToolResultLike,
-} from "@xynogen/pix-pretty/types";
+import type { RenderContextLike, ThemeLike, ToolResultLike } from "@xynogen/pix-pretty/types";
 import {
 	fillToolBackground,
 	getTextContent,
@@ -67,8 +63,7 @@ export default function (pi: ExtensionAPI): void {
 			"Use only when the task genuinely requires elevated permissions " +
 			"(e.g. writing to /etc, managing system services, installing packages system-wide). " +
 			"You MUST provide a clear `reason` explaining why root is needed.",
-		promptSnippet:
-			"Execute a shell command as root after user sees intent + password prompt",
+		promptSnippet: "Execute a shell command as root after user sees intent + password prompt",
 		promptGuidelines: [
 			"Use sudo_run only when root privileges are strictly required — prefer plain bash for everything else. " +
 				"Always set `reason` to a short plain-English sentence explaining why root is needed " +
@@ -112,9 +107,7 @@ export default function (pi: ExtensionAPI): void {
 			const cached = await hasValidTicket();
 
 			const body = [
-				reason?.trim()
-					? `Intent: ${reason.trim()}`
-					: "No reason provided by AI",
+				reason?.trim() ? `Intent: ${reason.trim()}` : "No reason provided by AI",
 				`Command: ${command}`,
 			];
 
@@ -181,10 +174,7 @@ export default function (pi: ExtensionAPI): void {
 
 			// ── Step 4: Auth-failure check ─────────────────────────────────────
 			if (detectAuthFailure(result.code, result.stderr)) {
-				ctx.ui.notify(
-					"🔐 sudo authentication failed — wrong password",
-					"error",
-				);
+				ctx.ui.notify("🔐 sudo authentication failed — wrong password", "error");
 				return {
 					content: [
 						{
@@ -205,17 +195,14 @@ export default function (pi: ExtensionAPI): void {
 				.filter(Boolean)
 				.join("\n");
 
-			const { text: truncatedText, truncated } = truncate(
-				combined || "(no output)",
-			);
+			const { text: truncatedText, truncated } = truncate(combined || "(no output)");
 
 			const suffix = truncated
 				? `\n\n[Output truncated to ${MAX_OUTPUT_LINES} lines / ${MAX_OUTPUT_BYTES / 1024}KB]`
 				: "";
 
 			const combinedOut =
-				[result.stdout, result.stderr].filter(Boolean).join("\n") ||
-				"(no output)";
+				[result.stdout, result.stderr].filter(Boolean).join("\n") || "(no output)";
 
 			return {
 				content: [
@@ -257,8 +244,7 @@ export default function (pi: ExtensionAPI): void {
 
 			const lines = rendered ? rendered.split("\n") : [];
 			const lineCount = lines.length;
-			const lineInfo =
-				lineCount > 1 ? `  ${FG_DIM}(${lineCount} lines)${RST}` : "";
+			const lineInfo = lineCount > 1 ? `  ${FG_DIM}(${lineCount} lines)${RST}` : "";
 			const header = `  ${summary}${lineInfo}`;
 
 			if (!rendered) {

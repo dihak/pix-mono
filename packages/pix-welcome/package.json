@@ -1,47 +1,47 @@
 {
-	"name": "@xynogen/pix-welcome",
-	"version": "0.1.13",
-	"description": "Pi extension — welcome banner with startup health checks",
-	"type": "module",
-	"main": "src/index.ts",
-	"scripts": {
-		"test": "bun test"
-	},
-	"files": [
-		"src",
-		"README.md",
-		"LICENSE"
-	],
-	"pi": {
-		"extensions": [
-			"src/extension.ts"
-		]
-	},
-	"keywords": [
-		"pi",
-		"pi-package",
-		"pi-extension",
-		"pix"
-	],
-	"author": "xynogen",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
-		"directory": "packages/pix-welcome"
-	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-welcome#readme",
-	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*",
-		"@earendil-works/pi-tui": "*"
-	},
-	"dependencies": {
-		"@xynogen/pix-pretty": "^1.7.9"
-	}
+  "name": "@xynogen/pix-welcome",
+  "version": "0.1.14",
+  "description": "Pi extension — welcome banner with startup health checks",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "bun test"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "src/extension.ts"
+    ]
+  },
+  "keywords": [
+    "pi",
+    "pi-package",
+    "pi-extension",
+    "pix"
+  ],
+  "author": "xynogen",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xynogen/pix-mono.git",
+    "directory": "packages/pix-welcome"
+  },
+  "homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-welcome#readme",
+  "bugs": {
+    "url": "https://github.com/xynogen/pix-mono/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "dependencies": {
+    "@xynogen/pix-pretty": "^1.7.9"
+  }
 }

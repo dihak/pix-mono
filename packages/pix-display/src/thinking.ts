@@ -131,10 +131,7 @@ function splitThinking(text: string): Block[] {
 	const openMatch = OPEN_TAIL_RE.exec(rest);
 	if (openMatch) {
 		// Leading text may still carry orphan tags (e.g. a stray `</think>`).
-		pushText(
-			blocks,
-			openMatch.input.slice(0, openMatch.index).replace(ORPHAN_TAG_RE, ""),
-		);
+		pushText(blocks, openMatch.input.slice(0, openMatch.index).replace(ORPHAN_TAG_RE, ""));
 		pushThinking(blocks, (openMatch[2] ?? "").replace(ORPHAN_TAG_RE, ""));
 	} else {
 		// Strip any orphan tags from the trailing text.

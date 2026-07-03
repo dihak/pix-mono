@@ -28,9 +28,7 @@ async function apiPost(
 	const key = auth();
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-	const s = signal
-		? AbortSignal.any([signal, controller.signal])
-		: controller.signal;
+	const s = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
 	try {
 		const res = await fetch(url, {
@@ -128,8 +126,7 @@ export default function registerSearch(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "search",
 		label: "Search",
-		description:
-			"Web or news search via exa. Returns title, url, and snippet for each result.",
+		description: "Web or news search via exa. Returns title, url, and snippet for each result.",
 		promptSnippet:
 			"search(query, search_type, max_results?) — search_type: 'web' or 'news'. Defaults to 5 results, max 10.",
 		promptGuidelines: [
@@ -228,8 +225,7 @@ export default function registerSearch(pi: ExtensionAPI): void {
 					details: { source: "curl-fallback" },
 				};
 			} catch (curlErr: unknown) {
-				const curlMsg =
-					curlErr instanceof Error ? curlErr.message : String(curlErr);
+				const curlMsg = curlErr instanceof Error ? curlErr.message : String(curlErr);
 				return {
 					content: [
 						{

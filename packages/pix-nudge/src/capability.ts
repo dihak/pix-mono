@@ -55,9 +55,7 @@ export function graphifyHint(cwd: string): string | undefined {
 }
 
 /** Count model-invocable skills (excludes user-only /skill:name entries). */
-export function countInvocableSkills(
-	skills: LoadedSkill[] | undefined,
-): number {
+export function countInvocableSkills(skills: LoadedSkill[] | undefined): number {
 	return (skills ?? []).filter((s) => !s.disableModelInvocation).length;
 }
 
@@ -113,9 +111,7 @@ export function buildOrientation(
 	if (other) inventory.push(`${other} tool${other === 1 ? "" : "s"}`);
 	if (mcp) inventory.push(`${mcp} MCP tool${mcp === 1 ? "" : "s"}`);
 	if (skillNames.length)
-		inventory.push(
-			`${skillNames.length} skill${skillNames.length === 1 ? "" : "s"}`,
-		);
+		inventory.push(`${skillNames.length} skill${skillNames.length === 1 ? "" : "s"}`);
 	const summary = inventory.length ? inventory.join(", ") : "your toolbelt";
 
 	// Lead with the gate — tools not described in the prompt are still callable
@@ -175,9 +171,7 @@ export default function registerCapabilityNudge(pi: ExtensionAPI): void {
 			// Fire reminder every REMINDER_INTERVAL turns (turn 11, 21, ...)
 			const cwd = process.cwd();
 			const gHint = graphifyHint(cwd);
-			content = gHint
-				? `${CAPABILITY_REMINDER}\n${gHint}`
-				: CAPABILITY_REMINDER;
+			content = gHint ? `${CAPABILITY_REMINDER}\n${gHint}` : CAPABILITY_REMINDER;
 		} else {
 			return; // no nudge this turn
 		}

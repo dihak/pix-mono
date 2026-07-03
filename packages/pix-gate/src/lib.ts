@@ -32,8 +32,7 @@ export const DEFAULT_RULES: Rule[] = [
 		reason: "rm -rf on /",
 	},
 	{
-		pattern:
-			/\brm\s+(-[a-z]*r[a-z]*f|-[a-z]*f[a-z]*r)\s+(~|\$HOME)(\s|$|\/\s*$)/i,
+		pattern: /\brm\s+(-[a-z]*r[a-z]*f|-[a-z]*f[a-z]*r)\s+(~|\$HOME)(\s|$|\/\s*$)/i,
 		severity: "critical",
 		reason: "rm -rf on $HOME",
 	},
@@ -171,9 +170,7 @@ export function buildRules(cfg: UserConfig): {
 export function classify(command: string, rules: Rule[]): Rule | undefined {
 	const order: Severity[] = ["critical", "dangerous", "risky"];
 	for (const sev of order) {
-		const hit = rules.find(
-			(r) => r.severity === sev && r.pattern.test(command),
-		);
+		const hit = rules.find((r) => r.severity === sev && r.pattern.test(command));
 		if (hit) return hit;
 	}
 	return undefined;

@@ -23,9 +23,7 @@ const theme: Theme = {
 
 describe("shortCwd", () => {
 	it("replaces home prefix with ~", () => {
-		expect(shortCwd("/home/user/projects/foo", "/home/user")).toBe(
-			"~/projects/foo",
-		);
+		expect(shortCwd("/home/user/projects/foo", "/home/user")).toBe("~/projects/foo");
 	});
 
 	it("returns path unchanged when not under home", () => {
@@ -81,8 +79,7 @@ describe("renderCheck", () => {
 
 describe("LOGO_ROWS", () => {
 	it("has 6 rows", () => expect(LOGO_ROWS.length).toBe(6));
-	it("starts with empty tag", () =>
-		expect((LOGO_ROWS[0] as string[])[1]).toBe(""));
+	it("starts with empty tag", () => expect((LOGO_ROWS[0] as string[])[1]).toBe(""));
 	it("has heading, model, cwd, ready tags", () => {
 		const tags = LOGO_ROWS.map((r) => r[1]);
 		expect(tags).toContain("heading");
@@ -138,10 +135,7 @@ describe("summariseSkills", () => {
 	});
 
 	it("marks all-manual as manual", () => {
-		const r = summariseSkills([
-			{ disableModelInvocation: true },
-			{ disableModelInvocation: true },
-		]);
+		const r = summariseSkills([{ disableModelInvocation: true }, { disableModelInvocation: true }]);
 		expect(r.status).toBe("ok");
 		expect(r.detail).toBe("2 loaded (manual)");
 	});
@@ -155,14 +149,8 @@ describe("countSkillsInDirs", () => {
 	it("counts flat .md files", () => {
 		const dir = mkdtempSync(join(tmpdir(), "pix-skills-"));
 		try {
-			writeFileSync(
-				join(dir, "commit.md"),
-				"---\nname: commit\ndescription: test\n---\n",
-			);
-			writeFileSync(
-				join(dir, "debug.md"),
-				"---\nname: debug\ndescription: test\n---\n",
-			);
+			writeFileSync(join(dir, "commit.md"), "---\nname: commit\ndescription: test\n---\n");
+			writeFileSync(join(dir, "debug.md"), "---\nname: debug\ndescription: test\n---\n");
 			expect(countSkillsInDirs([dir])).toBe(2);
 		} finally {
 			rmSync(dir, { recursive: true });
@@ -186,10 +174,7 @@ describe("countSkillsInDirs", () => {
 	it("deduplicates across dirs", () => {
 		const dir = mkdtempSync(join(tmpdir(), "pix-skills-"));
 		try {
-			writeFileSync(
-				join(dir, "foo.md"),
-				"---\nname: foo\ndescription: test\n---\n",
-			);
+			writeFileSync(join(dir, "foo.md"), "---\nname: foo\ndescription: test\n---\n");
 			// same dir twice — should still count 1
 			expect(countSkillsInDirs([dir, dir])).toBe(1);
 		} finally {

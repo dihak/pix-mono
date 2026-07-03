@@ -46,9 +46,7 @@ describe("extractName", () => {
 
 describe("extractDescription", () => {
 	it("reads description from frontmatter", () => {
-		expect(extractDescription(FRONTMATTER)).toBe(
-			"Split, write, and maintain commits.",
-		);
+		expect(extractDescription(FRONTMATTER)).toBe("Split, write, and maintain commits.");
 	});
 
 	it("returns null when absent", () => {
@@ -67,9 +65,7 @@ describe("formatSkillSummary", () => {
 
 	it("renders single skill as bold-accent name + muted description", () => {
 		const out = formatSkillSummary(FRONTMATTER, tagTheme);
-		expect(out).toBe(
-			"[accent]<b>commit</b>[/] [muted]Split, write, and maintain commits.[/]",
-		);
+		expect(out).toBe("[accent]<b>commit</b>[/] [muted]Split, write, and maintain commits.[/]");
 	});
 
 	it("falls back to (no description) when frontmatter has name only", () => {
@@ -83,9 +79,7 @@ describe("formatSkillSummary", () => {
 		const lines = out.split("\n");
 		expect(lines).toHaveLength(2);
 		expect(lines[0]).toBe("[accent]<b>commit</b>[/] [muted]write commits[/]");
-		expect(lines[1]).toBe(
-			"[accent]<b>debug</b>[/] [muted]root cause analysis[/]",
-		);
+		expect(lines[1]).toBe("[accent]<b>debug</b>[/] [muted]root cause analysis[/]");
 	});
 
 	it("passes non 'name: desc' lines through as muted", () => {
@@ -112,9 +106,10 @@ describe("findCommandDirectives", () => {
 	});
 
 	it("finds multiple", () => {
-		expect(
-			findCommandDirectives("!`pwd` !`git diff`").map((d) => d.command),
-		).toEqual(["pwd", "git diff"]);
+		expect(findCommandDirectives("!`pwd` !`git diff`").map((d) => d.command)).toEqual([
+			"pwd",
+			"git diff",
+		]);
 	});
 });
 
@@ -125,20 +120,7 @@ describe("replaceSpan", () => {
 });
 
 describe("hasShellMeta", () => {
-	for (const ch of [
-		";",
-		"|",
-		"&",
-		"$",
-		"`",
-		">",
-		"<",
-		"(",
-		")",
-		"{",
-		"}",
-		"\n",
-	]) {
+	for (const ch of [";", "|", "&", "$", "`", ">", "<", "(", ")", "{", "}", "\n"]) {
 		it(`flags ${JSON.stringify(ch)}`, () => {
 			expect(hasShellMeta(`git status ${ch}`)).toBe(true);
 		});

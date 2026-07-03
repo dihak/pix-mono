@@ -100,33 +100,25 @@ describe("lookupInIndex", () => {
 	]);
 
 	it("finds exact match", () => {
-		expect(lookupInIndex("claude-sonnet-4-5", index)?.name).toBe(
-			"Claude Sonnet 4.5",
-		);
+		expect(lookupInIndex("claude-sonnet-4-5", index)?.name).toBe("Claude Sonnet 4.5");
 	});
 
 	it("strips provider prefix (provider/model)", () => {
-		expect(lookupInIndex("anthropic/claude-opus-4", index)?.name).toBe(
-			"Claude Opus 4",
-		);
+		expect(lookupInIndex("anthropic/claude-opus-4", index)?.name).toBe("Claude Opus 4");
 	});
 
 	it("strips deep prefix (cc/model)", () => {
-		expect(lookupInIndex("cc/claude-opus-4", index)?.name).toBe(
-			"Claude Opus 4",
-		);
+		expect(lookupInIndex("cc/claude-opus-4", index)?.name).toBe("Claude Opus 4");
 	});
 
 	it("strips date suffix", () => {
-		expect(lookupInIndex("claude-sonnet-4-5-20250514", index)?.name).toBe(
-			"Claude Sonnet 4.5",
-		);
+		expect(lookupInIndex("claude-sonnet-4-5-20250514", index)?.name).toBe("Claude Sonnet 4.5");
 	});
 
 	it("strips provider prefix + date suffix", () => {
-		expect(
-			lookupInIndex("anthropic/claude-sonnet-4-5-20250514", index)?.name,
-		).toBe("Claude Sonnet 4.5");
+		expect(lookupInIndex("anthropic/claude-sonnet-4-5-20250514", index)?.name).toBe(
+			"Claude Sonnet 4.5",
+		);
 	});
 
 	it("returns undefined for unknown model", () => {
@@ -183,10 +175,7 @@ describe("modelgrep adapters", () => {
 	});
 
 	it("lookupModelsDev finds hy3 via prefix + suffix strip", () => {
-		expect(
-			lookupModelsDev("openrouter", "tencent/hy3-preview:nitro")?.limit
-				?.context,
-		).toBe(256000);
+		expect(lookupModelsDev("openrouter", "tencent/hy3-preview:nitro")?.limit?.context).toBe(256000);
 	});
 
 	it("lookupModelsDev returns undefined for unknown model", () => {
@@ -251,8 +240,7 @@ describe("benchlm fallback", () => {
 
 	beforeEach(() => {
 		(modelgrep as unknown as { _mem: ModelGrepModel[] })._mem = catalog;
-		(benchlm as unknown as { _mem: typeof benchlmEntries })._mem =
-			benchlmEntries;
+		(benchlm as unknown as { _mem: typeof benchlmEntries })._mem = benchlmEntries;
 	});
 	afterEach(() => {
 		(modelgrep as unknown as { _mem: ModelGrepModel[] | null })._mem = null;
@@ -293,14 +281,11 @@ describe("modelgrep AA primary wins over benchlm", () => {
 			bench: { intelligence: 60 }, // AA index: 60/65 → 92
 		}),
 	];
-	const benchlmEntries = [
-		{ rank: 1, model: "Claude Opus 4.8", overallScore: 50 },
-	];
+	const benchlmEntries = [{ rank: 1, model: "Claude Opus 4.8", overallScore: 50 }];
 
 	beforeEach(() => {
 		(modelgrep as unknown as { _mem: ModelGrepModel[] })._mem = catalog;
-		(benchlm as unknown as { _mem: typeof benchlmEntries })._mem =
-			benchlmEntries;
+		(benchlm as unknown as { _mem: typeof benchlmEntries })._mem = benchlmEntries;
 	});
 	afterEach(() => {
 		(modelgrep as unknown as { _mem: ModelGrepModel[] | null })._mem = null;

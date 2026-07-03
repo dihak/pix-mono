@@ -1,10 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-	OptimizerStatus,
-	renderStatus,
-	STATUS_KEY,
-	toolIcon,
-} from "./status.ts";
+import { OptimizerStatus, renderStatus, STATUS_KEY, toolIcon } from "./status.ts";
 
 /** Tagging colorizer: <accent>X</accent> / <dim>X</dim> for assertions. */
 const tag = (c: string, t: string) => `<${c}>${t}</${c}>`;
@@ -17,23 +12,13 @@ const PT = toolIcon("ponytail");
 
 describe("renderStatus", () => {
 	it("shows ALL icons in order, accent when enabled", () => {
-		expect(
-			renderStatus(
-				{ caveman: true, rtk: true, toon: true, ponytail: true },
-				tag,
-			),
-		).toBe(
+		expect(renderStatus({ caveman: true, rtk: true, toon: true, ponytail: true }, tag)).toBe(
 			`<accent>${CV}</accent>  <accent>${RK}</accent>  <accent>${TN}</accent>  <accent>${PT}</accent> `,
 		);
 	});
 
 	it("dims disabled tools but still shows them", () => {
-		expect(
-			renderStatus(
-				{ caveman: false, rtk: true, toon: true, ponytail: true },
-				tag,
-			),
-		).toBe(
+		expect(renderStatus({ caveman: false, rtk: true, toon: true, ponytail: true }, tag)).toBe(
 			`<dim>${CV}</dim>  <accent>${RK}</accent>  <accent>${TN}</accent>  <accent>${PT}</accent> `,
 		);
 	});
@@ -63,8 +48,7 @@ describe("OptimizerStatus", () => {
 		return {
 			calls,
 			ui: {
-				setStatus: (key: string, text: string | undefined) =>
-					calls.push({ key, text: text ?? "" }),
+				setStatus: (key: string, text: string | undefined) => calls.push({ key, text: text ?? "" }),
 				theme: { fg: (c: string, t: string) => `<${c}>${t}</${c}>` },
 			},
 		} as const;

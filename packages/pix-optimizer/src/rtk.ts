@@ -51,10 +51,7 @@ export function detectSudoSegments(parts: string[]): string[] {
  * intercepted. Directs the model to `sudo_run` when available, otherwise
  * explains the restriction clearly.
  */
-export function buildSudoBlockReason(
-	sudoCmds: string[],
-	hasSudoRunTool: boolean,
-): string {
+export function buildSudoBlockReason(sudoCmds: string[], hasSudoRunTool: boolean): string {
 	const list = sudoCmds.map((c) => `  - ${c}`).join("\n");
 	if (hasSudoRunTool) {
 		return (
@@ -224,10 +221,7 @@ export function rewriteChain(command: string): string {
 	return changed ? rewritten.join("") : command;
 }
 
-export function rtk(
-	pi: ExtensionAPI,
-	status: OptimizerStatus,
-): OptimizerHandle {
+export function rtk(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle {
 	let rtkStatus: RtkStatus | null = null;
 	let warnedMissing = false;
 	let enabled = true;
@@ -306,10 +300,7 @@ export function rtk(
 
 	// -- Overlay value handler (called by the /optimizer overlay) --
 
-	async function run(
-		value: string,
-		ctx: ExtensionCommandContext,
-	): Promise<void> {
+	async function run(value: string, ctx: ExtensionCommandContext): Promise<void> {
 		enabled = value === "on";
 		saveOptValue("rtk", enabled ? "on" : "off");
 

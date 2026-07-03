@@ -42,8 +42,7 @@ function readCollapseConfig(): CollapseConf {
 		if (!c || typeof c !== "object") return DEFAULT_COLLAPSE;
 		return {
 			enabled: typeof c.enabled === "boolean" ? c.enabled : true,
-			delaySec:
-				typeof c.delaySec === "number" && c.delaySec > 0 ? c.delaySec : 10,
+			delaySec: typeof c.delaySec === "number" && c.delaySec > 0 ? c.delaySec : 10,
 			tools:
 				c.tools && typeof c.tools === "object"
 					? (c.tools as Record<string, boolean | undefined>)
@@ -99,10 +98,7 @@ export type TodoTheme = {
 };
 
 /** One-line dim summary used once a card has collapsed. */
-export function renderTodoSummaryLine(
-	items: TodoItem[],
-	theme: TodoTheme,
-): string {
+export function renderTodoSummaryLine(items: TodoItem[], theme: TodoTheme): string {
 	if (!items.length) return theme.fg("muted", "(no todos)");
 	const done = items.filter((t) => t.status === "done").length;
 	return theme.fg("muted", `Todos ${done}/${items.length} done ✓`);
@@ -145,9 +141,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 		function todoSummary(): string {
 			if (!todos.length) return "(no todos)";
 			const done = todos.filter((t) => t.status === "done").length;
-			const lines = todos.map(
-				(t) => `${TODO_GLYPH[t.status]} ${t.id}. ${t.text}`,
-			);
+			const lines = todos.map((t) => `${TODO_GLYPH[t.status]} ${t.id}. ${t.text}`);
 			return `Todos ${done}/${todos.length} done:\n${lines.join("\n")}`;
 		}
 
@@ -179,13 +173,10 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				),
 				items: Type.Optional(
 					Type.String({
-						description:
-							"For set/add: newline-separated or numbered list of todo texts.",
+						description: "For set/add: newline-separated or numbered list of todo texts.",
 					}),
 				),
-				id: Type.Optional(
-					Type.Number({ description: "For update: target todo id." }),
-				),
+				id: Type.Optional(Type.Number({ description: "For update: target todo id." })),
 				status: Type.Optional(
 					Type.Union(
 						[
@@ -220,9 +211,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 						context.invalidate();
 					}, collapseDelayMs());
 				}
-				const render = state.collapsed
-					? renderTodoSummaryLine
-					: renderTodoLines;
+				const render = state.collapsed ? renderTodoSummaryLine : renderTodoLines;
 				return new Text(render(state.snapshot, theme as TodoTheme), 0, 0);
 			},
 
@@ -258,8 +247,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 					case "add": {
 						const texts = parseItems(params.items ?? "");
 						if (!texts.length) return fail("add requires non-empty `items`.");
-						for (const text of texts)
-							todos.push({ id: nextTodoId++, text, status: "pending" });
+						for (const text of texts) todos.push({ id: nextTodoId++, text, status: "pending" });
 						persistTodos();
 						return ok(todoSummary());
 					}
@@ -276,8 +264,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 								for (const other of todos)
 									if (
 										other.id < t.id &&
-										(other.status === "pending" ||
-											other.status === "in_progress")
+										(other.status === "pending" || other.status === "in_progress")
 									)
 										other.status = "done";
 							t.status = params.status;
@@ -311,9 +298,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				.pop();
 			if (Array.isArray(lastTodo?.data?.todos)) {
 				todos = lastTodo.data.todos;
-				nextTodoId =
-					lastTodo.data.nextTodoId ??
-					todos.reduce((m, t) => Math.max(m, t.id + 1), 1);
+				nextTodoId = lastTodo.data.nextTodoId ?? todos.reduce((m, t) => Math.max(m, t.id + 1), 1);
 			}
 		});
 	});

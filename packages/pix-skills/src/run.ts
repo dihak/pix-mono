@@ -40,9 +40,7 @@ export function runArgv(argv: string[], opts: RunOptions): Promise<string> {
 				stdio: ["ignore", "pipe", "pipe"],
 			});
 		} catch (err) {
-			finish(
-				`[command failed: ${err instanceof Error ? err.message : String(err)}]`,
-			);
+			finish(`[command failed: ${err instanceof Error ? err.message : String(err)}]`);
 			return;
 		}
 
@@ -73,7 +71,6 @@ function format(
 	truncMarker = "[output truncated]",
 ): string {
 	const combined = Buffer.concat(chunks).toString("utf-8").trimEnd();
-	if (bytes > maxBytes)
-		return `${combined.slice(0, maxBytes)}\n… ${truncMarker}`;
+	if (bytes > maxBytes) return `${combined.slice(0, maxBytes)}\n… ${truncMarker}`;
 	return combined || "(no output)";
 }

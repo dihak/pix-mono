@@ -21,9 +21,7 @@ export async function rpcFallback(
 		const header = q.header;
 
 		if (q.multiSelect) {
-			const lines = q.options.map(
-				(o, idx) => `${idx + 1}. ${o.label} — ${o.description}`,
-			);
+			const lines = q.options.map((o, idx) => `${idx + 1}. ${o.label} — ${o.description}`);
 			const raw = await ui.input(
 				`${header}: ${q.question}\n\n${lines.join("\n")}\n\nEnter numbers separated by commas:`,
 				"e.g. 1,3",
@@ -71,8 +69,7 @@ export async function rpcFallback(
 				});
 			} else {
 				const opt = q.options.find(
-					(o) =>
-						chosen === o.label || `${o.label} — ${o.description}` === chosen,
+					(o) => chosen === o.label || `${o.label} — ${o.description}` === chosen,
 				);
 				answers.push({
 					questionIndex: i,

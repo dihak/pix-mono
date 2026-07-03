@@ -1,13 +1,6 @@
-import type {
-	ExtensionAPI,
-	ExtensionCommandContext,
-} from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { type ConfirmUI, confirmOverlay } from "@xynogen/pix-pretty/confirm";
-import {
-	openProgress,
-	type ProgressHandle,
-	type ProgressUI,
-} from "@xynogen/pix-pretty/progress";
+import { openProgress, type ProgressHandle, type ProgressUI } from "@xynogen/pix-pretty/progress";
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────
 
 export const PACKAGE_NAME = "@earendil-works/pi-coding-agent";
@@ -82,19 +75,10 @@ export function commandFor(method: InstallMethod): CommandSpec | undefined {
 	}
 }
 
-export function formatUpdateSummary(
-	before: string,
-	after: string,
-	attempts: number,
-): string {
-	const changed =
-		before !== after && before !== "unknown" && after !== "unknown";
-	const summary = changed
-		? `Pi updated: ${before} → ${after}`
-		: `Pi is up to date (${after}).`;
-	return attempts > 1
-		? `${summary} Retried ${attempts - 1} transient failure(s).`
-		: summary;
+export function formatUpdateSummary(before: string, after: string, attempts: number): string {
+	const changed = before !== after && before !== "unknown" && after !== "unknown";
+	const summary = changed ? `Pi updated: ${before} → ${after}` : `Pi is up to date (${after}).`;
+	return attempts > 1 ? `${summary} Retried ${attempts - 1} transient failure(s).` : summary;
 }
 
 export const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -129,11 +113,9 @@ export async function withSpinner<T>(
 }
 
 export async function resolveCommand(command: string, pi: ExtensionAPI) {
-	const result = await pi.exec(
-		"/bin/sh",
-		["-lc", `command -v ${command} || true`],
-		{ timeout: 10_000 },
-	);
+	const result = await pi.exec("/bin/sh", ["-lc", `command -v ${command} || true`], {
+		timeout: 10_000,
+	});
 	return result.stdout.trim().split("\n")[0] || undefined;
 }
 
@@ -142,9 +124,7 @@ export async function currentVersion(pi: ExtensionAPI) {
 	return result.stdout.trim() || result.stderr.trim() || "unknown";
 }
 
-export async function detectInstallMethod(
-	pi: ExtensionAPI,
-): Promise<InstallMethod> {
+export async function detectInstallMethod(pi: ExtensionAPI): Promise<InstallMethod> {
 	// Resolve pi path + realpath + all fallback command probes in parallel.
 	const [piPath, vpPath, bunPath, npmPath, brewPath] = await Promise.all([
 		resolveCommand("pi", pi),
@@ -156,18 +136,14 @@ export async function detectInstallMethod(
 
 	const realPiPath = piPath
 		? (
-				await pi.exec(
-					"/bin/sh",
-					["-lc", `realpath ${piPath} 2>/dev/null || printf %s ${piPath}`],
-					{ timeout: 10_000 },
-				)
+				await pi.exec("/bin/sh", ["-lc", `realpath ${piPath} 2>/dev/null || printf %s ${piPath}`], {
+					timeout: 10_000,
+				})
 			).stdout.trim()
 		: undefined;
 
-	if (piPath?.includes("/.vite-plus/") || realPiPath?.includes("/.vite-plus/"))
-		return "vp";
-	if (piPath?.includes("/.bun/") || realPiPath?.includes("/.bun/"))
-		return "bun";
+	if (piPath?.includes("/.vite-plus/") || realPiPath?.includes("/.vite-plus/")) return "vp";
+	if (piPath?.includes("/.bun/") || realPiPath?.includes("/.bun/")) return "bun";
 	if (
 		piPath?.includes("/Homebrew/") ||
 		piPath?.includes("/homebrew/") ||
@@ -200,17 +176,11 @@ export async function runWithRetry(pi: ExtensionAPI, spec: CommandSpec) {
 	let lastOutput = "";
 	for (let attempt = 1; attempt <= 3; attempt++) {
 		// nice -n 19: deprioritize the install so the TUI keeps echoing keystrokes.
-		const result = await pi.exec(
-			"nice",
-			["-n", "19", spec.command, ...spec.args],
-			{ timeout: 180_000 },
-		);
-		lastOutput = [result.stdout, result.stderr]
-			.filter(Boolean)
-			.join("\n")
-			.trim();
-		if ((result.code ?? 0) === 0)
-			return { ok: true, output: lastOutput, attempts: attempt };
+		const result = await pi.exec("nice", ["-n", "19", spec.command, ...spec.args], {
+			timeout: 180_000,
+		});
+		lastOutput = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
+		if ((result.code ?? 0) === 0) return { ok: true, output: lastOutput, attempts: attempt };
 		if (attempt === 3 || !isTransient(lastOutput))
 			return { ok: false, output: lastOutput, attempts: attempt };
 		await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
@@ -223,9 +193,7 @@ async function updatePi(
 	ctx: ExtensionCommandContext,
 	progress?: ProgressHandle,
 ): Promise<boolean> {
-	await (
-		ctx as ExtensionCommandContext & { waitForIdle?: () => Promise<void> }
-	).waitForIdle?.();
+	await (ctx as ExtensionCommandContext & { waitForIdle?: () => Promise<void> }).waitForIdle?.();
 
 	// Grab current version + detect install method concurrently.
 	const [before, method] = await Promise.all([
@@ -264,20 +232,12 @@ async function updatePackages(
 	progress?: ProgressHandle,
 ) {
 	progress?.setLabel("Updating pi packages…");
-	const result = await pi.exec(
-		"nice",
-		["-n", "19", "pi", "update", "--extensions"],
-		{ timeout: 240_000 },
-	);
-	const output = [result.stdout, result.stderr]
-		.filter(Boolean)
-		.join("\n")
-		.trim();
+	const result = await pi.exec("nice", ["-n", "19", "pi", "update", "--extensions"], {
+		timeout: 240_000,
+	});
+	const output = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
 	if ((result.code ?? 0) !== 0) {
-		ctx.ui.notify(
-			`Pi package update failed. ${output || "No output."}`,
-			"error",
-		);
+		ctx.ui.notify(`Pi package update failed. ${output || "No output."}`, "error");
 		return;
 	}
 	ctx.ui.notify("Pi packages updated.", "info");

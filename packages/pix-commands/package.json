@@ -1,43 +1,43 @@
 {
-	"name": "@xynogen/pix-commands",
-	"version": "0.1.7",
-	"description": "Pi extension — slash commands (/clear; more planned)",
-	"type": "module",
-	"main": "src/index.ts",
-	"scripts": {
-		"test": "bun test"
-	},
-	"files": [
-		"src",
-		"README.md",
-		"LICENSE"
-	],
-	"pi": {
-		"extensions": [
-			"src/extension.ts"
-		]
-	},
-	"keywords": [
-		"pi",
-		"pi-package",
-		"pi-extension",
-		"pix"
-	],
-	"author": "xynogen",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
-		"directory": "packages/pix-commands"
-	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-commands#readme",
-	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*"
-	}
+  "name": "@xynogen/pix-commands",
+  "version": "0.1.8",
+  "description": "Pi extension — slash commands (/clear; more planned)",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "bun test"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "src/extension.ts"
+    ]
+  },
+  "keywords": [
+    "pi",
+    "pi-package",
+    "pi-extension",
+    "pix"
+  ],
+  "author": "xynogen",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xynogen/pix-mono.git",
+    "directory": "packages/pix-commands"
+  },
+  "homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-commands#readme",
+  "bugs": {
+    "url": "https://github.com/xynogen/pix-mono/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  }
 }

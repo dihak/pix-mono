@@ -5,8 +5,7 @@ import { join } from "node:path";
 
 // Pure replacement tested in isolation (the exported fn resolves the host
 // package, which isn't present in the test sandbox).
-const MODEL_COMMAND_LINE =
-	'{ name: "model", description: "Select model (opens selector UI)" },';
+const MODEL_COMMAND_LINE = '{ name: "model", description: "Select model (opens selector UI)" },';
 
 function escapeRegExp(text: string): string {
 	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -14,10 +13,7 @@ function escapeRegExp(text: string): string {
 
 function patchSource(source: string): string {
 	if (!source.includes(MODEL_COMMAND_LINE)) return source;
-	return source.replace(
-		new RegExp(`[ \\t]*${escapeRegExp(MODEL_COMMAND_LINE)}\\n?`),
-		"",
-	);
+	return source.replace(new RegExp(`[ \\t]*${escapeRegExp(MODEL_COMMAND_LINE)}\\n?`), "");
 }
 
 const UNPATCHED = `export const BUILTIN_SLASH_COMMANDS = [

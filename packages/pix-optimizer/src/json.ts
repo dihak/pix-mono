@@ -182,8 +182,7 @@ export function isUniformObjectArray(arr: unknown[]): boolean {
 		for (let i = 0; i < keys.length; i++) {
 			if (elKeys[i] !== keys[i]) return false;
 			// values must be primitive for a clean tabular row
-			if (isObjectLike((el as Record<string, unknown>)[keys[i] as string]))
-				return false;
+			if (isObjectLike((el as Record<string, unknown>)[keys[i] as string])) return false;
 		}
 		return true;
 	});
@@ -209,21 +208,14 @@ export function objectDepth(value: unknown): number {
 
 // ── Pi extension ──────────────────────────────────────────────────────────────
 
-export function json(
-	pi: ExtensionAPI,
-	status: OptimizerStatus,
-): OptimizerHandle {
+export function json(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle {
 	let enabled = true;
 	let jqAvailable: boolean | null = null;
 	let toonAvailable: boolean | null = null;
 
 	// Report into the shared optimizer indicator.
 	function syncStatus(ctx: Pick<ExtensionContext, "ui">) {
-		status.set(
-			"toon",
-			enabled && jqAvailable !== false && toonAvailable !== false,
-			ctx,
-		);
+		status.set("toon", enabled && jqAvailable !== false && toonAvailable !== false, ctx);
 	}
 
 	pi.on("session_start", async (_event, ctx) => {
@@ -251,9 +243,7 @@ export function json(
 		if (jqAvailable === null || toonAvailable === null) {
 			const [jqRes, toonRes] = await Promise.all([
 				pi.exec("which", ["jq"], { timeout: 1000 }).catch(() => ({ code: 1 })),
-				pi
-					.exec("which", ["toon"], { timeout: 1000 })
-					.catch(() => ({ code: 1 })),
+				pi.exec("which", ["toon"], { timeout: 1000 }).catch(() => ({ code: 1 })),
 			]);
 			jqAvailable = jqRes.code === 0;
 			toonAvailable = toonRes.code === 0;
@@ -277,10 +267,7 @@ export function json(
 
 	// -- Overlay value handler (called by the /optimizer overlay) --
 
-	async function run(
-		value: string,
-		ctx: ExtensionCommandContext,
-	): Promise<void> {
+	async function run(value: string, ctx: ExtensionCommandContext): Promise<void> {
 		enabled = value === "on";
 		saveOptValue("toon", enabled ? "on" : "off");
 

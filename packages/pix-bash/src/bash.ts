@@ -51,25 +51,14 @@ export function registerBashTool(
 			upd: AgentToolUpdateCallback<unknown> | undefined,
 			toolCtx: ExtensionContext,
 		) {
-			const result = (await origBash.execute(
-				tid,
-				params,
-				sig,
-				upd,
-				toolCtx,
-			)) as ToolResultLike;
+			const result = (await origBash.execute(tid, params, sig, upd, toolCtx)) as ToolResultLike;
 			const textContent = getTextContent(result);
 
 			let exitCode: number | null = 0;
 			if (textContent) {
-				const exitMatch = textContent.match(
-					/(?:exit code|exited with|exit status)[:\s]*(\d+)/i,
-				);
+				const exitMatch = textContent.match(/(?:exit code|exited with|exit status)[:\s]*(\d+)/i);
 				if (exitMatch) exitCode = Number(exitMatch[1]);
-				if (
-					textContent.includes("command not found") ||
-					textContent.includes("No such file")
-				) {
+				if (textContent.includes("command not found") || textContent.includes("No such file")) {
 					exitCode = 1;
 				}
 			}
@@ -84,18 +73,12 @@ export function registerBashTool(
 			return result;
 		},
 
-		renderCall(
-			args: BashParams,
-			theme: ThemeLike,
-			renderCtx: RenderContextLike,
-		) {
+		renderCall(args: BashParams, theme: ThemeLike, renderCtx: RenderContextLike) {
 			const cmd = args.command ?? "";
 			const displayCmdRaw = cmd.trim();
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 			const label = theme.fg("toolTitle", theme.bold("bash"));
-			const timeout = args.timeout
-				? ` ${theme.fg("muted", `(${args.timeout}s timeout)`)}`
-				: "";
+			const timeout = args.timeout ? ` ${theme.fg("muted", `(${args.timeout}s timeout)`)}` : "";
 			const cmdLines = displayCmdRaw.split("\n");
 			const firstLine = cmdLines[0] ?? "";
 			const compactCmd =
@@ -151,14 +134,10 @@ export function registerBashTool(
 				const normalizedText = normalizeLineEndings(d.text as string)
 					.replace(/\n{3,}/g, "\n\n")
 					.replace(/^\n+|\n+$/g, "");
-				const { summary } = renderBashOutput(
-					normalizedText,
-					d.exitCode as number | null,
-				);
+				const { summary } = renderBashOutput(normalizedText, d.exitCode as number | null);
 				const lines = normalizedText ? normalizedText.split("\n") : [];
 				const lineCount = lines.length;
-				const lineInfo =
-					lineCount > 1 ? `  ${FG_DIM}(${lineCount} lines)${RST}` : "";
+				const lineInfo = lineCount > 1 ? `  ${FG_DIM}(${lineCount} lines)${RST}` : "";
 				const header = `  ${summary}${lineInfo}`;
 
 				if (normalizedText) {
@@ -179,13 +158,8 @@ export function registerBashTool(
 			}
 
 			const fallback = result.content?.[0];
-			const fallbackText =
-				fallback && isTextContent(fallback) ? fallback.text : "done";
-			text.setText(
-				fillToolBackground(
-					`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`,
-				),
-			);
+			const fallbackText = fallback && isTextContent(fallback) ? fallback.text : "done";
+			text.setText(fillToolBackground(`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`));
 			return text;
 		},
 	});

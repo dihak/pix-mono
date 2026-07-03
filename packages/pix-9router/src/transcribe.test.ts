@@ -95,9 +95,7 @@ describe("parseTranscriptionResponse", () => {
 	});
 
 	it("returns plain text as-is when not JSON", () => {
-		expect(parseTranscriptionResponse("Just plain text")).toBe(
-			"Just plain text",
-		);
+		expect(parseTranscriptionResponse("Just plain text")).toBe("Just plain text");
 	});
 
 	it("returns empty string from JSON with empty text", () => {
@@ -203,12 +201,7 @@ describe("buildTranscriptionResult", () => {
 
 	it("returns inline text (truncated at 50_000) when no output_file is set", async () => {
 		const text = "a".repeat(60_000);
-		const result = await buildTranscriptionResult(
-			text,
-			"dg/nova-3",
-			"api",
-			undefined,
-		);
+		const result = await buildTranscriptionResult(text, "dg/nova-3", "api", undefined);
 		expect(result.content).toHaveLength(1);
 		expect(result.content[0]?.type).toBe("text");
 		expect(result.content[0]?.text.length).toBe(50_000);
@@ -221,12 +214,7 @@ describe("buildTranscriptionResult", () => {
 
 	it("returns inline text (untruncated) when short and no output_file", async () => {
 		const text = "short transcript";
-		const result = await buildTranscriptionResult(
-			text,
-			"dg/nova-3",
-			"api",
-			undefined,
-		);
+		const result = await buildTranscriptionResult(text, "dg/nova-3", "api", undefined);
 		expect(result.content[0]?.text).toBe("short transcript");
 		expect(result.details.chars).toBe(text.length);
 	});
@@ -234,12 +222,7 @@ describe("buildTranscriptionResult", () => {
 	it("writes full text to file and returns short path summary when output_file is set", async () => {
 		const text = "a".repeat(100_000); // way over 50k
 		const file = join(tmpRoot, "result-a.txt");
-		const result = await buildTranscriptionResult(
-			text,
-			"dg/nova-3",
-			"api",
-			file,
-		);
+		const result = await buildTranscriptionResult(text, "dg/nova-3", "api", file);
 
 		// content is a short summary, not the full text
 		expect(result.content).toHaveLength(1);
@@ -261,12 +244,7 @@ describe("buildTranscriptionResult", () => {
 
 	it("passes through curl-fallback source label", async () => {
 		const text = "hi";
-		const result = await buildTranscriptionResult(
-			text,
-			"dg/nova-3",
-			"curl-fallback",
-			undefined,
-		);
+		const result = await buildTranscriptionResult(text, "dg/nova-3", "curl-fallback", undefined);
 		expect(result.details.source).toBe("curl-fallback");
 	});
 
@@ -274,12 +252,7 @@ describe("buildTranscriptionResult", () => {
 		const text = "relative path content";
 		const relDir = join(tmpRoot, "rel", "sub");
 		const relFile = join(relDir, "out.txt");
-		const result = await buildTranscriptionResult(
-			text,
-			"dg/nova-3",
-			"api",
-			relFile,
-		);
+		const result = await buildTranscriptionResult(text, "dg/nova-3", "api", relFile);
 
 		expect(result.details.output_path).toBe(relFile);
 		expect(await readFile(relFile, "utf-8")).toBe("relative path content");
@@ -302,9 +275,7 @@ describe("validateOutputPath", () => {
 	});
 
 	it("accepts a fresh path several levels deep", async () => {
-		const result = await validateOutputPath(
-			join(tmpRoot, "a", "b", "c", "deep.txt"),
-		);
+		const result = await validateOutputPath(join(tmpRoot, "a", "b", "c", "deep.txt"));
 		expect(result.ok).toBe(true);
 	});
 
@@ -404,9 +375,7 @@ describe("writeTranscriptionFile — rejection propagation", () => {
 	});
 
 	it("throws on null byte", async () => {
-		await expect(
-			writeTranscriptionFile("/tmp/pix-test-\0x.txt", "x"),
-		).rejects.toThrow(/null byte/);
+		await expect(writeTranscriptionFile("/tmp/pix-test-\0x.txt", "x")).rejects.toThrow(/null byte/);
 	});
 });
 
@@ -415,12 +384,7 @@ describe("writeTranscriptionFile — rejection propagation", () => {
 describe("buildTranscriptionResult — write failure path", () => {
 	it("returns isError + inline fallback when output_file is rejected", async () => {
 		const text = "the actual transcription that was successfully produced";
-		const result = await buildTranscriptionResult(
-			text,
-			"dg/nova-3",
-			"api",
-			"/etc/passwd",
-		);
+		const result = await buildTranscriptionResult(text, "dg/nova-3", "api", "/etc/passwd");
 		expect(result.isError).toBe(true);
 		expect(result.details.write_error).toMatch(/refusing to write/);
 		expect(result.details.output_path).toBeUndefined();

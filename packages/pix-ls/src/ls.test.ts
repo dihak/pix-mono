@@ -24,25 +24,21 @@ describe("registerLsTool", () => {
 			on() {},
 		};
 
-		registerLsTool(
-			mockPi,
-			() => ({ execute: async () => ({ content: [], details: undefined }) }),
-			{
-				cwd: process.cwd(),
-				sp: (p: string) => p,
-				TextComponent: MockTextComponent as unknown as TextComponentCtor,
-				fffState: {
-					module: null,
-					finder: null,
-					partialIndex: false,
-					dbDir: null,
-				} satisfies FffState,
-				cursorStore: {
-					store: () => "",
-					get: () => undefined,
-				} as unknown as CursorStore,
-			},
-		);
+		registerLsTool(mockPi, () => ({ execute: async () => ({ content: [], details: undefined }) }), {
+			cwd: process.cwd(),
+			sp: (p: string) => p,
+			TextComponent: MockTextComponent as unknown as TextComponentCtor,
+			fffState: {
+				module: null,
+				finder: null,
+				partialIndex: false,
+				dbDir: null,
+			} satisfies FffState,
+			cursorStore: {
+				store: () => "",
+				get: () => undefined,
+			} as unknown as CursorStore,
+		});
 		expect(tools).toEqual(["ls"]);
 	});
 });

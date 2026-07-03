@@ -1,44 +1,44 @@
 {
-	"name": "@xynogen/pix-sudo",
-	"version": "0.3.4",
-	"description": "Pi tool — sudo_run with interactive PAM password prompt (PAM via sudo -S)",
-	"type": "module",
-	"main": "src/index.ts",
-	"scripts": {
-		"test": "bun test"
-	},
-	"files": [
-		"src",
-		"README.md",
-		"LICENSE"
-	],
-	"pi": {
-		"extensions": [
-			"src/index.ts"
-		]
-	},
-	"keywords": [
-		"pi",
-		"pi-package",
-		"pi-extension",
-		"sudo"
-	],
-	"author": "xynogen",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
-		"directory": "packages/pix-sudo"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"dependencies": {
-		"typebox": "^1.1.38",
-		"@xynogen/pix-pretty": "^1.7.9"
-	},
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*",
-		"@earendil-works/pi-tui": "*"
-	}
+  "name": "@xynogen/pix-sudo",
+  "version": "0.3.5",
+  "description": "Pi tool — sudo_run with interactive PAM password prompt (PAM via sudo -S)",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "bun test"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "src/index.ts"
+    ]
+  },
+  "keywords": [
+    "pi",
+    "pi-package",
+    "pi-extension",
+    "sudo"
+  ],
+  "author": "xynogen",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xynogen/pix-mono.git",
+    "directory": "packages/pix-sudo"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "typebox": "^1.1.38",
+    "@xynogen/pix-pretty": "^1.7.9"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  }
 }

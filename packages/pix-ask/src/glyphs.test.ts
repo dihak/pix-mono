@@ -4,36 +4,28 @@ import { checkboxGlyphs, selectionGlyph } from "./glyphs.js";
 
 describe("selectionGlyph", () => {
 	test("multi checked → ▣ / success", () => {
-		expect(
-			selectionGlyph({ multi: true, selected: false, checked: true }),
-		).toEqual({
+		expect(selectionGlyph({ multi: true, selected: false, checked: true })).toEqual({
 			glyph: "▣",
 			color: "success",
 		});
 	});
 
 	test("multi unchecked → ☐ / dim", () => {
-		expect(
-			selectionGlyph({ multi: true, selected: true, checked: false }),
-		).toEqual({
+		expect(selectionGlyph({ multi: true, selected: true, checked: false })).toEqual({
 			glyph: "☐",
 			color: "dim",
 		});
 	});
 
 	test("radio selected → ◉ / accent", () => {
-		expect(
-			selectionGlyph({ multi: false, selected: true, checked: false }),
-		).toEqual({
+		expect(selectionGlyph({ multi: false, selected: true, checked: false })).toEqual({
 			glyph: "◉",
 			color: "accent",
 		});
 	});
 
 	test("radio unselected → ○ / dim", () => {
-		expect(
-			selectionGlyph({ multi: false, selected: false, checked: false }),
-		).toEqual({
+		expect(selectionGlyph({ multi: false, selected: false, checked: false })).toEqual({
 			glyph: "○",
 			color: "dim",
 		});

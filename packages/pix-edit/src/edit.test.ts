@@ -1,11 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { CursorStore, FffState } from "@xynogen/pix-pretty/fff";
 import type { PiPrettyApi, TextComponentCtor } from "@xynogen/pix-pretty/types";
-import {
-	getEditOperations,
-	registerEditTool,
-	summarizeEditOperations,
-} from "./edit";
+import { getEditOperations, registerEditTool, summarizeEditOperations } from "./edit";
 
 class MockTextComponent {
 	private text = "";
@@ -72,9 +68,7 @@ describe("getEditOperations", () => {
 
 describe("summarizeEditOperations", () => {
 	it("returns a summary string", () => {
-		const { summary } = summarizeEditOperations([
-			{ oldText: "a\nb", newText: "c\nd\ne" },
-		]);
+		const { summary } = summarizeEditOperations([{ oldText: "a\nb", newText: "c\nd\ne" }]);
 		expect(typeof summary).toBe("string");
 		expect(summary.length).toBeGreaterThan(0);
 	});

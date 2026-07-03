@@ -40,10 +40,7 @@ export interface ModelsDevModel {
 	};
 }
 
-export type ModelsDevApi = Record<
-	string,
-	{ models?: Record<string, ModelsDevModel> }
->;
+export type ModelsDevApi = Record<string, { models?: Record<string, ModelsDevModel> }>;
 
 export interface BenchmarkEntry {
 	rank: number;
@@ -158,13 +155,8 @@ export class DataSource<T> {
 			return val;
 		}
 		try {
-			const url =
-				typeof this.opts.url === "function" ? this.opts.url() : this.opts.url;
-			const raw = await this.opts.fetchRaw(
-				url,
-				this.opts.headers(),
-				this.opts.timeoutMs,
-			);
+			const url = typeof this.opts.url === "function" ? this.opts.url() : this.opts.url;
+			const raw = await this.opts.fetchRaw(url, this.opts.headers(), this.opts.timeoutMs);
 			const val = this.opts.parse(raw);
 			this._mem = val;
 			void this._writeCache(raw);
@@ -172,9 +164,7 @@ export class DataSource<T> {
 		} catch (error) {
 			const msg = error instanceof Error ? error.message : String(error);
 			if (cached !== undefined) {
-				console.warn(
-					`${this.opts.label} fetch failed, using stale cache: ${msg}`,
-				);
+				console.warn(`${this.opts.label} fetch failed, using stale cache: ${msg}`);
 				const val = this.opts.parseCache(cached.data);
 				this._mem = val;
 				return val;
@@ -184,9 +174,7 @@ export class DataSource<T> {
 		}
 	}
 
-	private async _readCache(): Promise<
-		{ ts: number; data: unknown } | undefined
-	> {
+	private async _readCache(): Promise<{ ts: number; data: unknown } | undefined> {
 		try {
 			const raw = await readFile(this.opts.cachePath, "utf8");
 			const parsed = JSON.parse(raw) as { ts: number; data: unknown };
@@ -200,10 +188,7 @@ export class DataSource<T> {
 	private async _writeCache(data: unknown): Promise<void> {
 		try {
 			await mkdir(dirname(this.opts.cachePath), { recursive: true });
-			await writeFile(
-				this.opts.cachePath,
-				JSON.stringify({ ts: Date.now(), data }),
-			);
+			await writeFile(this.opts.cachePath, JSON.stringify({ ts: Date.now(), data }));
 		} catch {
 			// Write failure is non-fatal — stale cache used on next run
 		}
@@ -217,9 +202,7 @@ function fetchWithTimeout(
 ): Promise<Response> {
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), timeoutMs);
-	return fetch(url, { signal: controller.signal, headers }).finally(() =>
-		clearTimeout(timer),
-	);
+	return fetch(url, { signal: controller.signal, headers }).finally(() => clearTimeout(timer));
 }
 
 /** Single-request raw fetch — the default DataSource fetch strategy. */
@@ -270,10 +253,7 @@ async function fetchModelGrepAll(
 
 // ── Cache dir ─────────────────────────────────────────────────────────────────
 
-export const CACHE_DIR = join(
-	process.env.XDG_CACHE_HOME || join(homedir(), ".cache"),
-	"pi",
-);
+export const CACHE_DIR = join(process.env.XDG_CACHE_HOME || join(homedir(), ".cache"), "pi");
 
 // ── Data sources ──────────────────────────────────────────────────────────────
 
@@ -375,9 +355,7 @@ function toModelsDevModel(g: ModelGrepModel): ModelsDevModel {
 	};
 }
 
-export function buildModelsDevIndex(
-	source: ModelGrepModel[],
-): Map<string, ModelsDevModel> {
+export function buildModelsDevIndex(source: ModelGrepModel[]): Map<string, ModelsDevModel> {
 	const index = new Map<string, ModelsDevModel>();
 	for (const g of source) {
 		const m = toModelsDevModel(g);
@@ -388,18 +366,13 @@ export function buildModelsDevIndex(
 	return index;
 }
 
-export function lookupModelsDev(
-	_provider: string,
-	id: string,
-): ModelsDevModel | undefined {
+export function lookupModelsDev(_provider: string, id: string): ModelsDevModel | undefined {
 	// Provider prefix differs between Pi routing (cc/ds/openrouter) and modelgrep
 	// (anthropic/tencent), so join on the model slug only via the normalized index.
 	return findInIndex(id, buildModelsDevIndex(modelgrep.getCached()));
 }
 
-export async function fetchModelsDevIndex(): Promise<
-	Map<string, ModelsDevModel>
-> {
+export async function fetchModelsDevIndex(): Promise<Map<string, ModelsDevModel>> {
 	return buildModelsDevIndex(await modelgrep.get());
 }
 
@@ -438,9 +411,7 @@ const clamp01to100 = (x: number) => Math.max(0, Math.min(100, x));
 // agentic-heavy (.60) since tool-call matters most, coding (.30), reasoning a
 // .10 tiebreaker. Sub-weights likewise fit — tau2 dominates the agentic group.
 function heuristicScore(
-	aa: NonNullable<
-		NonNullable<ModelGrepModel["benchmarks"]>["artificial_analysis"]
-	>,
+	aa: NonNullable<NonNullable<ModelGrepModel["benchmarks"]>["artificial_analysis"]>,
 ): number | null {
 	const coding = blend([
 		[0.6, frac(aa.coding)],
@@ -464,17 +435,13 @@ function heuristicScore(
 // Model score 0–100. Prefer AA's Intelligence Index (authoritative 9-eval
 // composite); when absent, map our heuristic onto the index scale via the
 // fitted line. Null only when nothing is benchmarked.
-function codingScore(
-	bench: NonNullable<ModelGrepModel["benchmarks"]>,
-): number | null {
+function codingScore(bench: NonNullable<ModelGrepModel["benchmarks"]>): number | null {
 	const aa = bench.artificial_analysis ?? {};
 	if (aa.intelligence != null) {
 		return Math.round((aa.intelligence / INTELLIGENCE_MAX) * 100);
 	}
 	const h = heuristicScore(aa);
-	return h == null
-		? null
-		: Math.round(clamp01to100(FALLBACK_SLOPE * h + FALLBACK_INTERCEPT));
+	return h == null ? null : Math.round(clamp01to100(FALLBACK_SLOPE * h + FALLBACK_INTERCEPT));
 }
 
 function buildBenchIndex(): Map<string, BenchmarkEntry> {
@@ -508,8 +475,7 @@ function buildBenchIndex(): Map<string, BenchmarkEntry> {
 			inputPrice: g.pricing?.input ?? null,
 			outputPrice: g.pricing?.output ?? null,
 		};
-		for (const k of [slug, normalize(slug)])
-			if (!index.has(k)) index.set(k, entry);
+		for (const k of [slug, normalize(slug)]) if (!index.has(k)) index.set(k, entry);
 	});
 	return index;
 }
@@ -544,8 +510,7 @@ function lookupBenchlmScore(
 	if (direct) candidates.push(...direct);
 	for (const [key, entries] of benchlmByNorm) {
 		if (key === norm) continue;
-		if (key.startsWith(norm) || norm.startsWith(key))
-			candidates.push(...entries);
+		if (key.startsWith(norm) || norm.startsWith(key)) candidates.push(...entries);
 	}
 	if (candidates.length === 0) return null;
 
@@ -555,10 +520,7 @@ function lookupBenchlmScore(
 		const sa = a.overallScore ?? -Infinity;
 		const sb = b.overallScore ?? -Infinity;
 		if (sa !== sb) return sb - sa;
-		return (
-			normalizeBenchlmName(a.model).length -
-			normalizeBenchlmName(b.model).length
-		);
+		return normalizeBenchlmName(a.model).length - normalizeBenchlmName(b.model).length;
 	});
 	const best = sorted[0];
 	if (!best) return null;

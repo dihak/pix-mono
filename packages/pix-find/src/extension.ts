@@ -4,11 +4,7 @@ import {
 	type FindToolInput,
 } from "@earendil-works/pi-coding-agent";
 import { CursorStore, fffState } from "@xynogen/pix-pretty/fff";
-import type {
-	PiPrettyApi,
-	TextComponentCtor,
-	ToolFactory,
-} from "@xynogen/pix-pretty/types";
+import type { PiPrettyApi, TextComponentCtor, ToolFactory } from "@xynogen/pix-pretty/types";
 import { shortPath } from "@xynogen/pix-pretty/utils";
 import { registerFindTool } from "./find.js";
 import { once } from "./once.ts";

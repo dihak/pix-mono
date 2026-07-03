@@ -37,12 +37,7 @@ export function findCommandDirectives(content: string): CommandDirective[] {
 }
 
 /** Replace the [start, end) slice of `s` with `text`. */
-export function replaceSpan(
-	s: string,
-	start: number,
-	end: number,
-	text: string,
-): string {
+export function replaceSpan(s: string, start: number, end: number, text: string): string {
 	return s.slice(0, start) + text + s.slice(end);
 }
 

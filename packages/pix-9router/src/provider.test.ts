@@ -8,18 +8,9 @@ import type { ModelsDevModel, RouterModel } from "./data.ts";
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 16_384;
 
-const IMAGE_CAPABLE_PATTERNS = [
-	/claude/i,
-	/gpt-5/i,
-	/gpt-4/i,
-	/kimi-k2/i,
-	/hy3/i,
-];
+const IMAGE_CAPABLE_PATTERNS = [/claude/i, /gpt-5/i, /gpt-4/i, /kimi-k2/i, /hy3/i];
 
-function getInputTypes(
-	model: RouterModel,
-	devModel?: ModelsDevModel,
-): ("text" | "image")[] {
+function getInputTypes(model: RouterModel, devModel?: ModelsDevModel): ("text" | "image")[] {
 	if (devModel?.modalities?.input) {
 		const inputs = devModel.modalities.input.filter(
 			(i): i is "text" | "image" => i === "text" || i === "image",
@@ -35,10 +26,7 @@ function getModelName(model: RouterModel, devModel?: ModelsDevModel): string {
 	return model.name || devModel?.name || model.id || "unknown";
 }
 
-function getContextWindow(
-	model: RouterModel,
-	devModel?: ModelsDevModel,
-): number {
+function getContextWindow(model: RouterModel, devModel?: ModelsDevModel): number {
 	return (
 		model.context_window ||
 		model.contextWindow ||
@@ -48,19 +36,12 @@ function getContextWindow(
 }
 
 function getMaxTokens(model: RouterModel, devModel?: ModelsDevModel): number {
-	return (
-		model.max_tokens ||
-		model.maxTokens ||
-		devModel?.limit?.output ||
-		DEFAULT_MAX_TOKENS
-	);
+	return model.max_tokens || model.maxTokens || devModel?.limit?.output || DEFAULT_MAX_TOKENS;
 }
 
 function getReasoning(model: RouterModel, devModel?: ModelsDevModel): boolean {
 	if (typeof devModel?.reasoning === "boolean") return devModel.reasoning;
-	return /reasoner|thinking|xhigh|high|max|pro|codex|opus|sonnet/i.test(
-		model.id ?? "",
-	);
+	return /reasoner|thinking|xhigh|high|max|pro|codex|opus|sonnet/i.test(model.id ?? "");
 }
 
 // ── getInputTypes ────────────────────────────────────────────────────────────
@@ -85,10 +66,7 @@ describe("getInputTypes", () => {
 	});
 
 	it("falls back to pattern match for claude", () => {
-		expect(getInputTypes({ id: "claude-sonnet-4-5" })).toEqual([
-			"text",
-			"image",
-		]);
+		expect(getInputTypes({ id: "claude-sonnet-4-5" })).toEqual(["text", "image"]);
 	});
 
 	it("falls back to pattern match for gpt-4o", () => {
@@ -96,10 +74,7 @@ describe("getInputTypes", () => {
 	});
 
 	it("falls back to pattern match for kimi-k2", () => {
-		expect(getInputTypes({ id: "kimi-k2-instruct" })).toEqual([
-			"text",
-			"image",
-		]);
+		expect(getInputTypes({ id: "kimi-k2-instruct" })).toEqual(["text", "image"]);
 	});
 
 	it("returns text-only for unknown model with no devModel", () => {
@@ -120,18 +95,13 @@ describe("getInputTypes", () => {
 
 describe("getModelName", () => {
 	it("prefers router model.name", () => {
-		expect(
-			getModelName(
-				{ id: "x", name: "Router Name" },
-				{ id: "x", name: "Dev Name" },
-			),
-		).toBe("Router Name");
+		expect(getModelName({ id: "x", name: "Router Name" }, { id: "x", name: "Dev Name" })).toBe(
+			"Router Name",
+		);
 	});
 
 	it("falls back to devModel.name", () => {
-		expect(getModelName({ id: "x" }, { id: "x", name: "Dev Name" })).toBe(
-			"Dev Name",
-		);
+		expect(getModelName({ id: "x" }, { id: "x", name: "Dev Name" })).toBe("Dev Name");
 	});
 
 	it("falls back to model.id", () => {
@@ -160,9 +130,7 @@ describe("getContextWindow", () => {
 	});
 
 	it("falls back to devModel.limit.context", () => {
-		expect(
-			getContextWindow({ id: "x" }, { id: "x", limit: { context: 200_000 } }),
-		).toBe(200_000);
+		expect(getContextWindow({ id: "x" }, { id: "x", limit: { context: 200_000 } })).toBe(200_000);
 	});
 
 	it("falls back to DEFAULT_CONTEXT_WINDOW", () => {
@@ -175,10 +143,7 @@ describe("getContextWindow", () => {
 describe("getMaxTokens", () => {
 	it("prefers model.max_tokens", () => {
 		expect(
-			getMaxTokens(
-				{ id: "x", max_tokens: 4_096 },
-				{ id: "x", limit: { output: 32_000 } },
-			),
+			getMaxTokens({ id: "x", max_tokens: 4_096 }, { id: "x", limit: { output: 32_000 } }),
 		).toBe(4_096);
 	});
 
@@ -187,9 +152,7 @@ describe("getMaxTokens", () => {
 	});
 
 	it("falls back to devModel.limit.output", () => {
-		expect(
-			getMaxTokens({ id: "x" }, { id: "x", limit: { output: 16_000 } }),
-		).toBe(16_000);
+		expect(getMaxTokens({ id: "x" }, { id: "x", limit: { output: 16_000 } })).toBe(16_000);
 	});
 
 	it("falls back to DEFAULT_MAX_TOKENS", () => {
@@ -206,12 +169,9 @@ describe("getReasoning", () => {
 
 	it("uses devModel.reasoning when boolean false", () => {
 		// even if pattern would match, devModel wins
-		expect(
-			getReasoning(
-				{ id: "claude-opus-4" },
-				{ id: "claude-opus-4", reasoning: false },
-			),
-		).toBe(false);
+		expect(getReasoning({ id: "claude-opus-4" }, { id: "claude-opus-4", reasoning: false })).toBe(
+			false,
+		);
 	});
 
 	it("falls back to pattern — opus", () => {

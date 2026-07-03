@@ -4,11 +4,7 @@ import type { OptimizerHandle, OptimizerTool } from "./status.ts";
 
 /** Build a handle set with fixed current values + value lists. */
 function fakeHandles(): Record<OptimizerTool, OptimizerHandle> {
-	const mk = (
-		name: OptimizerTool,
-		current: string,
-		values: string[],
-	): OptimizerHandle => ({
+	const mk = (name: OptimizerTool, current: string, values: string[]): OptimizerHandle => ({
 		name,
 		help: `${name} — ${name} help`,
 		values,

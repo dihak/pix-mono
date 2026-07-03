@@ -52,12 +52,7 @@ export function registerGrepTool(
 			// Try FFF first (SIMD-accelerated).
 			// Constrained searches (path/glob) fall through to SDK — FFF 0.5.2
 			// can abort the process on constrained searches with Unicode filenames.
-			if (
-				fffState.finder &&
-				!fffState.finder.isDestroyed &&
-				!params.path &&
-				!params.glob
-			) {
+			if (fffState.finder && !fffState.finder.isDestroyed && !params.path && !params.glob) {
 				try {
 					const effectiveLimit = Math.max(1, params.limit ?? 100);
 					const grepResult = fffState.finder.grep(params.pattern, {
@@ -72,19 +67,14 @@ export function registerGrepTool(
 					if (grepResult.ok) {
 						const grep = grepResult.value;
 						const notices: string[] = [];
-						if (fffState.partialIndex)
-							notices.push("Warning: partial file index");
+						if (fffState.partialIndex) notices.push("Warning: partial file index");
 						if (grep.items.length >= effectiveLimit)
 							notices.push(`${effectiveLimit} limit reached`);
 						if (grep.regexFallbackError)
-							notices.push(
-								`Regex failed: ${grep.regexFallbackError}, used literal match`,
-							);
+							notices.push(`Regex failed: ${grep.regexFallbackError}, used literal match`);
 						if (grep.nextCursor) {
 							const cursorId = cursorStore.store(grep.nextCursor);
-							notices.push(
-								`More results available. Use cursor="${cursorId}" to continue`,
-							);
+							notices.push(`More results available. Use cursor="${cursorId}" to continue`);
 						}
 
 						const textContent = appendNotices(
@@ -104,18 +94,11 @@ export function registerGrepTool(
 			}
 
 			// SDK fallback
-			const result = await origGrep.execute(
-				tid,
-				params,
-				sig,
-				upd as never,
-				toolCtx,
-			);
+			const result = await origGrep.execute(tid, params, sig, upd as never, toolCtx);
 			const textContent = normalizeLineEndings(getTextContent(result));
 			if (result.content) {
 				for (const content of result.content) {
-					if (isTextContent(content))
-						content.text = normalizeLineEndings(content.text || "");
+					if (isTextContent(content)) content.text = normalizeLineEndings(content.text || "");
 				}
 			}
 			const matchCount = textContent ? countRipgrepMatches(textContent) : 0;
@@ -130,15 +113,9 @@ export function registerGrepTool(
 			return result;
 		},
 
-		renderCall(
-			args: GrepParams,
-			theme: ThemeLike,
-			renderCtx: RenderContextLike,
-		) {
+		renderCall(args: GrepParams, theme: ThemeLike, renderCtx: RenderContextLike) {
 			const pattern = args.pattern ?? "";
-			const path = args.path
-				? ` ${theme.fg("muted", `in ${sp(args.path)}`)}`
-				: "";
+			const path = args.path ? ` ${theme.fg("muted", `in ${sp(args.path)}`)}` : "";
 			const glob = args.glob ? ` ${theme.fg("muted", `(${args.glob})`)}` : "";
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 			text.setText(
@@ -168,9 +145,7 @@ export function registerGrepTool(
 			const cs = renderCtx.state as CollapseState;
 			if (tickCollapse("grep", cs, renderCtx.invalidate)) {
 				const summary =
-					d?._type === "grepResult"
-						? pluralize(d.matchCount, "match", "matches")
-						: "searched";
+					d?._type === "grepResult" ? pluralize(d.matchCount, "match", "matches") : "searched";
 				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
 				return text;
 			}
@@ -179,9 +154,7 @@ export function registerGrepTool(
 			text.setText(
 				renderDimPreview(output, theme, {
 					header:
-						d?._type === "grepResult"
-							? pluralize(d.matchCount, "match", "matches")
-							: undefined,
+						d?._type === "grepResult" ? pluralize(d.matchCount, "match", "matches") : undefined,
 					highlight: d?._type === "grepResult" ? d.pattern : undefined,
 				}),
 			);

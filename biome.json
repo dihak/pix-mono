@@ -11,22 +11,43 @@
 	},
 	"formatter": {
 		"enabled": true,
-		"indentStyle": "tab"
+		"indentStyle": "tab",
+		"lineWidth": 100
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"recommended": true,
 			"suspicious": {
-				"noControlCharactersInRegex": "off"
+				"noControlCharactersInRegex": "off",
+				"noExplicitAny": "off",
+				"noFallthroughSwitchClause": "error",
+				"noDoubleEquals": "error",
+				"noVar": "error"
 			},
 			"correctness": {
 				"noUnusedImports": "error",
-				"noUnusedVariables": "error",
-				"noUnusedPrivateClassMembers": "error"
+				"noUnusedVariables": "warn",
+				"noUnusedPrivateClassMembers": "warn",
+				"noInvalidUseBeforeDeclaration": "error"
+			},
+			"complexity": {
+				"noExcessiveCognitiveComplexity": {
+					"level": "warn",
+					"options": { "maxAllowedComplexity": 100 }
+				},
+				"noForEach": "off",
+				"noUselessTernary": "warn",
+				"noUselessConstructor": "warn"
+			},
+			"style": {
+				"noNonNullAssertion": "off",
+				"useConst": "warn",
+				"noParameterAssign": "off"
 			},
 			"performance": {
-				"noAccumulatingSpread": "error"
+				"noAccumulatingSpread": "error",
+				"noDelete": "off"
 			}
 		}
 	},

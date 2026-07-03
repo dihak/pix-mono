@@ -19,11 +19,7 @@ describe("splitChain", () => {
 	});
 
 	it("splits on && keeping operator", () => {
-		expect(splitChain("git add . && git push")).toEqual([
-			"git add . ",
-			"&&",
-			" git push",
-		]);
+		expect(splitChain("git add . && git push")).toEqual(["git add . ", "&&", " git push"]);
 	});
 
 	it("splits on ||, ;, |", () => {
@@ -33,9 +29,7 @@ describe("splitChain", () => {
 	});
 
 	it("ignores operators inside double quotes", () => {
-		expect(splitChain('git commit -m "a && b"')).toEqual([
-			'git commit -m "a && b"',
-		]);
+		expect(splitChain('git commit -m "a && b"')).toEqual(['git commit -m "a && b"']);
 	});
 
 	it("ignores operators inside single quotes", () => {
@@ -59,9 +53,7 @@ describe("rewriteChain", () => {
 	});
 
 	it("prefixes mixed known commands", () => {
-		expect(rewriteChain("cargo build && npm test")).toBe(
-			"rtk cargo build && rtk npm test",
-		);
+		expect(rewriteChain("cargo build && npm test")).toBe("rtk cargo build && rtk npm test");
 	});
 
 	it("leaves unknown commands alone", () => {
@@ -74,22 +66,16 @@ describe("rewriteChain", () => {
 	});
 
 	it("only prefixes known segments in a mixed chain", () => {
-		expect(rewriteChain("cd /tmp && git status")).toBe(
-			"cd /tmp && rtk git status",
-		);
+		expect(rewriteChain("cd /tmp && git status")).toBe("cd /tmp && rtk git status");
 	});
 
 	it("does not double-prefix already-rtk commands", () => {
 		expect(rewriteChain("rtk git status")).toBe("rtk git status");
-		expect(rewriteChain("rtk git add . && git push")).toBe(
-			"rtk git add . && rtk git push",
-		);
+		expect(rewriteChain("rtk git add . && git push")).toBe("rtk git add . && rtk git push");
 	});
 
 	it("does not touch operators inside quotes", () => {
-		expect(rewriteChain('git commit -m "a && b"')).toBe(
-			'rtk git commit -m "a && b"',
-		);
+		expect(rewriteChain('git commit -m "a && b"')).toBe('rtk git commit -m "a && b"');
 	});
 
 	it("returns original on unbalanced quotes", () => {
@@ -106,9 +92,7 @@ describe("rewriteChain", () => {
 	});
 
 	it("handles pipes between known commands", () => {
-		expect(rewriteChain("git log | grep fix")).toBe(
-			"rtk git log | rtk grep fix",
-		);
+		expect(rewriteChain("git log | grep fix")).toBe("rtk git log | rtk grep fix");
 	});
 });
 
@@ -120,9 +104,7 @@ describe("detectSudoSegments", () => {
 	});
 
 	it("detects a plain sudo segment", () => {
-		expect(detectSudoSegments(["sudo apt-get install foo"])).toEqual([
-			"sudo apt-get install foo",
-		]);
+		expect(detectSudoSegments(["sudo apt-get install foo"])).toEqual(["sudo apt-get install foo"]);
 	});
 
 	it("detects sudo in a chain (operators excluded)", () => {
@@ -132,10 +114,7 @@ describe("detectSudoSegments", () => {
 
 	it("detects multiple sudo segments", () => {
 		const parts = ["sudo rm -rf /tmp ", ";", " sudo reboot"];
-		expect(detectSudoSegments(parts)).toEqual([
-			"sudo rm -rf /tmp",
-			"sudo reboot",
-		]);
+		expect(detectSudoSegments(parts)).toEqual(["sudo rm -rf /tmp", "sudo reboot"]);
 	});
 
 	it("does not match 'sudoer' or 'pseudo'", () => {
@@ -170,10 +149,7 @@ describe("buildSudoBlockReason", () => {
 	});
 
 	it("lists all blocked commands", () => {
-		const reason = buildSudoBlockReason(
-			["sudo rm -rf /tmp", "sudo reboot"],
-			true,
-		);
+		const reason = buildSudoBlockReason(["sudo rm -rf /tmp", "sudo reboot"], true);
 		expect(reason).toContain("sudo rm -rf /tmp");
 		expect(reason).toContain("sudo reboot");
 	});
@@ -254,13 +230,9 @@ describe("applyRtkRewrite (tool_call hook step)", () => {
 
 	it("handles missing / non-string command safely", () => {
 		const event: BashCallEvent = { toolName: "bash", input: {} };
-		expect(applyRtkRewrite(event, { enabled: true, rtkAvailable: true })).toBe(
-			false,
-		);
+		expect(applyRtkRewrite(event, { enabled: true, rtkAvailable: true })).toBe(false);
 		const event2: BashCallEvent = { toolName: "bash", input: { command: 123 } };
-		expect(applyRtkRewrite(event2, { enabled: true, rtkAvailable: true })).toBe(
-			false,
-		);
+		expect(applyRtkRewrite(event2, { enabled: true, rtkAvailable: true })).toBe(false);
 	});
 
 	it("leaves command unchanged on unbalanced quotes", () => {

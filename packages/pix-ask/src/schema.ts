@@ -27,8 +27,7 @@ export const OptionSchema = Type.Object({
 	}),
 	preview: Type.Optional(
 		Type.String({
-			description:
-				"Optional markdown preview for side-by-side layout (single-select only).",
+			description: "Optional markdown preview for side-by-side layout (single-select only).",
 		}),
 	),
 });
@@ -44,14 +43,12 @@ export const QuestionSchema = Type.Object({
 	options: Type.Array(OptionSchema, {
 		minItems: MIN_OPTIONS,
 		maxItems: MAX_OPTIONS,
-		description:
-			"2-4 options. 'Type something.' is auto-appended for single-select.",
+		description: "2-4 options. 'Type something.' is auto-appended for single-select.",
 	}),
 	multiSelect: Type.Optional(
 		Type.Boolean({
 			default: false,
-			description:
-				"Allow multiple selections. Suppresses 'Type something.' row.",
+			description: "Allow multiple selections. Suppresses 'Type something.' row.",
 		}),
 	),
 });

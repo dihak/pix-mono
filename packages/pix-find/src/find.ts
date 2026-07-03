@@ -58,12 +58,9 @@ export function registerFindTool(
 						const { items, totalMatched } = searchResult.value;
 						const trimmed = items.slice(0, effectiveLimit);
 						const notices: string[] = [];
-						if (fffState.partialIndex)
-							notices.push("Warning: partial file index");
-						if (trimmed.length >= effectiveLimit)
-							notices.push(`${effectiveLimit} limit reached`);
-						if (totalMatched > trimmed.length)
-							notices.push(`${totalMatched} total matches`);
+						if (fffState.partialIndex) notices.push("Warning: partial file index");
+						if (trimmed.length >= effectiveLimit) notices.push(`${effectiveLimit} limit reached`);
+						if (totalMatched > trimmed.length) notices.push(`${totalMatched} total matches`);
 
 						const textContent = appendNotices(
 							trimmed.map((item) => item.relativePath).join("\n"),
@@ -82,17 +79,9 @@ export function registerFindTool(
 			}
 
 			// SDK fallback
-			const result = await origFind.execute(
-				tid,
-				params,
-				sig,
-				upd as never,
-				toolCtx,
-			);
+			const result = await origFind.execute(tid, params, sig, upd as never, toolCtx);
 			const textContent = getTextContent(result);
-			const matchCount = textContent
-				? textContent.trim().split("\n").filter(Boolean).length
-				: 0;
+			const matchCount = textContent ? textContent.trim().split("\n").filter(Boolean).length : 0;
 
 			setResultDetails<FindResultDetails>(result, {
 				_type: "findResult",
@@ -104,15 +93,9 @@ export function registerFindTool(
 			return result;
 		},
 
-		renderCall(
-			args: FindParams,
-			theme: ThemeLike,
-			renderCtx: RenderContextLike,
-		) {
+		renderCall(args: FindParams, theme: ThemeLike, renderCtx: RenderContextLike) {
 			const pattern = args.pattern ?? "";
-			const path = args.path
-				? ` ${theme.fg("muted", `in ${sp(args.path)}`)}`
-				: "";
+			const path = args.path ? ` ${theme.fg("muted", `in ${sp(args.path)}`)}` : "";
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 			text.setText(
 				fillToolBackground(
@@ -140,9 +123,7 @@ export function registerFindTool(
 			if (tickCollapse("find", cs, renderCtx.invalidate)) {
 				const d = result.details;
 				const summary =
-					d?._type === "findResult" && d.matchCount != null
-						? `${d.matchCount} files`
-						: "found";
+					d?._type === "findResult" && d.matchCount != null ? `${d.matchCount} files` : "found";
 				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
 				return text;
 			}

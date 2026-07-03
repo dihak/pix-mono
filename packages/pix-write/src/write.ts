@@ -165,22 +165,13 @@ export function registerWriteTool(
 
 			if (d?._type === "diff") {
 				const key = `wd:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${(d.newContent as string).length}:${d.language ?? ""}`;
-				if (renderCtx.toolCallId)
-					trackInvalidator(renderCtx.toolCallId, renderCtx.invalidate);
+				if (renderCtx.toolCallId) trackInvalidator(renderCtx.toolCallId, renderCtx.invalidate);
 				if (renderCtx.state._wdk !== key) {
 					renderCtx.state._wdk = key;
 					renderCtx.state._wdt = `  ${d.summary}\n${theme.fg("muted", "  rendering diff…")}`;
 					const dc = resolveDiffColors(theme);
-					const diff = parseDiff(
-						d.oldContent as string,
-						d.newContent as string,
-					);
-					renderSplit(
-						diff,
-						d.language as string | undefined,
-						MAX_RENDER_LINES,
-						dc,
-					)
+					const diff = parseDiff(d.oldContent as string, d.newContent as string);
+					renderSplit(diff, d.language as string | undefined, MAX_RENDER_LINES, dc)
 						.then((rendered) => {
 							if (renderCtx.state._wdk !== key) return;
 							renderCtx.state._wdt = `  ${d.summary}\n${rendered}`;
@@ -197,9 +188,7 @@ export function registerWriteTool(
 			}
 
 			if (d?._type === "noChange") {
-				text.setText(
-					fillToolBackground(`  ${theme.fg("muted", "✓ no changes")}`),
-				);
+				text.setText(fillToolBackground(`  ${theme.fg("muted", "✓ no changes")}`));
 				return text;
 			}
 
@@ -222,8 +211,7 @@ export function registerWriteTool(
 								const preview = hlLines.slice(0, maxShow).join("\n");
 								const rem = hlLines.length - maxShow;
 								let out = `${base}\n${preview}`;
-								if (rem > 0)
-									out += `\n${theme.fg("muted", `  … ${rem} more lines`)}`;
+								if (rem > 0) out += `\n${theme.fg("muted", `  … ${rem} more lines`)}`;
 								renderCtx.state._nft = out;
 								renderCtx.invalidate();
 							})
@@ -235,13 +223,8 @@ export function registerWriteTool(
 			}
 
 			const fallback = result.content?.[0];
-			const fallbackText =
-				fallback && isTextContent(fallback) ? fallback.text : "written";
-			text.setText(
-				fillToolBackground(
-					`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`,
-				),
-			);
+			const fallbackText = fallback && isTextContent(fallback) ? fallback.text : "written";
+			text.setText(fillToolBackground(`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`));
 			return text;
 		},
 	});

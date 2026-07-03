@@ -28,10 +28,7 @@ export function stripModelWarningParagraphs(text: string): string {
 	// then rejoin. Trim trailing whitespace from the result.
 	const paragraphs = text.split(/\n\n/);
 	const kept = paragraphs.filter(
-		(p) =>
-			!MODEL_WARNING_PREFIXES.some((prefix) =>
-				p.trimStart().startsWith(prefix),
-			),
+		(p) => !MODEL_WARNING_PREFIXES.some((prefix) => p.trimStart().startsWith(prefix)),
 	);
 	if (kept.length === paragraphs.length) return text;
 	return kept.join("\n\n").trimEnd();

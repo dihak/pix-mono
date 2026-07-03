@@ -10,11 +10,7 @@ import registerCapabilityNudge, {
 } from "./capability.ts";
 
 // Minimal Skill-shaped fixtures (only fields the builder reads).
-const skill = (
-	name: string,
-	description: string,
-	disableModelInvocation = false,
-) =>
+const skill = (name: string, description: string, disableModelInvocation = false) =>
 	({
 		name,
 		description,
@@ -65,11 +61,7 @@ describe("countInvocableSkills", () => {
 	});
 
 	test("excludes user-only skills", () => {
-		const n = countInvocableSkills([
-			skill("a", "."),
-			skill("b", ".", true),
-			skill("c", "."),
-		]);
+		const n = countInvocableSkills([skill("a", "."), skill("b", ".", true), skill("c", ".")]);
 		expect(n).toBe(2);
 	});
 });
@@ -96,10 +88,7 @@ describe("partitionTools", () => {
 	});
 
 	test("without an active set, every tool counts as active (gated 0)", () => {
-		const { active, gated } = partitionTools([
-			tool("read", "builtin"),
-			tool("find", "builtin"),
-		]);
+		const { active, gated } = partitionTools([tool("read", "builtin"), tool("find", "builtin")]);
 		expect(active).toBe(2);
 		expect(gated).toBe(0);
 	});
@@ -153,11 +142,7 @@ describe("buildOrientation", () => {
 	});
 
 	test("singular phrasing when exactly one tool is gated", () => {
-		const out = buildOrientation(
-			[tool("read", "builtin"), tool("find", "builtin")],
-			[],
-			["read"],
-		);
+		const out = buildOrientation([tool("read", "builtin"), tool("find", "builtin")], [], ["read"]);
 		expect(out).toContain("1 is gated");
 		expect(out).toContain("function definitions");
 	});
@@ -172,10 +157,7 @@ describe("buildOrientation", () => {
 	});
 
 	test("no gate line when active set is unknown", () => {
-		const out = buildOrientation(
-			[tool("read", "builtin"), tool("find", "builtin")],
-			[],
-		);
+		const out = buildOrientation([tool("read", "builtin"), tool("find", "builtin")], []);
 		expect(out).not.toContain("gated out of the prompt");
 	});
 
@@ -189,10 +171,7 @@ describe("buildOrientation", () => {
 	});
 
 	test("omits the skills line when no invocable skills", () => {
-		const out = buildOrientation(
-			[tool("read", "builtin")],
-			[skill("x", ".", true)],
-		);
+		const out = buildOrientation([tool("read", "builtin")], [skill("x", ".", true)]);
 		expect(out).not.toContain("Skills:");
 	});
 

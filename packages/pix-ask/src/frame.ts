@@ -60,8 +60,7 @@ export function frameLines(opts: FrameOptions): string[] {
 
 	const row = (content: string): string => {
 		const pad = inner - visibleWidth(content);
-		const padded =
-			pad > 0 ? content + " ".repeat(pad) : truncateToWidth(content, inner);
+		const padded = pad > 0 ? content + " ".repeat(pad) : truncateToWidth(content, inner);
 		return bg(`${color("│")} ${reassert(padded)} ${color("│")}`);
 	};
 

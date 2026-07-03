@@ -6,12 +6,7 @@ import { once } from "./once.ts";
 import { AskQuestionnaire } from "./questionnaire.js";
 import { rpcFallback } from "./rpc.js";
 import type { Params } from "./schema.js";
-import {
-	MAX_OPTIONS,
-	MAX_QUESTIONS,
-	MIN_OPTIONS,
-	ParamsSchema,
-} from "./schema.js";
+import { MAX_OPTIONS, MAX_QUESTIONS, MIN_OPTIONS, ParamsSchema } from "./schema.js";
 import type { QuestionAnswer, QuestionnaireResult } from "./types.js";
 
 // ── Re-exports (consumed by tests and single-select-layout) ───────────
@@ -57,9 +52,7 @@ export default function registerAsk(pi: ExtensionAPI): void {
 
 				if (!Array.isArray(typed.questions) || typed.questions.length === 0) {
 					return {
-						content: [
-							{ type: "text", text: "At least one question is required." },
-						],
+						content: [{ type: "text", text: "At least one question is required." }],
 						isError: true,
 						details: { answers: [], cancelled: true },
 					};
@@ -76,11 +69,9 @@ export default function registerAsk(pi: ExtensionAPI): void {
 				const result = await ctx.ui.custom<QuestionnaireResult | null>(
 					(tui, theme, keybindings, done) => {
 						if (signal) {
-							signal.addEventListener(
-								"abort",
-								() => done({ answers: [], cancelled: true }),
-								{ once: true },
-							);
+							signal.addEventListener("abort", () => done({ answers: [], cancelled: true }), {
+								once: true,
+							});
 						}
 						return new AskQuestionnaire(typed, tui, theme, keybindings, done);
 					},
@@ -89,9 +80,7 @@ export default function registerAsk(pi: ExtensionAPI): void {
 
 				if (!result || result.cancelled) {
 					return {
-						content: [
-							{ type: "text", text: "User cancelled the questionnaire" },
-						],
+						content: [{ type: "text", text: "User cancelled the questionnaire" }],
 						details: result ?? { answers: [], cancelled: true },
 					};
 				}
@@ -121,10 +110,7 @@ export default function registerAsk(pi: ExtensionAPI): void {
 					return new Text(theme.fg("warning", "Cancelled"), 0, 0);
 				}
 				const texts = details.answers.map((a) => {
-					const v =
-						a.kind === "multi"
-							? (a.selected ?? []).join(", ")
-							: (a.answer ?? "");
+					const v = a.kind === "multi" ? (a.selected ?? []).join(", ") : (a.answer ?? "");
 					return `${a.questionIndex + 1}: ${v}`;
 				});
 				return new Text(theme.fg("success", `✓ ${texts.join(" • ")}`), 0, 0);

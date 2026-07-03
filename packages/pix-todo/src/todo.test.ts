@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import registerTodo, {
-	renderTodoLines,
-	renderTodoSummaryLine,
-	type TodoItem,
-} from "./todo.ts";
+import registerTodo, { renderTodoLines, renderTodoSummaryLine, type TodoItem } from "./todo.ts";
 
 // registerTodo wraps its body in once(pi, "pix-todo") — a per-instance
 // WeakMap guard that dedupes activation across pix-core + a standalone install.
@@ -40,10 +36,7 @@ function makeHost(
 		  }>)
 		| null = null;
 	const appendCalls: Array<{ type: string; data: unknown }> = [];
-	const handlers: Record<
-		string,
-		Array<(event: unknown, ctx?: unknown) => unknown>
-	> = {};
+	const handlers: Record<string, Array<(event: unknown, ctx?: unknown) => unknown>> = {};
 
 	let capturedRender:
 		| ((
@@ -122,11 +115,7 @@ describe("todo actions", () => {
 	test("list on empty returns (no todos)", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "list" });
 		expect(text(result)).toBe("(no todos)");
 	});
@@ -134,11 +123,7 @@ describe("todo actions", () => {
 	test("set creates items from newline text", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, {
 			action: "set",
 			items: "alpha\nbravo\ncharlie",
@@ -153,11 +138,7 @@ describe("todo actions", () => {
 	test("set creates items from numbered list", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, {
 			action: "set",
 			items: "1. alpha\n2. bravo",
@@ -168,11 +149,7 @@ describe("todo actions", () => {
 	test("set creates items from bullet list", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, {
 			action: "set",
 			items: "- alpha\n* bravo",
@@ -184,11 +161,7 @@ describe("todo actions", () => {
 	test("set ignores empty lines", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, {
 			action: "set",
 			items: "alpha\n\nbravo\n  \ncharlie",
@@ -199,11 +172,7 @@ describe("todo actions", () => {
 	test("set with empty items returns error", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "set", items: "" });
 		expect(result.isError).toBe(true);
 		expect(text(result)).toContain("non-empty");
@@ -212,11 +181,7 @@ describe("todo actions", () => {
 	test("set with only whitespace returns error", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "set", items: "  \n  " });
 		expect(result.isError).toBe(true);
 	});
@@ -224,11 +189,7 @@ describe("todo actions", () => {
 	test("set resets ids on re-set", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "first\nsecond" });
 		const result = await run(host.execute, { action: "set", items: "new" });
 		expect(text(result)).toContain("○ 1. new");
@@ -238,11 +199,7 @@ describe("todo actions", () => {
 	test("add appends items", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "alpha" });
 		const result = await run(host.execute, {
 			action: "add",
@@ -258,11 +215,7 @@ describe("todo actions", () => {
 	test("add with ids continuing sequence", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "first\nsecond\nthird" });
 		const result = await run(host.execute, { action: "add", items: "fourth" });
 		expect(text(result)).toContain("○ 4. fourth");
@@ -271,11 +224,7 @@ describe("todo actions", () => {
 	test("add with empty items returns error", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "add", items: "" });
 		expect(result.isError).toBe(true);
 		expect(text(result)).toContain("non-empty");
@@ -284,11 +233,7 @@ describe("todo actions", () => {
 	test("update changes status", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "alpha\nbravo" });
 		const result = await run(host.execute, {
 			action: "update",
@@ -304,11 +249,7 @@ describe("todo actions", () => {
 	test("update changes text", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "old name" });
 		const result = await run(host.execute, {
 			action: "update",
@@ -321,11 +262,7 @@ describe("todo actions", () => {
 	test("update changes status and text together", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "alpha" });
 		const result = await run(host.execute, {
 			action: "update",
@@ -341,11 +278,7 @@ describe("todo actions", () => {
 	test("opening a new in_progress closes the previous one", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "a\nb\nc" });
 		await run(host.execute, { action: "update", id: 1, status: "in_progress" });
 		const result = await run(host.execute, {
@@ -363,11 +296,7 @@ describe("todo actions", () => {
 	test("opening a later item cascade-closes skipped pending items", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "a\nb\nc\nd" });
 		// Jump straight to id 4 without opening 1-3; they should all auto-close.
 		const result = await run(host.execute, {
@@ -386,11 +315,7 @@ describe("todo actions", () => {
 	test("cascade-close leaves a blocked earlier item untouched", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "a\nb\nc" });
 		await run(host.execute, { action: "update", id: 1, status: "blocked" });
 		const result = await run(host.execute, {
@@ -407,11 +332,7 @@ describe("todo actions", () => {
 	test("update unknown id returns error", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, {
 			action: "update",
 			id: 999,
@@ -424,11 +345,7 @@ describe("todo actions", () => {
 	test("update without status or text does nothing", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "unchanged" });
 		const result = await run(host.execute, { action: "update", id: 1 });
 		expect(text(result)).toContain("○ 1. unchanged");
@@ -437,11 +354,7 @@ describe("todo actions", () => {
 	test("clear empties list", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "alpha\nbravo" });
 		const result = await run(host.execute, { action: "clear" });
 		expect(text(result)).toContain("Todos cleared");
@@ -453,11 +366,7 @@ describe("todo actions", () => {
 	test("clear resets id counter", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "alpha\nbravo\ncharlie" });
 		await run(host.execute, { action: "clear" });
 		const result = await run(host.execute, { action: "set", items: "new" });
@@ -467,11 +376,7 @@ describe("todo actions", () => {
 	test("unknown action returns error", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "bogus" });
 		expect(result.isError).toBe(true);
 		expect(text(result)).toContain("Unknown action");
@@ -480,11 +385,7 @@ describe("todo actions", () => {
 	test("all status glyphs render correctly", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "a\nb\nc\nd" });
 		// Open id 2 first (cascade-closes nothing earlier we assert on), then set
 		// the others directly so each glyph is exercised without cascade interfering.
@@ -508,11 +409,7 @@ describe("persistence", () => {
 	test("set persists todos", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		host.appendCalls.length = 0;
 		await run(host.execute, { action: "set", items: "alpha\nbravo" });
 		expect(host.appendCalls.length).toBe(1);
@@ -529,11 +426,7 @@ describe("persistence", () => {
 	test("add persists todos", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "alpha" });
 		host.appendCalls.length = 0;
 		await run(host.execute, { action: "add", items: "bravo" });
@@ -543,11 +436,7 @@ describe("persistence", () => {
 	test("update persists todos", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "alpha" });
 		host.appendCalls.length = 0;
 		await run(host.execute, { action: "update", id: 1, status: "done" });
@@ -557,11 +446,7 @@ describe("persistence", () => {
 	test("clear persists", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "alpha" });
 		host.appendCalls.length = 0;
 		await run(host.execute, { action: "clear" });
@@ -590,11 +475,7 @@ describe("restore", () => {
 			},
 		]);
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "list" });
 		expect(text(result)).toContain("● 1. restored");
 		expect(text(result)).toContain("Todos 1/1 done");
@@ -612,11 +493,7 @@ describe("restore", () => {
 			},
 		]);
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "add", items: "new" });
 		expect(text(result)).toContain("○ 6. new");
 	});
@@ -635,11 +512,7 @@ describe("restore", () => {
 			},
 		]);
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "add", items: "next" });
 		expect(text(result)).toContain("○ 8. next");
 	});
@@ -658,11 +531,7 @@ describe("restore", () => {
 			},
 		]);
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "list" });
 		expect(text(result)).toContain("○ 1. real");
 	});
@@ -670,11 +539,7 @@ describe("restore", () => {
 	test("no todo-state entries starts empty", async () => {
 		const host = makeHost([{ type: "message", data: "hello" }]);
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "list" });
 		expect(text(result)).toBe("(no todos)");
 	});
@@ -682,11 +547,7 @@ describe("restore", () => {
 	test("empty entries list starts empty", async () => {
 		const host = makeHost([]);
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "list" });
 		expect(text(result)).toBe("(no todos)");
 	});
@@ -700,11 +561,7 @@ describe("restore", () => {
 			},
 		]);
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		const result = await run(host.execute, { action: "list" });
 		expect(text(result)).toBe("(no todos)");
 	});
@@ -754,11 +611,7 @@ describe("renderResult snapshot isolation", () => {
 	test("a rendered card keeps its state after todos mutate", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
-		await host.emit(
-			"session_start",
-			{},
-			{ sessionManager: host.sessionManager },
-		);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
 		await run(host.execute, { action: "set", items: "alpha\nbravo" });
 
 		// Render once with a per-row state bag; snapshot is taken here.
@@ -789,8 +642,6 @@ describe("renderTodoSummaryLine (collapsed one-liner)", () => {
 			{ id: 1, text: "a", status: "done" },
 			{ id: 2, text: "b", status: "pending" },
 		];
-		expect(renderTodoSummaryLine(items, tagTheme)).toBe(
-			"[muted]Todos 1/2 done ✓[/]",
-		);
+		expect(renderTodoSummaryLine(items, tagTheme)).toBe("[muted]Todos 1/2 done ✓[/]");
 	});
 });

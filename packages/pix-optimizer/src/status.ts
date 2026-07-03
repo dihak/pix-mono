@@ -17,11 +17,7 @@ import type {
 	ExtensionContext,
 	ThemeColor,
 } from "@earendil-works/pi-coding-agent";
-import {
-	type IconKey,
-	icon,
-	onIconModeChange,
-} from "@xynogen/pix-pretty/icon-catalog";
+import { type IconKey, icon, onIconModeChange } from "@xynogen/pix-pretty/icon-catalog";
 
 /**
  * Each optimizer tool (caveman/rtk/toon/ponytail) exposes a handle so the
@@ -66,12 +62,7 @@ export function toolIcon(tool: OptimizerTool): string {
 }
 
 /** Fixed left-to-right order of icons in the cell. */
-const TOOL_ORDER: readonly OptimizerTool[] = [
-	"caveman",
-	"rtk",
-	"toon",
-	"ponytail",
-];
+const TOOL_ORDER: readonly OptimizerTool[] = ["caveman", "rtk", "toon", "ponytail"];
 
 /** Theme color for enabled icons. */
 const ENABLED_COLOR: ThemeColor = "accent";
@@ -124,11 +115,7 @@ export class OptimizerStatus {
 	}
 
 	/** Update one tool's enabled state and repaint the shared cell. */
-	set(
-		tool: OptimizerTool,
-		enabled: boolean,
-		ctx: Pick<ExtensionContext, "ui">,
-	): void {
+	set(tool: OptimizerTool, enabled: boolean, ctx: Pick<ExtensionContext, "ui">): void {
 		this.states[tool] = enabled;
 		this.paint(ctx);
 	}

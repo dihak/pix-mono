@@ -167,11 +167,7 @@ export function registerEditTool(
 			return result;
 		},
 
-		renderCall(
-			args: EditParams,
-			theme: ThemeLike,
-			renderCtx: RenderContextLike<EditRenderState>,
-		) {
+		renderCall(args: EditParams, theme: ThemeLike, renderCtx: RenderContextLike<EditRenderState>) {
 			const fp = args?.path ?? args?.file_path ?? "";
 			const operations = getEditOperations(args);
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
@@ -183,10 +179,7 @@ export function registerEditTool(
 			}
 
 			const { summary } = summarizeEditOperations(operations);
-			const suffix =
-				operations.length === 1
-					? summary
-					: `${operations.length} edits ${summary}`;
+			const suffix = operations.length === 1 ? summary : `${operations.length} edits ${summary}`;
 			text.setText(fillToolBackground(`${hdr}  ${theme.fg("muted", suffix)}`));
 			return text;
 		},
@@ -220,14 +213,11 @@ export function registerEditTool(
 			// Single edit — full split diff
 			if (d?._type === "editInfo") {
 				const key = `ed:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${(d.oldContent as string).length}:${(d.newContent as string).length}:${d.language ?? ""}`;
-				if (renderCtx.toolCallId)
-					trackInvalidator(renderCtx.toolCallId, renderCtx.invalidate);
+				if (renderCtx.toolCallId) trackInvalidator(renderCtx.toolCallId, renderCtx.invalidate);
 				if (renderCtx.state._edk !== key) {
 					renderCtx.state._edk = key;
 					const loc =
-						(d.editLine as number) > 0
-							? ` ${theme.fg("muted", `at line ${d.editLine}`)}`
-							: "";
+						(d.editLine as number) > 0 ? ` ${theme.fg("muted", `at line ${d.editLine}`)}` : "";
 					renderCtx.state._edt = `  ${d.summary}${loc}\n${theme.fg("muted", "  rendering diff…")}`;
 					const dc = resolveDiffColors(theme);
 					const diff = parseDiff(
@@ -236,18 +226,11 @@ export function registerEditTool(
 						3,
 						d.editLine as number,
 					);
-					renderSplit(
-						diff,
-						d.language as string | undefined,
-						MAX_RENDER_LINES,
-						dc,
-					)
+					renderSplit(diff, d.language as string | undefined, MAX_RENDER_LINES, dc)
 						.then((rendered) => {
 							if (renderCtx.state._edk !== key) return;
 							const loc2 =
-								(d.editLine as number) > 0
-									? ` ${theme.fg("muted", `at line ${d.editLine}`)}`
-									: "";
+								(d.editLine as number) > 0 ? ` ${theme.fg("muted", `at line ${d.editLine}`)}` : "";
 							renderCtx.state._edt = `  ${d.summary}${loc2}\n${rendered}`;
 							renderCtx.invalidate();
 						})
@@ -264,8 +247,7 @@ export function registerEditTool(
 			// Multi-edit — stacked diffs
 			if (d?._type === "multiEditInfo") {
 				const key = `med:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${d.editCount}:${d.diffLineCount}`;
-				if (renderCtx.toolCallId)
-					trackInvalidator(renderCtx.toolCallId, renderCtx.invalidate);
+				if (renderCtx.toolCallId) trackInvalidator(renderCtx.toolCallId, renderCtx.invalidate);
 				if (renderCtx.state._edk !== key) {
 					renderCtx.state._edk = key;
 					renderCtx.state._edt = `  ${d.editCount} edits ${d.summary}\n${theme.fg("muted", "  rendering diff…")}`;
@@ -279,12 +261,7 @@ export function registerEditTool(
 								editLine?: number;
 							}>
 						).map((op) => {
-							const diff = parseDiff(
-								op.oldContent,
-								op.newContent,
-								3,
-								op.editLine ?? 0,
-							);
+							const diff = parseDiff(op.oldContent, op.newContent, 3, op.editLine ?? 0);
 							return renderSplit(diff, op.language, MAX_RENDER_LINES, dc);
 						}),
 					)
@@ -300,20 +277,13 @@ export function registerEditTool(
 							renderCtx.invalidate();
 						});
 				}
-				text.setText(
-					renderCtx.state._edt ?? `  ${d.editCount} edits ${d.summary}`,
-				);
+				text.setText(renderCtx.state._edt ?? `  ${d.editCount} edits ${d.summary}`);
 				return text;
 			}
 
 			const fallback = result.content?.[0];
-			const fallbackText =
-				fallback && isTextContent(fallback) ? fallback.text : "edited";
-			text.setText(
-				fillToolBackground(
-					`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`,
-				),
-			);
+			const fallbackText = fallback && isTextContent(fallback) ? fallback.text : "edited";
+			text.setText(fillToolBackground(`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`));
 			return text;
 		},
 	});
