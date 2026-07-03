@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-pretty",
-	"version": "1.7.13",
+	"version": "1.7.14",
 	"description": "Enhanced tool output rendering with syntax highlighting, file icons, tree views, diff rendering, and FFF search",
 	"type": "module",
 	"main": "src/index.ts",
@@ -58,7 +58,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-data": "workspace:*",
+		"@xynogen/pix-data": "^0.3.0",
 		"cli-highlight": "^2.1.11",
 		"@ff-labs/fff-node": "^0.5.2",
 		"diff": "^7.0.0"
