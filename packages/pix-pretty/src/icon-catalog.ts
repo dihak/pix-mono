@@ -78,7 +78,7 @@ const CATALOG = {
 	// ── subagent widget (pix-subagent) ────────────────────────────────────
 	agent: { nerd: "\u{F0BA0}", unicode: `\u2699${VS}`, ascii: "@" },
 	turns: { nerd: "\u{F006A}", unicode: `\u21BB${VS}`, ascii: "~" },
-	tools: { nerd: "\u{F0764}", unicode: `\u2692${VS}`, ascii: "T" },
+	tools: { nerd: "\u{F1064}", unicode: `\u2692${VS}`, ascii: "T" },
 	tokens: { nerd: "\u{F027F}", unicode: `\u25A4${VS}`, ascii: "tk" },
 } as const;
 
