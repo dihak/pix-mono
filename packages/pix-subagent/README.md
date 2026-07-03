@@ -20,7 +20,7 @@ Gives the parent agent (planner) three tools to delegate work to isolated child 
 
 | Tool | Purpose |
 |---|---|
-| `agent` | Spawn a sub-agent (foreground or background) |
+| `agent` | Spawn a background sub-agent |
 | `agent_result` | Fetch latest output / full conversation by ID |
 | `agent_steer` | Inject a message into a running background agent |
 
@@ -47,10 +47,7 @@ model?           string    "provider/id" or fuzzy ("haiku") — from the live mo
 allowed_tools?   string[]  Restrict child's tools (intersected, never widens)
 thinking?        string    off|minimal|low|medium|high|xhigh
 max_turns?       number    Omit for unlimited
-run_in_background? bool    false (default) = foreground; true = background + notify
 resume?          string    Agent ID to continue
-isolated?        bool      No extension/MCP tools, builtins only
-inherit_context? bool      Fork parent conversation into child
 ```
 
 **`allowed_tools[]`** is the work-splitting hook. Pass `["read","grep","find"]` to scope an Explore agent to read-only ops. The list is intersected with the agent type's default set — it can only narrow, never widen.
@@ -105,7 +102,7 @@ max_turns: 20
 You are a read-only code scout. Find patterns, never write files.
 ```
 
-Frontmatter fields: `description`, `tools` (CSV), `model` (caller-overridable default), `thinking`, `max_turns`, `extensions` (true/false/CSV), `skills` (true/false/CSV), `isolated`, `inherit_context`, `run_in_background`, `prompt_mode` (replace/append), `enabled` (false to disable).
+Frontmatter fields: `description`, `tools` (CSV), `model` (caller-overridable default), `thinking`, `max_turns`, `extensions` (true/false/CSV), `skills` (true/false/CSV), `isolated`, `inherit_context`, `prompt_mode` (replace/append), `enabled` (false to disable).
 
 **`model`** in a custom agent is a *caller-overridable default*: it applies
 when the caller's `model:` param is omitted, but a caller's explicit `model:`
