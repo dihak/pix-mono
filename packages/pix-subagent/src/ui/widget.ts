@@ -15,6 +15,7 @@ import { getConfig } from "../agent-types.ts";
 import type { AgentActivity, AgentDetails, Theme } from "../tools.ts";
 import {
 	describeActivity,
+	formatContext,
 	formatMs,
 	formatSpeed,
 	formatTokens,
@@ -23,11 +24,12 @@ import {
 	SPINNER,
 } from "../tools.ts";
 import type { AgentInvocation, SubagentType } from "../types.ts";
-import { getLifetimeTotal, getSessionContextPercent, type SessionLike } from "../usage.ts";
+import { getSessionContextPercent, type SessionLike } from "../usage.ts";
 
 export type { AgentActivity, AgentDetails, Theme };
 export {
 	describeActivity,
+	formatContext,
 	formatMs,
 	formatSpeed,
 	formatTokens,
@@ -58,21 +60,37 @@ export type UICtx = {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-export function formatSessionTokens(
-	tokens: number,
+/**
+ * Format context-window utilization for the widget, with optional compaction
+ * count annotation. Returns "" when context percent is unavailable.
+ */
+export function formatSessionContext(
 	percent: number | null,
 	theme: Theme,
 	compactions = 0,
 ): string {
-	const tokenStr = formatTokens(tokens);
-	const annot: string[] = [];
-	if (percent !== null) {
-		const color = percent >= 85 ? "error" : percent >= 70 ? "warning" : "dim";
-		annot.push(theme.fg(color, `${Math.round(percent)}%`));
+	if (percent == null && compactions === 0) return "";
+	const base = formatContext(percent);
+	if (compactions > 0) {
+		const compactStr = theme.fg("dim", `⇊${compactions}`);
+		if (!base) return compactStr;
+		const color =
+			percent != null && percent >= 85
+				? "error"
+				: percent != null && percent >= 70
+					? "warning"
+					: "dim";
+		return `${icon("tokens")} ${theme.fg(color, `${Math.round(percent!)}%`)} ctx ${theme.fg("dim", "(")}${compactStr}${theme.fg("dim", ")")}`;
 	}
-	if (compactions > 0) annot.push(theme.fg("dim", `⇊${compactions}`));
-	if (annot.length === 0) return tokenStr;
-	return `${tokenStr} ${theme.fg("dim", "(")}${annot.join(theme.fg("dim", " · "))}${theme.fg("dim", ")")}`;
+	if (!base) return "";
+	// Color the percent based on thresholds
+	const color =
+		percent != null && percent >= 85
+			? "error"
+			: percent != null && percent >= 70
+				? "warning"
+				: "dim";
+	return `${icon("tokens")} ${theme.fg(color, `${Math.round(percent!)}% ctx`)}`;
 }
 
 export function getDisplayName(type: SubagentType): string {
@@ -141,10 +159,12 @@ export class AgentWidget {
 		}
 	}
 
-	private shouldShowFinished(status: string, completedAt: number): boolean {
-		// Linger a few seconds after finish, then drop. The ✓ … Done line in the
-		// transcript is the permanent record; errors stay longer so failures are
-		// noticed. The 80ms widget timer re-evaluates this continuously.
+	private shouldShowFinished(status: string, completedAt: number, isBackground?: boolean): boolean {
+		// Foreground agents show their result inline in the transcript — no need
+		// to linger in the widget. Only background agents get the finished line.
+		if (!isBackground) return false;
+		// Linger a few seconds after finish, then drop. The notification is the
+		// permanent record; errors stay longer so failures are noticed.
 		const linger = ERROR_STATUSES.has(status)
 			? AgentWidget.ERROR_LINGER_MS
 			: AgentWidget.FINISHED_LINGER_MS;
@@ -207,13 +227,11 @@ export class AgentWidget {
 		// the activity entry before this line renders, which had dropped ↻N.
 		if (a.turnCount != null && a.turnCount > 0) parts.push(formatTurns(a.turnCount, a.maxTurns));
 		if (a.toolUses > 0) parts.push(formatToolUses(a.toolUses));
-		// Token + context% + speed read from the record (survives the
+		// Context% + speed read from the record (survives the
 		// agentActivity delete that fires in onComplete before this renders).
-		const tokens = getLifetimeTotal(a.lifetimeUsage);
-		if (tokens > 0) {
-			const contextPercent = a.session ? getSessionContextPercent(a.session as SessionLike) : null;
-			parts.push(formatSessionTokens(tokens, contextPercent, theme, a.compactionCount ?? 0));
-		}
+		const contextPercent = a.session ? getSessionContextPercent(a.session as SessionLike) : null;
+		const ctxText = formatSessionContext(contextPercent, theme, a.compactionCount ?? 0);
+		if (ctxText) parts.push(ctxText);
 		parts.push(duration);
 		const speed = formatSpeed(a.lifetimeUsage?.output ?? 0, a.streamingMs ?? durationMs);
 		if (speed) parts.push(speed);
@@ -233,7 +251,7 @@ export class AgentWidget {
 				a.status !== "running" &&
 				a.status !== "queued" &&
 				a.completedAt != null &&
-				this.shouldShowFinished(a.status, a.completedAt),
+				this.shouldShowFinished(a.status, a.completedAt, a.isBackground),
 		);
 
 		if (running.length === 0 && queued.length === 0 && finished.length === 0) return [];
@@ -264,17 +282,15 @@ export class AgentWidget {
 
 			const bg = this.agentActivity.get(a.id);
 			const toolUses = bg?.toolUses ?? a.toolUses;
-			const tokens = getLifetimeTotal(bg?.lifetimeUsage);
 			const contextPercent = bg?.session
 				? getSessionContextPercent(bg.session as Parameters<typeof getSessionContextPercent>[0])
 				: null;
-			const tokenText =
-				tokens > 0 ? formatSessionTokens(tokens, contextPercent, theme, a.compactionCount) : "";
+			const ctxText = formatSessionContext(contextPercent, theme, a.compactionCount);
 
 			const parts: string[] = [];
 			if (bg && bg.turnCount > 0) parts.push(formatTurns(bg.turnCount, bg.maxTurns));
 			if (toolUses > 0) parts.push(formatToolUses(toolUses));
-			if (tokenText) parts.push(tokenText);
+			if (ctxText) parts.push(ctxText);
 			parts.push(elapsed);
 			const liveSpeed = formatSpeed(bg?.lifetimeUsage.output ?? 0, bg?.streamingMs ?? 0);
 			if (liveSpeed) parts.push(liveSpeed);
@@ -367,7 +383,10 @@ export class AgentWidget {
 		for (const a of allAgents) {
 			if (a.status === "running") runningCount++;
 			else if (a.status === "queued") queuedCount++;
-			else if (a.completedAt != null && this.shouldShowFinished(a.status, a.completedAt))
+			else if (
+				a.completedAt != null &&
+				this.shouldShowFinished(a.status, a.completedAt, a.isBackground)
+			)
 				hasFinished = true;
 		}
 		const hasActive = runningCount > 0 || queuedCount > 0;
@@ -401,7 +420,7 @@ export class AgentWidget {
 				let earliest = Number.POSITIVE_INFINITY;
 				for (const a of allAgents) {
 					if (a.status === "running" || a.status === "queued") continue;
-					if (a.completedAt == null) continue;
+					if (a.completedAt == null || !a.isBackground) continue;
 					const linger = ERROR_STATUSES.has(a.status)
 						? AgentWidget.ERROR_LINGER_MS
 						: AgentWidget.FINISHED_LINGER_MS;

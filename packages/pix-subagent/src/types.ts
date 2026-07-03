@@ -88,6 +88,8 @@ export interface AgentRecord {
 	streamingMs: number;
 	/** Resolved spawn params, captured for UI display. */
 	invocation?: AgentInvocation;
+	/** True when this agent was launched in background mode. */
+	isBackground?: boolean;
 }
 
 export interface AgentInvocation {
@@ -109,7 +111,8 @@ export interface NotificationDetails {
 	toolUses: number;
 	turnCount: number;
 	maxTurns?: number;
-	totalTokens: number;
+	/** Context-window utilization 0–100, or null when unavailable. */
+	contextPercent: number | null;
 	durationMs: number;
 	error?: string;
 	resultPreview: string;

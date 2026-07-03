@@ -30,7 +30,7 @@ import { BUILTIN_TOOL_NAMES, getAgentConfig, getAvailableTypes, getConfig } from
 import { resolveAgentInvocationConfig } from "./invocation-config.ts";
 import { resolveModel } from "./model-resolver.ts";
 import type { AgentInvocation, LifetimeUsage } from "./types.ts";
-import { getLifetimeTotal, getSessionContextPercent, type SessionLike } from "./usage.ts";
+import { getSessionContextPercent, type SessionLike } from "./usage.ts";
 
 // ── Types shared with ui/widget.ts (widget imports from here to avoid circular) ─
 
@@ -56,9 +56,8 @@ export interface AgentDetails {
 	description: string;
 	subagentType: string;
 	toolUses: number;
-	tokens: string;
-	/** Context-window utilization 0–100, or null/undefined when unavailable. */
-	contextPercent?: number | null;
+	/** Context-window utilization as a pre-formatted string (e.g. "42% ctx"), or "" when unavailable. */
+	context: string;
 	/** Raw output tokens — for t/s = outputTokens / streamingMs. */
 	outputTokens?: number;
 	durationMs: number;
@@ -103,6 +102,16 @@ export function formatTokens(count: number): string {
 	if (count >= 1_000_000) return `${t} ${(count / 1_000_000).toFixed(1)}M token`;
 	if (count >= 1_000) return `${t} ${(count / 1_000).toFixed(1)}k token`;
 	return `${t} ${count} token`;
+}
+
+/**
+ * Format context-window utilization as a compact string.
+ * Returns "" when percent is null/unavailable (caller should skip the segment).
+ */
+export function formatContext(percent: number | null | undefined): string {
+	if (percent == null) return "";
+	const t = icon("tokens");
+	return `${t} ${Math.round(percent)}% ctx`;
 }
 
 export function formatTurns(turnCount: number, maxTurns?: number | null): string {
@@ -191,11 +200,7 @@ function buildStats(d: AgentDetails, theme: Theme): string {
 	if (d.turnCount != null && d.turnCount > 0)
 		parts.push(theme.fg("dim", formatTurns(d.turnCount, d.maxTurns)));
 	if (d.toolUses > 0) parts.push(theme.fg("dim", formatToolUses(d.toolUses)));
-	if (d.tokens) {
-		const pct =
-			d.contextPercent != null ? ` ${theme.fg("dim", `(${Math.round(d.contextPercent)}%)`)}` : "";
-		parts.push(theme.fg("dim", d.tokens) + pct);
-	}
+	if (d.context) parts.push(theme.fg("dim", d.context));
 	return parts.join(` ${theme.fg("dim", "·")} `);
 }
 
@@ -350,7 +355,7 @@ export function createAgentTool(
 				if (details.turnCount != null && details.turnCount > 0)
 					parts.push(formatTurns(details.turnCount, details.maxTurns));
 				if (details.toolUses > 0) parts.push(formatToolUses(details.toolUses));
-				if (details.tokens) parts.push(details.tokens);
+				if (details.context) parts.push(details.context);
 				if (details.durationMs > 0) parts.push(formatMs(details.durationMs));
 				if (details.activity) parts.push(details.activity);
 				const statsText =
@@ -600,12 +605,17 @@ export function createAgentTool(
 
 				agentActivity.set(bgId, bgState);
 
+				// Mark as user-initiated background so the widget lingers the
+				// finished line (foreground results show inline in transcript).
+				const bgRecord = manager.getRecord(bgId);
+				if (bgRecord) bgRecord.isBackground = true;
+
 				return textResult(
 					`Agent launched (ID: ${bgId}). Its result will be delivered automatically when it finishes — do NOT poll or sleep-wait. Continue with other work or respond to the user.`,
 					{
 						...detailBase,
 						toolUses: 0,
-						tokens: "",
+						context: "",
 						durationMs: 0,
 						status: "background",
 						agentId: bgId,
@@ -623,13 +633,15 @@ export function createAgentTool(
 						const activity = act
 							? describeActivity(act.activeTools, act.responseText)
 							: "thinking…";
-						const tokens = act ? getLifetimeTotal(act.lifetimeUsage) : 0;
+						const contextPercent = act?.session
+							? getSessionContextPercent(act.session as SessionLike)
+							: null;
 						onUpdate({
 							content: [{ type: "text" as const, text: "" }],
 							details: {
 								...detailBase,
 								toolUses: act?.toolUses ?? 0,
-								tokens: tokens > 0 ? formatTokens(tokens) : "",
+								context: formatContext(contextPercent),
 								durationMs: Date.now() - fgStartedAt,
 								status: "running" as const,
 								activity,
@@ -677,7 +689,7 @@ export function createAgentTool(
 					details: {
 						...detailBase,
 						toolUses: 0,
-						tokens: "",
+						context: "",
 						durationMs: 0,
 						status: "running" as const,
 						activity: "starting…",
@@ -1034,15 +1046,13 @@ function buildDetails(
 	},
 	activity?: AgentActivity & { durationMs?: number },
 ): AgentDetails {
-	const totalTokens = getLifetimeTotal(record.lifetimeUsage);
 	const contextPercent = activity?.session
 		? getSessionContextPercent(activity.session as SessionLike)
 		: null;
 	return {
 		...base,
 		toolUses: record.toolUses,
-		tokens: totalTokens > 0 ? formatTokens(totalTokens) : "",
-		contextPercent,
+		context: formatContext(contextPercent),
 		outputTokens: record.lifetimeUsage.output,
 		streamingMs: activity?.streamingMs,
 		turnCount: activity?.turnCount,

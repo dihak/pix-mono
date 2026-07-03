@@ -12,7 +12,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { formatMs, formatTokens, formatToolUses, formatTurns } from "../tools.ts";
+import { formatContext, formatMs, formatToolUses, formatTurns } from "../tools.ts";
 import type { NotificationDetails } from "../types.ts";
 
 /**
@@ -42,7 +42,8 @@ export function registerNotificationRenderer(pi: ExtensionAPI): void {
 			if (d.modelName) parts.push(theme.fg("muted", `[${d.modelName}]`));
 			if (d.turnCount > 0) parts.push(formatTurns(d.turnCount, d.maxTurns));
 			if (d.toolUses > 0) parts.push(formatToolUses(d.toolUses));
-			if (d.totalTokens > 0) parts.push(formatTokens(d.totalTokens));
+			const ctxText = formatContext(d.contextPercent);
+			if (ctxText) parts.push(ctxText);
 			if (d.durationMs > 0) parts.push(formatMs(d.durationMs));
 			if (parts.length) {
 				line += `\n  ${parts.map((p) => theme.fg("dim", p)).join(` ${theme.fg("dim", "·")} `)}`;

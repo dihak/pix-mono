@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { formatMs, formatTokens, formatTurns } from "../src/tools.ts";
+import { formatContext, formatMs, formatTokens, formatTurns } from "../src/tools.ts";
 import { describeActivity, formatSpeed } from "../src/ui/widget.ts";
 
 test("formatTokens < 1k", () => {
@@ -38,6 +38,23 @@ test("formatSpeed empty on zero output", () => {
 
 test("formatSpeed empty on zero duration", () => {
 	expect(formatSpeed(1500, 0)).toBe("");
+});
+
+test("formatContext with percent", () => {
+	// nerd-mode default: nf-md-file-document-outline (U+F027F) + space
+	expect(formatContext(42)).toBe("\u{F027F} 42% ctx");
+});
+
+test("formatContext rounds to nearest integer", () => {
+	expect(formatContext(73.6)).toBe("\u{F027F} 74% ctx");
+});
+
+test("formatContext empty on null", () => {
+	expect(formatContext(null)).toBe("");
+});
+
+test("formatContext empty on undefined", () => {
+	expect(formatContext(undefined)).toBe("");
 });
 
 test("describeActivity: active tool wins over output", () => {
