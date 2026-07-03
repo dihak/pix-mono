@@ -42,8 +42,7 @@ export function parseDiff(
 	for (let hi = 0; hi < patch.hunks.length; hi++) {
 		if (hi > 0) {
 			const prev = at(patch.hunks, hi - 1);
-			const gap =
-				at(patch.hunks, hi).oldStart - (prev.oldStart + prev.oldLines);
+			const gap = at(patch.hunks, hi).oldStart - (prev.oldStart + prev.oldLines);
 			lines.push({
 				type: "sep",
 				oldNum: null,

@@ -5,9 +5,7 @@ import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import registerPrompts from "./prompts.ts";
 
-type Handler = (event: {
-	systemPrompt?: string;
-}) => Promise<{ systemPrompt?: string } | undefined>;
+type Handler = (event: { systemPrompt?: string }) => Promise<{ systemPrompt?: string } | undefined>;
 
 /** Minimal fake pi that captures the before_agent_start handler. */
 function fakePi(): { pi: ExtensionAPI; getHandler: () => Handler } {
@@ -88,8 +86,7 @@ describe("pix-prompts host-aware injection", () => {
 
 		// Second pass finds its own tag already present → nothing new.
 		expect(second).toBeUndefined();
-		const occurrences =
-			(first?.systemPrompt ?? "").split("<pix-prompts-gemini-md>").length - 1;
+		const occurrences = (first?.systemPrompt ?? "").split("<pix-prompts-gemini-md>").length - 1;
 		expect(occurrences).toBe(1);
 	});
 

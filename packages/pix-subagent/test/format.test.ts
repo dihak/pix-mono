@@ -3,15 +3,16 @@ import { formatMs, formatTokens, formatTurns } from "../src/tools.ts";
 import { describeActivity, formatSpeed } from "../src/ui/widget.ts";
 
 test("formatTokens < 1k", () => {
-	expect(formatTokens(500)).toBe("500 token");
+	// nerd-mode default: nf-md-file-document-outline (U+F027F) + space
+	expect(formatTokens(500)).toBe("\u{F027F} 500 token");
 });
 
 test("formatTokens 1k–1M", () => {
-	expect(formatTokens(12_400)).toBe("12.4k token");
+	expect(formatTokens(12_400)).toBe("\u{F027F} 12.4k token");
 });
 
 test("formatTokens >= 1M", () => {
-	expect(formatTokens(2_500_000)).toBe("2.5M token");
+	expect(formatTokens(2_500_000)).toBe("\u{F027F} 2.5M token");
 });
 
 test("formatMs rounds to 1dp", () => {
@@ -19,11 +20,12 @@ test("formatMs rounds to 1dp", () => {
 });
 
 test("formatTurns no max", () => {
-	expect(formatTurns(3)).toBe("🗘3");
+	// nerd-mode default: nf-md-autorenew glyph (U+F006A) + space before count
+	expect(formatTurns(3)).toBe("\u{F006A} 3");
 });
 
 test("formatTurns with max", () => {
-	expect(formatTurns(3, 10)).toBe("🗘3≤10");
+	expect(formatTurns(3, 10)).toBe("\u{F006A} 3≤10");
 });
 
 test("formatSpeed computes output t/s", () => {
@@ -39,9 +41,7 @@ test("formatSpeed empty on zero duration", () => {
 });
 
 test("describeActivity: active tool wins over output", () => {
-	expect(describeActivity(new Map([["t1", "read"]]), "some text")).toBe(
-		"reading…",
-	);
+	expect(describeActivity(new Map([["t1", "read"]]), "some text")).toBe("reading…");
 });
 
 test("describeActivity: groups parallel tools with count", () => {

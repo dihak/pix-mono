@@ -17,29 +17,21 @@ import {
 	formatMs,
 	formatSpeed,
 	formatTokens,
+	formatToolUses,
 	formatTurns,
 	SPINNER,
 } from "../tools.ts";
 import type { AgentInvocation, SubagentType } from "../types.ts";
-import {
-	getLifetimeTotal,
-	getSessionContextPercent,
-	type SessionLike,
-} from "../usage.ts";
+import { getLifetimeTotal, getSessionContextPercent, type SessionLike } from "../usage.ts";
 
 export type { AgentActivity, AgentDetails, Theme };
-export { formatMs, formatSpeed, formatTokens, formatTurns, SPINNER };
+export { formatMs, formatSpeed, formatTokens, formatToolUses, formatTurns, SPINNER };
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
 const MAX_WIDGET_LINES = 12;
 
-export const ERROR_STATUSES = new Set([
-	"error",
-	"aborted",
-	"steered",
-	"stopped",
-]);
+export const ERROR_STATUSES = new Set(["error", "aborted", "steered", "stopped"]);
 
 const TOOL_DISPLAY: Record<string, string> = {
 	read: "reading",
@@ -60,10 +52,7 @@ export type UICtx = {
 		key: string,
 		content:
 			| undefined
-			| ((
-					tui: unknown,
-					theme: Theme,
-			  ) => { render(): string[]; invalidate(): void }),
+			| ((tui: unknown, theme: Theme) => { render(): string[]; invalidate(): void }),
 		options?: { placement?: "aboveEditor" | "belowEditor" },
 	): void;
 };
@@ -121,10 +110,7 @@ function truncateLine(text: string, len = 16): string {
 	return `…${line.slice(-len)}`;
 }
 
-export function describeActivity(
-	activeTools: Map<string, string>,
-	responseText?: string,
-): string {
+export function describeActivity(activeTools: Map<string, string>, responseText?: string): string {
 	if (activeTools.size > 0) {
 		const groups = new Map<string, number>();
 		for (const toolName of activeTools.values()) {
@@ -247,31 +233,17 @@ export class AgentWidget {
 		const parts: string[] = [];
 		// Turns read from the record (a.*), not agentActivity — onComplete deletes
 		// the activity entry before this line renders, which had dropped ↻N.
-		if (a.turnCount != null && a.turnCount > 0)
-			parts.push(formatTurns(a.turnCount, a.maxTurns));
-		if (a.toolUses > 0)
-			parts.push(`${a.toolUses} tool use${a.toolUses === 1 ? "" : "s"}`);
+		if (a.turnCount != null && a.turnCount > 0) parts.push(formatTurns(a.turnCount, a.maxTurns));
+		if (a.toolUses > 0) parts.push(formatToolUses(a.toolUses));
 		// Token + context% + speed read from the record (survives the
 		// agentActivity delete that fires in onComplete before this renders).
 		const tokens = getLifetimeTotal(a.lifetimeUsage);
 		if (tokens > 0) {
-			const contextPercent = a.session
-				? getSessionContextPercent(a.session as SessionLike)
-				: null;
-			parts.push(
-				formatSessionTokens(
-					tokens,
-					contextPercent,
-					theme,
-					a.compactionCount ?? 0,
-				),
-			);
+			const contextPercent = a.session ? getSessionContextPercent(a.session as SessionLike) : null;
+			parts.push(formatSessionTokens(tokens, contextPercent, theme, a.compactionCount ?? 0));
 		}
 		parts.push(duration);
-		const speed = formatSpeed(
-			a.lifetimeUsage?.output ?? 0,
-			a.streamingMs ?? durationMs,
-		);
+		const speed = formatSpeed(a.lifetimeUsage?.output ?? 0, a.streamingMs ?? durationMs);
 		if (speed) parts.push(speed);
 
 		return `${icon} ${theme.fg("dim", name)}${modelLabel}${modeTag} ${theme.fg("dim", "·")} ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`;
@@ -292,8 +264,7 @@ export class AgentWidget {
 				this.shouldShowFinished(a.status, a.completedAt),
 		);
 
-		if (running.length === 0 && queued.length === 0 && finished.length === 0)
-			return [];
+		if (running.length === 0 && queued.length === 0 && finished.length === 0) return [];
 
 		const w = tui.terminal.columns;
 		const truncate = (line: string) => truncateToWidth(line, w);
@@ -305,11 +276,7 @@ export class AgentWidget {
 
 		const finishedLines: string[] = [];
 		for (const a of finished) {
-			finishedLines.push(
-				truncate(
-					`${theme.fg("dim", "├─")} ${this.renderFinishedLine(a, theme)}`,
-				),
-			);
+			finishedLines.push(truncate(`${theme.fg("dim", "├─")} ${this.renderFinishedLine(a, theme)}`));
 		}
 
 		const runningLines: string[] = [];
@@ -327,39 +294,23 @@ export class AgentWidget {
 			const toolUses = bg?.toolUses ?? a.toolUses;
 			const tokens = getLifetimeTotal(bg?.lifetimeUsage);
 			const contextPercent = bg?.session
-				? getSessionContextPercent(
-						bg.session as Parameters<typeof getSessionContextPercent>[0],
-					)
+				? getSessionContextPercent(bg.session as Parameters<typeof getSessionContextPercent>[0])
 				: null;
 			const tokenText =
-				tokens > 0
-					? formatSessionTokens(
-							tokens,
-							contextPercent,
-							theme,
-							a.compactionCount,
-						)
-					: "";
+				tokens > 0 ? formatSessionTokens(tokens, contextPercent, theme, a.compactionCount) : "";
 
 			const parts: string[] = [];
-			if (bg && bg.turnCount > 0)
-				parts.push(formatTurns(bg.turnCount, bg.maxTurns));
-			if (toolUses > 0)
-				parts.push(`${toolUses} tool use${toolUses === 1 ? "" : "s"}`);
+			if (bg && bg.turnCount > 0) parts.push(formatTurns(bg.turnCount, bg.maxTurns));
+			if (toolUses > 0) parts.push(formatToolUses(toolUses));
 			if (tokenText) parts.push(tokenText);
 			parts.push(elapsed);
-			const liveSpeed = formatSpeed(
-				bg?.lifetimeUsage.output ?? 0,
-				bg?.streamingMs ?? 0,
-			);
+			const liveSpeed = formatSpeed(bg?.lifetimeUsage.output ?? 0, bg?.streamingMs ?? 0);
 			if (liveSpeed) parts.push(liveSpeed);
 			const statsText = parts.join(" · ");
 
 			// Activity trails at the end (after stats) so its variable width
 			// doesn't cause the static identity + stats to bounce around.
-			const activity = bg
-				? describeActivity(bg.activeTools, bg.responseText)
-				: "thinking…";
+			const activity = bg ? describeActivity(bg.activeTools, bg.responseText) : "thinking…";
 
 			runningLines.push(
 				truncate(
@@ -378,15 +329,10 @@ export class AgentWidget {
 				: undefined;
 
 		const maxBody = MAX_WIDGET_LINES - 1;
-		const totalBody =
-			finishedLines.length + runningLines.length + (queuedLine ? 1 : 0);
+		const totalBody = finishedLines.length + runningLines.length + (queuedLine ? 1 : 0);
 
 		const lines: string[] = [
-			truncate(
-				theme.fg(headingColor, headingIcon) +
-					" " +
-					theme.fg(headingColor, "Agents"),
-			),
+			truncate(`${theme.fg(headingColor, headingIcon)} ${theme.fg(headingColor, "Agents")}`),
 		];
 
 		if (totalBody <= maxBody) {
@@ -449,10 +395,7 @@ export class AgentWidget {
 		for (const a of allAgents) {
 			if (a.status === "running") runningCount++;
 			else if (a.status === "queued") queuedCount++;
-			else if (
-				a.completedAt != null &&
-				this.shouldShowFinished(a.status, a.completedAt)
-			)
+			else if (a.completedAt != null && this.shouldShowFinished(a.status, a.completedAt))
 				hasFinished = true;
 		}
 		const hasActive = runningCount > 0 || queuedCount > 0;
@@ -538,9 +481,7 @@ export class AgentWidget {
 			);
 			this.widgetRegistered = true;
 		} else {
-			(
-				this.tui as { requestRender?: () => void } | undefined
-			)?.requestRender?.();
+			(this.tui as { requestRender?: () => void } | undefined)?.requestRender?.();
 		}
 	}
 

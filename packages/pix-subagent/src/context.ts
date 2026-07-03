@@ -22,10 +22,7 @@ export function extractText(content: unknown[]): string {
  * applied tail-anchored: the MOST RECENT parts are kept, oldest are dropped,
  * and a marker line indicates how many entries were omitted.
  */
-export function buildParentContext(
-	ctx: ExtensionContext,
-	maxChars = 40_000,
-): string {
+export function buildParentContext(ctx: ExtensionContext, maxChars = 40_000): string {
 	const entries = ctx.sessionManager.getBranch();
 	if (!entries || entries.length === 0) return "";
 
@@ -35,10 +32,7 @@ export function buildParentContext(
 		if (entry.type === "message") {
 			const msg = entry.message;
 			if (msg.role === "user") {
-				const text =
-					typeof msg.content === "string"
-						? msg.content
-						: extractText(msg.content);
+				const text = typeof msg.content === "string" ? msg.content : extractText(msg.content);
 				if (text.trim()) parts.push(`[User]: ${text.trim()}`);
 			} else if (msg.role === "assistant") {
 				const text = extractText(msg.content);

@@ -3,6 +3,8 @@
  *
  * Guards against workspace:* protocol and bare "*" ranges leaking
  * into published package.json files (see #2, #4).
+ * Also verifies pix-core dependency pins stay in sync with each
+ * package's actual version.
  */
 
 import { readdirSync, readFileSync, existsSync } from "node:fs";
@@ -82,6 +84,31 @@ describe("dependency hygiene", () => {
 				}
 			}
 		}
+		expect(violations).toEqual([]);
+	});
+
+	test("pix-core dependency pins match each package's actual version", () => {
+		const corePkg = pkgs.find((p) => p.name === "@xynogen/pix-core");
+		if (!corePkg) throw new Error("pix-core not found in packages/");
+		const coreDeps = corePkg.pkg.dependencies ?? {};
+		const violations: string[] = [];
+
+		for (const [dep, range] of Object.entries(coreDeps)) {
+			if (!dep.startsWith("@xynogen/")) continue;
+			const pkgName = dep.replace("@xynogen/", "");
+			const target = pkgs.find((p) => p.dir === pkgName);
+			if (!target) {
+				violations.push(`${dep}: package not found in packages/`);
+				continue;
+			}
+			const pinBase = range.replace(/^[\^~>=<]*/, "");
+			if (pinBase !== target.pkg.version) {
+				violations.push(
+					`${dep}: pix-core pins ${range} (base ${pinBase}) but actual is ${target.pkg.version}`,
+				);
+			}
+		}
+
 		expect(violations).toEqual([]);
 	});
 });

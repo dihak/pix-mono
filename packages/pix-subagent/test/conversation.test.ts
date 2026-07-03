@@ -3,9 +3,7 @@ import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import { getAgentConversation } from "../src/agent-runner.ts";
 
 /** Minimal fake session — getAgentConversation only reads `.messages`. */
-function fakeSession(
-	messages: { role: string; content: unknown; toolName?: string }[],
-) {
+function fakeSession(messages: { role: string; content: unknown; toolName?: string }[]) {
 	return { messages } as unknown as AgentSession;
 }
 

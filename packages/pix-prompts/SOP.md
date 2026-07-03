@@ -86,6 +86,17 @@ For **Complex** tasks (optionally Standard when multi-step):
 - Self-audit: plan followed? Recon findings used? §2 triggers missed? Name defects explicitly (§4).
 - Concise summary of what changed. Flaws → back to **Plan**.
 
+### Project ownership
+
+When editing files inside a project (monorepo, workspace, multi-package), you own the **project**, not just the file. Every change must be evaluated for its ripple effects.
+
+- **Think globally**: a change to one package may require version bumps, dep pin updates, re-exports, or test fixes in dependent packages. Check consumers before declaring done.
+- **Cross-package consistency**: if you change a public API, icon catalog entry, shared type, or formatter — grep for all call sites across the repo. Updating the source but not the consumers = defect.
+- **Version awareness**: after changing a package, verify its version in the parent aggregator (e.g. pix-core) still matches. Stale pins break installs. Run dep-sync checks if they exist.
+- **Don't orphan work**: "it was not my change" is not a valid reason to ignore a broken test, stale import, or version mismatch you encounter. If you see it while working, fix it or flag it.
+- **Pre-existing issues in scope**: if a file you're editing has lint warnings, type errors, or failing tests that are unrelated to your change — fix them. You touched the file, you own it now.
+- **Release surface**: before bump/tag/publish, verify ALL tests pass project-wide (`bun test` at root), not just the package you changed.
+
 ### Release discipline
 
 - **Version bump**: only changed packages. `feat`→minor, `fix`/`perf`→patch, breaking→major. Default to patch — minor/major need user approval.

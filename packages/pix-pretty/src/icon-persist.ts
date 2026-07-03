@@ -47,10 +47,7 @@ export function saveIconMode(mode: IconMode): void {
 		let existing: Record<string, unknown> = {};
 		if (existsSync(p)) {
 			try {
-				existing = JSON.parse(readFileSync(p, "utf-8")) as Record<
-					string,
-					unknown
-				>;
+				existing = JSON.parse(readFileSync(p, "utf-8")) as Record<string, unknown>;
 			} catch {
 				existing = {};
 			}

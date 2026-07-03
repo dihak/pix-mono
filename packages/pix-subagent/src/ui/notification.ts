@@ -12,7 +12,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { formatMs, formatTokens, formatTurns } from "../tools.ts";
+import { formatMs, formatTokens, formatToolUses, formatTurns } from "../tools.ts";
 import type { NotificationDetails } from "../types.ts";
 
 /**
@@ -26,10 +26,7 @@ export function registerNotificationRenderer(pi: ExtensionAPI): void {
 			const d = message.details;
 			if (!d) return undefined;
 
-			const isError =
-				d.status === "error" ||
-				d.status === "stopped" ||
-				d.status === "aborted";
+			const isError = d.status === "error" || d.status === "stopped" || d.status === "aborted";
 			const icon = isError ? theme.fg("error", "✗") : theme.fg("success", "✓");
 			const statusText = isError
 				? d.status
@@ -44,16 +41,11 @@ export function registerNotificationRenderer(pi: ExtensionAPI): void {
 			const parts: string[] = [];
 			if (d.modelName) parts.push(theme.fg("muted", `[${d.modelName}]`));
 			if (d.turnCount > 0) parts.push(formatTurns(d.turnCount, d.maxTurns));
-			if (d.toolUses > 0)
-				parts.push(`${d.toolUses} tool use${d.toolUses === 1 ? "" : "s"}`);
+			if (d.toolUses > 0) parts.push(formatToolUses(d.toolUses));
 			if (d.totalTokens > 0) parts.push(formatTokens(d.totalTokens));
 			if (d.durationMs > 0) parts.push(formatMs(d.durationMs));
 			if (parts.length) {
-				line +=
-					"\n  " +
-					parts
-						.map((p) => theme.fg("dim", p))
-						.join(` ${theme.fg("dim", "·")} `);
+				line += `\n  ${parts.map((p) => theme.fg("dim", p)).join(` ${theme.fg("dim", "·")} `)}`;
 			}
 
 			// Line 3: result preview

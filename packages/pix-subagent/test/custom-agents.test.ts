@@ -39,9 +39,7 @@ test("loads a project .pi/agents/*.md with frontmatter", () => {
 	const agents = loadCustomAgents(cwd);
 	const scout = agents.get("scout");
 	expect(scout?.description).toBe("scout the code");
-	expect(new Set(scout?.builtinToolNames)).toEqual(
-		new Set(["read", "grep", "find"]),
-	);
+	expect(new Set(scout?.builtinToolNames)).toEqual(new Set(["read", "grep", "find"]));
 	expect(scout?.model).toBe("haiku");
 	expect(scout?.systemPrompt).toBe("You are a scout.");
 });
@@ -53,10 +51,7 @@ describe("thinking level validation", () => {
 		for (const level of ["off", "minimal", "low", "medium", "high", "xhigh"]) {
 			const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
 			mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
-			writeFileSync(
-				join(cwd, ".pi", "agents", "a.md"),
-				`---\nthinking: ${level}\n---\nprompt`,
-			);
+			writeFileSync(join(cwd, ".pi", "agents", "a.md"), `---\nthinking: ${level}\n---\nprompt`);
 			const agents = loadCustomAgents(cwd);
 			const a = agents.get("a");
 			expect(a?.thinking).toBe(level as AgentConfig["thinking"]);
@@ -67,10 +62,7 @@ describe("thinking level validation", () => {
 	test("invalid thinking level → undefined + warning populated", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
 		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
-		writeFileSync(
-			join(cwd, ".pi", "agents", "bad.md"),
-			"---\nthinking: hgih\n---\nprompt",
-		);
+		writeFileSync(join(cwd, ".pi", "agents", "bad.md"), "---\nthinking: hgih\n---\nprompt");
 		const agents = loadCustomAgents(cwd);
 		const bad = agents.get("bad");
 		expect(bad?.thinking).toBeUndefined();
@@ -131,10 +123,7 @@ describe("additional frontmatter parsing", () => {
 	test("max_turns is parsed as number", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
 		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
-		writeFileSync(
-			join(cwd, ".pi", "agents", "limited.md"),
-			"---\nmax_turns: 15\n---\nprompt",
-		);
+		writeFileSync(join(cwd, ".pi", "agents", "limited.md"), "---\nmax_turns: 15\n---\nprompt");
 		const agents = loadCustomAgents(cwd);
 		expect(agents.get("limited")?.maxTurns).toBe(15);
 	});
@@ -142,10 +131,7 @@ describe("additional frontmatter parsing", () => {
 	test("extensions: false disables extensions", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
 		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
-		writeFileSync(
-			join(cwd, ".pi", "agents", "noext.md"),
-			"---\nextensions: false\n---\nprompt",
-		);
+		writeFileSync(join(cwd, ".pi", "agents", "noext.md"), "---\nextensions: false\n---\nprompt");
 		const agents = loadCustomAgents(cwd);
 		expect(agents.get("noext")?.extensions).toBe(false);
 	});
@@ -164,10 +150,7 @@ describe("additional frontmatter parsing", () => {
 	test("isolated: true is parsed", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
 		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
-		writeFileSync(
-			join(cwd, ".pi", "agents", "iso.md"),
-			"---\nisolated: true\n---\nprompt",
-		);
+		writeFileSync(join(cwd, ".pi", "agents", "iso.md"), "---\nisolated: true\n---\nprompt");
 		const agents = loadCustomAgents(cwd);
 		expect(agents.get("iso")?.isolated).toBe(true);
 	});
@@ -175,10 +158,7 @@ describe("additional frontmatter parsing", () => {
 	test("inherit_context: true is parsed", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
 		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
-		writeFileSync(
-			join(cwd, ".pi", "agents", "ctx.md"),
-			"---\ninherit_context: true\n---\nprompt",
-		);
+		writeFileSync(join(cwd, ".pi", "agents", "ctx.md"), "---\ninherit_context: true\n---\nprompt");
 		const agents = loadCustomAgents(cwd);
 		expect(agents.get("ctx")?.inheritContext).toBe(true);
 	});
@@ -186,18 +166,9 @@ describe("additional frontmatter parsing", () => {
 	test("prompt_mode: append is parsed (default is replace)", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
 		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
-		writeFileSync(
-			join(cwd, ".pi", "agents", "app.md"),
-			"---\nprompt_mode: append\n---\nprompt",
-		);
-		writeFileSync(
-			join(cwd, ".pi", "agents", "rep.md"),
-			"---\nprompt_mode: replace\n---\nprompt",
-		);
-		writeFileSync(
-			join(cwd, ".pi", "agents", "def.md"),
-			"---\ndescription: default\n---\nprompt",
-		);
+		writeFileSync(join(cwd, ".pi", "agents", "app.md"), "---\nprompt_mode: append\n---\nprompt");
+		writeFileSync(join(cwd, ".pi", "agents", "rep.md"), "---\nprompt_mode: replace\n---\nprompt");
+		writeFileSync(join(cwd, ".pi", "agents", "def.md"), "---\ndescription: default\n---\nprompt");
 		const agents = loadCustomAgents(cwd);
 		expect(agents.get("app")?.promptMode).toBe("append");
 		expect(agents.get("rep")?.promptMode).toBe("replace");
@@ -207,10 +178,7 @@ describe("additional frontmatter parsing", () => {
 	test("enabled: false disables agent", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
 		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
-		writeFileSync(
-			join(cwd, ".pi", "agents", "off.md"),
-			"---\nenabled: false\n---\nprompt",
-		);
+		writeFileSync(join(cwd, ".pi", "agents", "off.md"), "---\nenabled: false\n---\nprompt");
 		const agents = loadCustomAgents(cwd);
 		expect(agents.get("off")?.enabled).toBe(false);
 	});
@@ -229,10 +197,7 @@ describe("additional frontmatter parsing", () => {
 	test("source is set to 'project' for .pi/agents/", () => {
 		const cwd = mkdtempSync(join(tmpdir(), "pixsa-"));
 		mkdirSync(join(cwd, ".pi", "agents"), { recursive: true });
-		writeFileSync(
-			join(cwd, ".pi", "agents", "src.md"),
-			"---\ndescription: test\n---\nprompt",
-		);
+		writeFileSync(join(cwd, ".pi", "agents", "src.md"), "---\ndescription: test\n---\nprompt");
 		const agents = loadCustomAgents(cwd);
 		expect(agents.get("src")?.source).toBe("project");
 	});

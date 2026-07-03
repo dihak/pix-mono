@@ -1,14 +1,8 @@
 import { expect, test } from "bun:test";
-import {
-	addUsage,
-	getLifetimeTotal,
-	getSessionContextPercent,
-} from "../src/usage.ts";
+import { addUsage, getLifetimeTotal, getSessionContextPercent } from "../src/usage.ts";
 
 test("getLifetimeTotal sums all three fields", () => {
-	expect(getLifetimeTotal({ input: 100, output: 200, cacheWrite: 50 })).toBe(
-		350,
-	);
+	expect(getLifetimeTotal({ input: 100, output: 200, cacheWrite: 50 })).toBe(350);
 });
 
 test("getLifetimeTotal returns 0 for undefined", () => {

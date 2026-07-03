@@ -2,9 +2,7 @@ import { expect, test } from "bun:test";
 import { buildParentContext } from "../src/context.ts";
 
 /** Minimal fake that satisfies `buildParentContext`'s ExtensionContext shape. */
-function fakeCtx(
-	entries: { type: string; message?: unknown; summary?: string }[],
-) {
+function fakeCtx(entries: { type: string; message?: unknown; summary?: string }[]) {
 	return {
 		sessionManager: {
 			getBranch: () => entries,
@@ -61,12 +59,7 @@ test("over-budget — oldest dropped, marker present, newest retained", () => {
 });
 
 test("over-budget — marker shows correct count of omitted entries", () => {
-	const ctx = fakeCtx([
-		userMsg("old1"),
-		userMsg("old2"),
-		userMsg("old3"),
-		assistantMsg("keep"),
-	]);
+	const ctx = fakeCtx([userMsg("old1"), userMsg("old2"), userMsg("old3"), assistantMsg("keep")]);
 	// Budget fits only "keep" (~20 chars)
 	const result = buildParentContext(ctx, 30);
 	expect(result).toContain("[Assistant]: keep");

@@ -15,12 +15,7 @@ export type { LifetimeUsage, ThinkingLevel };
 export type SubagentType = string;
 
 /** Names of the three embedded default agents. */
-export const DEFAULT_AGENT_NAMES = [
-	"general-purpose",
-	"Explore",
-	"Plan",
-	"Mentor",
-] as const;
+export const DEFAULT_AGENT_NAMES = ["general-purpose", "Explore", "Plan", "Mentor"] as const;
 
 /** Unified agent configuration — used for both default and user-defined agents. */
 export interface AgentConfig {
@@ -62,14 +57,7 @@ export interface AgentRecord {
 	id: string;
 	type: SubagentType;
 	description: string;
-	status:
-		| "queued"
-		| "running"
-		| "completed"
-		| "steered"
-		| "aborted"
-		| "stopped"
-		| "error";
+	status: "queued" | "running" | "completed" | "steered" | "aborted" | "stopped" | "error";
 	result?: string;
 	error?: string;
 	toolUses: number;

@@ -10,11 +10,7 @@ import { randomUUID } from "node:crypto";
 import { statSync } from "node:fs";
 import { isAbsolute } from "node:path";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import type {
-	AgentSession,
-	ExtensionAPI,
-	ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
+import type { AgentSession, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	resumeAgent as _resumeAgentReal,
 	runAgent as _runAgentReal,
@@ -41,20 +37,12 @@ export function __resetAgentRunnersForTests(): void {
 	_resumeAgentImpl = _resumeAgentReal;
 }
 
-import type {
-	AgentInvocation,
-	AgentRecord,
-	SubagentType,
-	ThinkingLevel,
-} from "./types.ts";
+import type { AgentInvocation, AgentRecord, SubagentType, ThinkingLevel } from "./types.ts";
 import { addUsage } from "./usage.ts";
 
 export type OnAgentComplete = (record: AgentRecord) => void;
 export type OnAgentStart = (record: AgentRecord) => void;
-export type OnAgentCompact = (
-	record: AgentRecord,
-	info: CompactionInfo,
-) => void;
+export type OnAgentCompact = (record: AgentRecord, info: CompactionInfo) => void;
 export type CompactionInfo = {
 	reason: "manual" | "threshold" | "overflow";
 	tokensBefore: number;
@@ -69,14 +57,10 @@ const DEFAULT_MAX_CONCURRENT = 4;
  * directory — curated errors instead of TypeErrors from path/fs internals
  * (RPC callers send arbitrary JSON: null, numbers, file paths).
  */
-function assertValidSpawnCwd(
-	cwd: unknown,
-): asserts cwd is string | undefined | null {
+function assertValidSpawnCwd(cwd: unknown): asserts cwd is string | undefined | null {
 	if (cwd == null) return;
 	if (typeof cwd !== "string" || !isAbsolute(cwd)) {
-		throw new Error(
-			`SpawnOptions.cwd must be an absolute path: "${String(cwd)}"`,
-		);
+		throw new Error(`SpawnOptions.cwd must be an absolute path: "${String(cwd)}"`);
 	}
 	let isDirectory = false;
 	try {
@@ -126,11 +110,7 @@ interface SpawnOptions {
 	/** Called at the end of each agentic turn with the cumulative count. */
 	onTurnEnd?: (turnCount: number) => void;
 	/** Called once per assistant message_end with that message's usage delta. */
-	onAssistantUsage?: (usage: {
-		input: number;
-		output: number;
-		cacheWrite: number;
-	}) => void;
+	onAssistantUsage?: (usage: { input: number; output: number; cacheWrite: number }) => void;
 	/** Called when the session successfully compacts. */
 	onCompaction?: (info: CompactionInfo) => void;
 	/** Caller-supplied tool-name subset — intersected (never widens). Omit → type default. */
@@ -268,8 +248,7 @@ export class AgentManager {
 		if (options.signal) {
 			const onParentAbort = () => this.abort(id);
 			options.signal.addEventListener("abort", onParentAbort, { once: true });
-			detachParentSignal = () =>
-				options.signal?.removeEventListener("abort", onParentAbort);
+			detachParentSignal = () => options.signal?.removeEventListener("abort", onParentAbort);
 		}
 		const detach = () => {
 			detachParentSignal?.();
@@ -327,11 +306,7 @@ export class AgentManager {
 			.then(({ responseText, session, aborted, steered }) => {
 				// Don't overwrite status if externally stopped via abort()
 				if (record.status !== "stopped") {
-					record.status = aborted
-						? "aborted"
-						: steered
-							? "steered"
-							: "completed";
+					record.status = aborted ? "aborted" : steered ? "steered" : "completed";
 				}
 				record.result = responseText;
 				record.session = session;
@@ -373,10 +348,7 @@ export class AgentManager {
 
 	/** Start queued agents up to the concurrency limit. */
 	private drainQueue() {
-		while (
-			this.queue.length > 0 &&
-			this.runningBackground < this.maxConcurrent
-		) {
+		while (this.queue.length > 0 && this.runningBackground < this.maxConcurrent) {
 			const next = this.queue.shift();
 			if (!next) break;
 			const record = this.agents.get(next.id);
@@ -397,11 +369,7 @@ export class AgentManager {
 	/**
 	 * Resume an existing agent session with a new prompt.
 	 */
-	async resume(
-		id: string,
-		prompt: string,
-		signal?: AbortSignal,
-	): Promise<AgentRecord | undefined> {
+	async resume(id: string, prompt: string, signal?: AbortSignal): Promise<AgentRecord | undefined> {
 		const record = this.agents.get(id);
 		if (!record?.session) return undefined;
 
@@ -412,28 +380,24 @@ export class AgentManager {
 		record.error = undefined;
 
 		try {
-			const { responseText, aborted, steered } = await _resumeAgentImpl(
-				record.session,
-				prompt,
-				{
-					// Re-apply the original spawn's turn cap for this resume window.
-					maxTurns: record.maxTurns,
-					onTurnEnd: (turnCount) => {
-						record.turnCount = turnCount;
-					},
-					onToolActivity: (activity) => {
-						if (activity.type === "end") record.toolUses++;
-					},
-					onAssistantUsage: (usage) => {
-						addUsage(record.lifetimeUsage, usage);
-					},
-					onCompaction: (info) => {
-						record.compactionCount++;
-						this.onCompact?.(record, info);
-					},
-					signal,
+			const { responseText, aborted, steered } = await _resumeAgentImpl(record.session, prompt, {
+				// Re-apply the original spawn's turn cap for this resume window.
+				maxTurns: record.maxTurns,
+				onTurnEnd: (turnCount) => {
+					record.turnCount = turnCount;
 				},
-			);
+				onToolActivity: (activity) => {
+					if (activity.type === "end") record.toolUses++;
+				},
+				onAssistantUsage: (usage) => {
+					addUsage(record.lifetimeUsage, usage);
+				},
+				onCompaction: (info) => {
+					record.compactionCount++;
+					this.onCompact?.(record, info);
+				},
+				signal,
+			});
 			record.status = aborted ? "aborted" : steered ? "steered" : "completed";
 			record.result = responseText;
 			record.completedAt = Date.now();
@@ -502,9 +466,7 @@ export class AgentManager {
 
 	/** Whether any agents are still running or queued. */
 	hasRunning(): boolean {
-		return [...this.agents.values()].some(
-			(r) => r.status === "running" || r.status === "queued",
-		);
+		return [...this.agents.values()].some((r) => r.status === "running" || r.status === "queued");
 	}
 
 	/** Abort all running and queued agents immediately. */

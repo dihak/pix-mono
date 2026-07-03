@@ -36,9 +36,7 @@ export type SessionLike = { getSessionStats(): SessionStatsLike };
  * Context-window utilization (0–100), or null when unavailable
  * (no model contextWindow, or post-compaction before the next response).
  */
-export function getSessionContextPercent(
-	session: SessionLike | undefined,
-): number | null {
+export function getSessionContextPercent(session: SessionLike | undefined): number | null {
 	if (!session) return null;
 	try {
 		return session.getSessionStats().contextUsage?.percent ?? null;

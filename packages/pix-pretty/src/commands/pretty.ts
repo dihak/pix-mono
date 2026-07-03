@@ -93,9 +93,7 @@ export function registerPrettyCommand(pi: PiPrettyApi): void {
 								const name = theme.fg(sel ? "accent" : "text", mode.padEnd(8));
 								// Live preview: render the sample glyphs in THIS mode.
 								const prev = ICON_MODES[i] === getIconMode();
-								const samples = prev
-									? PREVIEW.map((p) => icon(p.key)).join(" ")
-									: "";
+								const samples = prev ? PREVIEW.map((p) => icon(p.key)).join(" ") : "";
 								return `${cursor} ${name} ${theme.fg("dim", samples)}`;
 							});
 							const lines = [
@@ -115,8 +113,7 @@ export function registerPrettyCommand(pi: PiPrettyApi): void {
 						invalidate: () => {},
 						handleInput: (data: string) => {
 							if (data === "k" || data === "\u001b[A") choose(selected - 1);
-							else if (data === "j" || data === "\u001b[B")
-								choose(selected + 1);
+							else if (data === "j" || data === "\u001b[B") choose(selected + 1);
 							else if (data === "\u001b" || data === "q" || data === "\r") {
 								done(null);
 								return;

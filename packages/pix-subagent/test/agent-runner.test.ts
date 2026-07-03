@@ -5,10 +5,7 @@
  */
 
 import { afterEach, describe, expect, test } from "bun:test";
-import type {
-	AgentSession,
-	AgentSessionEvent,
-} from "@earendil-works/pi-coding-agent";
+import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import {
 	attachTurnLimit,
 	extensionCanonicalName,
@@ -104,16 +101,14 @@ describe("narrowTools", () => {
 	});
 
 	test("allowlist intersects — only common tools survive", () => {
-		expect(narrowTools(["read", "bash", "edit"], ["read", "edit"])).toEqual([
-			"read",
-			"edit",
-		]);
+		expect(narrowTools(["read", "bash", "edit"], ["read", "edit"])).toEqual(["read", "edit"]);
 	});
 
 	test("allowlist with extras doesn't widen", () => {
-		expect(
-			narrowTools(["read", "bash"], ["read", "bash", "write", "edit"]),
-		).toEqual(["read", "bash"]);
+		expect(narrowTools(["read", "bash"], ["read", "bash", "write", "edit"])).toEqual([
+			"read",
+			"bash",
+		]);
 	});
 
 	test("empty allowlist → empty", () => {
@@ -125,9 +120,7 @@ describe("narrowTools", () => {
 
 describe("extensionCanonicalName", () => {
 	test("single file .ts → basename without extension, lowercased", () => {
-		expect(extensionCanonicalName("/path/to/MyExtension.ts")).toBe(
-			"myextension",
-		);
+		expect(extensionCanonicalName("/path/to/MyExtension.ts")).toBe("myextension");
 	});
 
 	test("single file .js → basename without extension, lowercased", () => {
@@ -135,9 +128,7 @@ describe("extensionCanonicalName", () => {
 	});
 
 	test("index.ts → parent directory name, lowercased", () => {
-		expect(extensionCanonicalName("/path/to/MyCoolExt/index.ts")).toBe(
-			"mycoolext",
-		);
+		expect(extensionCanonicalName("/path/to/MyCoolExt/index.ts")).toBe("mycoolext");
 	});
 
 	test("index.js → parent directory name, lowercased", () => {

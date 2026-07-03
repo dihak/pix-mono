@@ -31,9 +31,7 @@ export function getPiPrettyFffDir(_agentDir: string): string {
 	return join(cacheHome, "pi", "fff");
 }
 
-export async function fffEnsureFinder(
-	cwd: string,
-): Promise<FffBackedFinder | null> {
+export async function fffEnsureFinder(cwd: string): Promise<FffBackedFinder | null> {
 	if (fffState.finder && !fffState.finder.isDestroyed) return fffState.finder;
 	if (!fffState.module || !fffState.dbDir) return null;
 
@@ -68,13 +66,9 @@ export function fffDestroy(): void {
 function sanitizeGrepRecordContent(text: string): string {
 	let content = text;
 	if (content.endsWith("\r\n")) content = content.slice(0, -2);
-	else if (content.endsWith("\r") || content.endsWith("\n"))
-		content = content.slice(0, -1);
+	else if (content.endsWith("\r") || content.endsWith("\n")) content = content.slice(0, -1);
 
-	return content
-		.replace(/\r\n/g, "\\n")
-		.replace(/\r/g, "\\r")
-		.replace(/\n/g, "\\n");
+	return content.replace(/\r\n/g, "\\n").replace(/\r/g, "\\r").replace(/\n/g, "\\n");
 }
 
 function truncateGrepRecordContent(text: string): string {

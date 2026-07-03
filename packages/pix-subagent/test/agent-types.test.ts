@@ -29,9 +29,7 @@ test("defaults register and Explore is read-only", () => {
 
 test("getToolNamesForType falls back to all built-ins for unknown type", () => {
 	registerAgents(new Map());
-	expect(new Set(getToolNamesForType("does-not-exist"))).toEqual(
-		new Set(BUILTIN_TOOL_NAMES),
-	);
+	expect(new Set(getToolNamesForType("does-not-exist"))).toEqual(new Set(BUILTIN_TOOL_NAMES));
 });
 
 test("no default agent carries a baked-in model", () => {
@@ -72,10 +70,7 @@ test("caller params.model always wins over agentConfig.model", () => {
 	expect(r2.modelFromParams).toBe(false);
 
 	// Caller silent + no config model → undefined (caller inherits parent)
-	const r3 = resolveAgentInvocationConfig(
-		{ ...customConfig, model: undefined },
-		{},
-	);
+	const r3 = resolveAgentInvocationConfig({ ...customConfig, model: undefined }, {});
 	expect(r3.modelInput).toBeUndefined();
 	expect(r3.modelFromParams).toBe(false);
 });

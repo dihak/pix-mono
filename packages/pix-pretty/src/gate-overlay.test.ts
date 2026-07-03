@@ -27,9 +27,7 @@ interface Wired {
  * the SelectList keys; simpler: we expose the live component so the test can
  * call its handlers. We do the latter via the captured component ref.
  */
-function makeUI(
-	onReady: (comp: Wired, finish: (v: unknown) => void) => void,
-): OverlayUI {
+function makeUI(onReady: (comp: Wired, finish: (v: unknown) => void) => void): OverlayUI {
 	return {
 		custom: async <T>(
 			cb: (
@@ -195,9 +193,7 @@ function makeTimerUI(onReady?: (comp: Wired) => void): OverlayUI {
 			) => Wired,
 		): Promise<T | undefined> =>
 			new Promise((resolve) => {
-				const comp = cb({ requestRender: () => {} }, theme, undefined, (v) =>
-					resolve(v),
-				);
+				const comp = cb({ requestRender: () => {} }, theme, undefined, (v) => resolve(v));
 				comp.render(80);
 				onReady?.(comp);
 			}),

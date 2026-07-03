@@ -72,31 +72,13 @@ const dc = pixConfig().pretty.diff;
 // Precedence: env → pix.json → hardcoded default
 const BG_ADD = envBg("DIFF_BG_ADD", hexToBg(dc.bgAdd) || "\x1b[48;2;22;38;32m");
 const BG_DEL = envBg("DIFF_BG_DEL", hexToBg(dc.bgDel) || "\x1b[48;2;45;25;25m");
-const BG_ADD_W = envBg(
-	"DIFF_BG_ADD_HL",
-	hexToBg(dc.bgAddHighlight) || "\x1b[48;2;35;75;50m",
-);
-const BG_DEL_W = envBg(
-	"DIFF_BG_DEL_HL",
-	hexToBg(dc.bgDelHighlight) || "\x1b[48;2;80;35;35m",
-);
-const BG_GUTTER_ADD = envBg(
-	"DIFF_BG_GUTTER_ADD",
-	hexToBg(dc.bgGutterAdd) || "\x1b[48;2;18;32;26m",
-);
-const BG_GUTTER_DEL = envBg(
-	"DIFF_BG_GUTTER_DEL",
-	hexToBg(dc.bgGutterDel) || "\x1b[48;2;38;22;22m",
-);
+const BG_ADD_W = envBg("DIFF_BG_ADD_HL", hexToBg(dc.bgAddHighlight) || "\x1b[48;2;35;75;50m");
+const BG_DEL_W = envBg("DIFF_BG_DEL_HL", hexToBg(dc.bgDelHighlight) || "\x1b[48;2;80;35;35m");
+const BG_GUTTER_ADD = envBg("DIFF_BG_GUTTER_ADD", hexToBg(dc.bgGutterAdd) || "\x1b[48;2;18;32;26m");
+const BG_GUTTER_DEL = envBg("DIFF_BG_GUTTER_DEL", hexToBg(dc.bgGutterDel) || "\x1b[48;2;38;22;22m");
 
-const FG_ADD = envFg(
-	"DIFF_FG_ADD",
-	hexToFg(dc.fgAdd) || "\x1b[38;2;100;180;120m",
-);
-const FG_DEL = envFg(
-	"DIFF_FG_DEL",
-	hexToFg(dc.fgDel) || "\x1b[38;2;200;100;100m",
-);
+const FG_ADD = envFg("DIFF_FG_ADD", hexToFg(dc.fgAdd) || "\x1b[38;2;100;180;120m");
+const FG_DEL = envFg("DIFF_FG_DEL", hexToFg(dc.fgDel) || "\x1b[38;2;200;100;100m");
 const FG_STRIPE = "\x1b[38;2;40;40;40m"; // diagonal stripes on filler cells
 
 const BORDER_BAR = "▌";
@@ -115,10 +97,7 @@ const MAX_TERM_WIDTH = 210;
 const MAX_PREVIEW_LINES = envInt("PRETTY_MAX_PREVIEW_LINES", 80);
 
 const SPLIT_MIN_WIDTH = envInt("DIFF_SPLIT_MIN_WIDTH", dc.splitMinWidth || 150);
-const SPLIT_MIN_CODE_WIDTH = envInt(
-	"DIFF_SPLIT_MIN_CODE_WIDTH",
-	dc.splitMinCodeWidth || 60,
-);
+const SPLIT_MIN_CODE_WIDTH = envInt("DIFF_SPLIT_MIN_CODE_WIDTH", dc.splitMinCodeWidth || 60);
 const SPLIT_MAX_WRAP_RATIO = 0.2;
 const SPLIT_MAX_WRAP_LINES = 8;
 
@@ -192,20 +171,12 @@ function ensureContrast(fg: string, bgSeq: string, min = 3): string {
  *
  *  Theme hue is preserved, but each add/del fg is contrast-checked against the
  *  gutter bg it is painted on and lifted if it would render too dark to read. */
-export function resolveDiffColors(theme?: {
-	getFgAnsi?: (key: string) => string;
-}): DiffColors {
+export function resolveDiffColors(theme?: { getFgAnsi?: (key: string) => string }): DiffColors {
 	if (!theme?.getFgAnsi) return DEFAULT_DIFF_COLORS;
 	try {
 		return {
-			fgAdd: ensureContrast(
-				theme.getFgAnsi("toolDiffAdded") || FG_ADD,
-				BG_GUTTER_ADD,
-			),
-			fgDel: ensureContrast(
-				theme.getFgAnsi("toolDiffRemoved") || FG_DEL,
-				BG_GUTTER_DEL,
-			),
+			fgAdd: ensureContrast(theme.getFgAnsi("toolDiffAdded") || FG_ADD, BG_GUTTER_ADD),
+			fgDel: ensureContrast(theme.getFgAnsi("toolDiffRemoved") || FG_DEL, BG_GUTTER_DEL),
 			fgCtx: theme.getFgAnsi("toolDiffContext") || FG_DIM,
 		};
 	} catch {
@@ -214,9 +185,7 @@ export function resolveDiffColors(theme?: {
 }
 
 /** Stable cache key for the resolved diff theme colors. */
-export function diffThemeCacheKey(theme?: {
-	getFgAnsi?: (key: string) => string;
-}): string {
+export function diffThemeCacheKey(theme?: { getFgAnsi?: (key: string) => string }): string {
 	const c = resolveDiffColors(theme);
 	return `${c.fgAdd}|${c.fgDel}|${c.fgCtx}|${BG_BASE}`;
 }
@@ -266,9 +235,7 @@ function fit(s: string, w: number): string {
 		vis++;
 		i++;
 	}
-	return w > 2
-		? `${s.slice(0, i)}${RST}${FG_DIM}›${RST}`
-		: `${s.slice(0, i)}${RST}`;
+	return w > 2 ? `${s.slice(0, i)}${RST}${FG_DIM}›${RST}` : `${s.slice(0, i)}${RST}`;
 }
 
 /** Extract last active fg + bg ANSI codes from a string (for wrap continuations). */
@@ -293,12 +260,7 @@ function ansiState(s: string): string {
 }
 
 /** Wrap ANSI-encoded string into rows of `w` visible chars. */
-function wrapAnsi(
-	s: string,
-	w: number,
-	maxRows = adaptiveWrapRows(),
-	fillBg = "",
-): string[] {
+function wrapAnsi(s: string, w: number, maxRows = adaptiveWrapRows(), fillBg = ""): string[] {
 	if (w <= 0) return [""];
 	const plain = strip(s);
 	if (plain.length <= w) {
@@ -375,12 +337,7 @@ function stripes(w: number, _rowOffset: number): string {
 
 /** Right-aligned line number. `noReset` keeps the active bg alive (no
  *  trailing RST) so the caller can build one bg-continuous gutter segment. */
-function lnum(
-	n: number | null,
-	w: number,
-	fg = FG_LNUM,
-	noReset = false,
-): string {
+function lnum(n: number | null, w: number, fg = FG_LNUM, noReset = false): string {
 	if (n === null) return " ".repeat(w);
 	const v = String(n);
 	const pad = " ".repeat(Math.max(0, w - v.length));
@@ -402,20 +359,8 @@ function buildGutter(opts: {
 	nw: number;
 	continuation: boolean;
 }): string {
-	const {
-		borderFg,
-		gutterBg,
-		bodyBg,
-		num,
-		numFg,
-		signFg,
-		sign,
-		nw,
-		continuation,
-	} = opts;
-	const border = borderFg
-		? `${gutterBg}${borderFg}${BORDER_BAR}`
-		: `${BG_BASE} `;
+	const { borderFg, gutterBg, bodyBg, num, numFg, signFg, sign, nw, continuation } = opts;
+	const border = borderFg ? `${gutterBg}${borderFg}${BORDER_BAR}` : `${BG_BASE} `;
 	const numCell = continuation
 		? " ".repeat(nw + 2)
 		: `${lnum(num, nw, numFg, true)}${signFg}${sign} `;
@@ -505,8 +450,7 @@ function injectBg(
 				continue;
 			}
 		}
-		while (ri < ranges.length && vis >= (ranges[ri] as [number, number])[1])
-			ri++;
+		while (ri < ranges.length && vis >= (ranges[ri] as [number, number])[1]) ri++;
 		const want =
 			ri < ranges.length &&
 			vis >= (ranges[ri] as [number, number])[0] &&
@@ -523,10 +467,7 @@ function injectBg(
 }
 
 /** Simple word diff (no syntax hl) — fallback when highlighting is unavailable. */
-function plainWordDiff(
-	oldText: string,
-	newText: string,
-): { old: string; new: string } {
+function plainWordDiff(oldText: string, newText: string): { old: string; new: string } {
 	const parts = Diff.diffWords(oldText, newText);
 	let o = "";
 	let n = "";
@@ -551,18 +492,13 @@ function at<T>(arr: T[], i: number): T {
 // Split-vs-unified decision
 // ---------------------------------------------------------------------------
 
-function shouldUseSplit(
-	diff: ParsedDiff,
-	tw: number,
-	maxRows = MAX_PREVIEW_LINES,
-): boolean {
+function shouldUseSplit(diff: ParsedDiff, tw: number, maxRows = MAX_PREVIEW_LINES): boolean {
 	if (!diff.lines.length) return false;
 	if (tw < SPLIT_MIN_WIDTH) return false;
 
 	const nw = Math.max(
 		2,
-		String(Math.max(...diff.lines.map((l) => l.oldNum ?? l.newNum ?? 0), 0))
-			.length,
+		String(Math.max(...diff.lines.map((l) => l.oldNum ?? l.newNum ?? 0), 0)).length,
 	);
 	const half = Math.floor((tw - 1) / 2);
 	const gw = nw + 5;
@@ -599,10 +535,7 @@ export async function renderUnified(
 
 	const vis = diff.lines.slice(0, max);
 	const tw = termW();
-	const nw = Math.max(
-		2,
-		String(Math.max(...vis.map((l) => l.oldNum ?? l.newNum ?? 0), 0)).length,
-	);
+	const nw = Math.max(2, String(Math.max(...vis.map((l) => l.oldNum ?? l.newNum ?? 0), 0)).length);
 	const gw = nw + 5;
 	const cw = Math.max(20, tw - gw);
 	const canHL = diff.chars <= MAX_HL_CHARS && vis.length <= MAX_RENDER_LINES;
@@ -650,8 +583,7 @@ export async function renderUnified(
 		const contGutter = buildGutter({ ...gutterArgs, continuation: true });
 		const rows = wrapAnsi(tabs(body), cw, adaptiveWrapRows(), bodyBg);
 		out.push(`${gutter}${rows[0]}${RST}`);
-		for (let r = 1; r < rows.length; r++)
-			out.push(`${contGutter}${rows[r]}${RST}`);
+		for (let r = 1; r < rows.length; r++) out.push(`${contGutter}${rows[r]}${RST}`);
 	}
 
 	while (idx < vis.length) {
@@ -664,23 +596,14 @@ export async function renderUnified(
 			const pad = Math.max(0, totalW - label.length - 2);
 			const half1 = Math.floor(pad / 2);
 			const half2 = pad - half1;
-			out.push(
-				`${BG_BASE}${FG_DIM}${"─".repeat(half1)}${label}${"─".repeat(half2)}${RST}`,
-			);
+			out.push(`${BG_BASE}${FG_DIM}${"─".repeat(half1)}${label}${"─".repeat(half2)}${RST}`);
 			idx++;
 			continue;
 		}
 
 		if (l.type === "ctx") {
 			const hl = oldHL[oI] ?? l.content;
-			emitRow(
-				l.newNum,
-				" ",
-				BG_BASE,
-				dc.fgCtx,
-				`${BG_BASE}${DIM}${hl}`,
-				BG_BASE,
-			);
+			emitRow(l.newNum, " ", BG_BASE, dc.fgCtx, `${BG_BASE}${DIM}${hl}`, BG_BASE);
 			oI++;
 			nI++;
 			idx++;
@@ -705,9 +628,7 @@ export async function renderUnified(
 		}
 
 		const isPaired = dels.length === 1 && adds.length === 1;
-		const wd = isPaired
-			? wordDiffAnalysis(at(dels, 0).l.content, at(adds, 0).l.content)
-			: null;
+		const wd = isPaired ? wordDiffAnalysis(at(dels, 0).l.content, at(adds, 0).l.content) : null;
 		const wdBalanced = wd && wd.oldRanges.length > 0 && wd.newRanges.length > 0;
 
 		if (isPaired && wdBalanced && wd.similarity >= WORD_DIFF_MIN_SIM && canHL) {
@@ -715,30 +636,11 @@ export async function renderUnified(
 			const add0 = at(adds, 0);
 			const delBody = injectBg(del0.hl, wd.oldRanges, BG_DEL, BG_DEL_W);
 			const addBody = injectBg(add0.hl, wd.newRanges, BG_ADD, BG_ADD_W);
-			emitRow(
-				del0.l.oldNum,
-				"-",
-				BG_GUTTER_DEL,
-				`${dc.fgDel}${BOLD}`,
-				delBody,
-				BG_DEL,
-			);
-			emitRow(
-				add0.l.newNum,
-				"+",
-				BG_GUTTER_ADD,
-				`${dc.fgAdd}${BOLD}`,
-				addBody,
-				BG_ADD,
-			);
+			emitRow(del0.l.oldNum, "-", BG_GUTTER_DEL, `${dc.fgDel}${BOLD}`, delBody, BG_DEL);
+			emitRow(add0.l.newNum, "+", BG_GUTTER_ADD, `${dc.fgAdd}${BOLD}`, addBody, BG_ADD);
 			continue;
 		}
-		if (
-			isPaired &&
-			wdBalanced &&
-			wd.similarity >= WORD_DIFF_MIN_SIM &&
-			!canHL
-		) {
+		if (isPaired && wdBalanced && wd.similarity >= WORD_DIFF_MIN_SIM && !canHL) {
 			const del0 = at(dels, 0);
 			const add0 = at(adds, 0);
 			const pwd = plainWordDiff(del0.l.content, add0.l.content);
@@ -763,33 +665,17 @@ export async function renderUnified(
 
 		for (const d of dels) {
 			const body = canHL ? `${BG_DEL}${d.hl}` : `${BG_DEL}${d.l.content}`;
-			emitRow(
-				d.l.oldNum,
-				"-",
-				BG_GUTTER_DEL,
-				`${dc.fgDel}${BOLD}`,
-				body,
-				BG_DEL,
-			);
+			emitRow(d.l.oldNum, "-", BG_GUTTER_DEL, `${dc.fgDel}${BOLD}`, body, BG_DEL);
 		}
 		for (const a of adds) {
 			const body = canHL ? `${BG_ADD}${a.hl}` : `${BG_ADD}${a.l.content}`;
-			emitRow(
-				a.l.newNum,
-				"+",
-				BG_GUTTER_ADD,
-				`${dc.fgAdd}${BOLD}`,
-				body,
-				BG_ADD,
-			);
+			emitRow(a.l.newNum, "+", BG_GUTTER_ADD, `${dc.fgAdd}${BOLD}`, body, BG_ADD);
 		}
 	}
 
 	out.push(rule(tw));
 	if (diff.lines.length > vis.length) {
-		out.push(
-			`${BG_BASE}${FG_DIM}  … ${diff.lines.length - vis.length} more lines${RST}`,
-		);
+		out.push(`${BG_BASE}${FG_DIM}  … ${diff.lines.length - vis.length} more lines${RST}`);
 	}
 	return out.join("\n");
 }
@@ -805,8 +691,7 @@ export async function renderSplit(
 	dc: DiffColors = DEFAULT_DIFF_COLORS,
 ): Promise<string> {
 	const tw = termW();
-	if (!shouldUseSplit(diff, tw, max))
-		return renderUnified(diff, language, max, dc);
+	if (!shouldUseSplit(diff, tw, max)) return renderUnified(diff, language, max, dc);
 	if (!diff.lines.length) return "";
 
 	type Row = { left: DiffLine | null; right: DiffLine | null };
@@ -834,21 +719,18 @@ export async function renderSplit(
 			i++;
 		}
 		const n = Math.max(dels.length, adds.length);
-		for (let j = 0; j < n; j++)
-			rows.push({ left: dels[j] ?? null, right: adds[j] ?? null });
+		for (let j = 0; j < n; j++) rows.push({ left: dels[j] ?? null, right: adds[j] ?? null });
 	}
 
 	const vis = rows.slice(0, max);
 	const half = Math.floor((tw - 1) / 2);
 	const nw = Math.max(
 		2,
-		String(Math.max(...diff.lines.map((l) => l.oldNum ?? l.newNum ?? 0), 0))
-			.length,
+		String(Math.max(...diff.lines.map((l) => l.oldNum ?? l.newNum ?? 0), 0)).length,
 	);
 	const gw = nw + 5;
 	const cw = Math.max(12, half - gw);
-	const canHL =
-		diff.chars <= MAX_HL_CHARS && vis.length * 2 <= MAX_RENDER_LINES * 2;
+	const canHL = diff.chars <= MAX_HL_CHARS && vis.length * 2 <= MAX_RENDER_LINES * 2;
 
 	const leftSrc: string[] = [];
 	const rightSrc: string[] = [];
@@ -920,9 +802,7 @@ export async function renderSplit(
 
 		// Split view's non-bordered context rows lead with a space before bg;
 		// buildGutter handles bordered rows, so feed the same border convention.
-		const splitBorder = borderFg
-			? `${gBg}${borderFg}${BORDER_BAR}`
-			: ` ${BG_BASE}`;
+		const splitBorder = borderFg ? `${gBg}${borderFg}${BORDER_BAR}` : ` ${BG_BASE}`;
 		const numCell = `${lnum(num, nw, numFg, true)}${sFg}${BOLD}${sign} `;
 		const gutter = `${splitBorder}${gBg}${numCell}${FG_RULE}│${cBg} ${RST}`;
 		const contGutter = `${splitBorder}${gBg}${" ".repeat(nw + 2)}${FG_RULE}│${cBg} ${RST}`;
@@ -936,14 +816,8 @@ export async function renderSplit(
 	for (const r of vis) {
 		const leftLine = r.left;
 		const rightLine = r.right;
-		const paired =
-			leftLine &&
-			rightLine &&
-			leftLine.type === "del" &&
-			rightLine.type === "add";
-		const wd = paired
-			? wordDiffAnalysis(leftLine.content, rightLine.content)
-			: null;
+		const paired = leftLine && rightLine && leftLine.type === "del" && rightLine.type === "add";
+		const wd = paired ? wordDiffAnalysis(leftLine.content, rightLine.content) : null;
 
 		let lResult: HalfResult;
 		let rResult: HalfResult;
@@ -961,13 +835,9 @@ export async function renderSplit(
 			rResult = halfBuild(rightLine, pwd.new, null, "right");
 		} else {
 			const lhl =
-				leftLine && leftLine.type !== "sep"
-					? (leftHL[lI++] ?? leftLine?.content ?? "")
-					: "";
+				leftLine && leftLine.type !== "sep" ? (leftHL[lI++] ?? leftLine?.content ?? "") : "";
 			const rhl =
-				rightLine && rightLine.type !== "sep"
-					? (rightHL[rI++] ?? rightLine?.content ?? "")
-					: "";
+				rightLine && rightLine.type !== "sep" ? (rightHL[rI++] ?? rightLine?.content ?? "") : "";
 			lResult = halfBuild(leftLine, lhl, null, "left");
 			rResult = halfBuild(rightLine, rhl, null, "right");
 		}
@@ -987,9 +857,7 @@ export async function renderSplit(
 
 	out.push(`${rule(half)}${FG_RULE}┊${RST}${rule(half)}`);
 	if (rows.length > vis.length) {
-		out.push(
-			`${BG_BASE}${FG_DIM}  … ${rows.length - vis.length} more lines${RST}`,
-		);
+		out.push(`${BG_BASE}${FG_DIM}  … ${rows.length - vis.length} more lines${RST}`);
 	}
 	return out.join("\n");
 }

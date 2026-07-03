@@ -110,9 +110,7 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 				turnCount: record.turnCount,
 				maxTurns: record.maxTurns,
 				totalTokens,
-				durationMs: record.completedAt
-					? record.completedAt - record.startedAt
-					: 0,
+				durationMs: record.completedAt ? record.completedAt - record.startedAt : 0,
 				error: record.error,
 				resultPreview,
 			};

@@ -10,10 +10,7 @@ import type { BundledLanguage } from "./types.js";
 // is not the process stdout chalk inspects) we default FORCE_COLOR before chalk
 // initializes, and lazy-load cli-highlight so this runs first. Respect an
 // explicit FORCE_COLOR/NO_COLOR if the user set one.
-if (
-	process.env.FORCE_COLOR === undefined &&
-	process.env.NO_COLOR === undefined
-) {
+if (process.env.FORCE_COLOR === undefined && process.env.NO_COLOR === undefined) {
 	process.env.FORCE_COLOR = "3";
 }
 

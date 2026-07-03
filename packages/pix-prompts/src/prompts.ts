@@ -109,9 +109,7 @@ export default function registerPrompts(pi: ExtensionAPI): void {
 			if (prompt.includes(`path="${path}"`)) continue; // host already injected it
 			const content = safeRead(path);
 			if (!content) continue;
-			prompt = prompt
-				? `${prompt}\n\n${wrap(tag, content)}`
-				: wrap(tag, content);
+			prompt = prompt ? `${prompt}\n\n${wrap(tag, content)}` : wrap(tag, content);
 		}
 
 		if (prompt === existing) return; // nothing new to inject

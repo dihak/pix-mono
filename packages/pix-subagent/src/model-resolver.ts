@@ -22,15 +22,10 @@ export interface ModelRegistry {
  * Tries exact match first ("provider/modelId"), then fuzzy match against all available models.
  * Returns the Model on success, or an error message string on failure.
  */
-export function resolveModel(
-	input: string,
-	registry: ModelRegistry,
-): Model<Api> | string {
+export function resolveModel(input: string, registry: ModelRegistry): Model<Api> | string {
 	// Available models (those with auth configured)
 	const all = (registry.getAvailable?.() ?? registry.getAll()) as ModelEntry[];
-	const availableSet = new Set(
-		all.map((m) => `${m.provider}/${m.id}`.toLowerCase()),
-	);
+	const availableSet = new Set(all.map((m) => `${m.provider}/${m.id}`.toLowerCase()));
 
 	// 1. Exact match: "provider/modelId" — only if available (has auth)
 	const slashIdx = input.indexOf("/");
@@ -67,9 +62,7 @@ export function resolveModel(
 				.split(/[\s\-/]+/)
 				.every(
 					(part) =>
-						id.includes(part) ||
-						name.includes(part) ||
-						m.provider.toLowerCase().includes(part),
+						id.includes(part) || name.includes(part) || m.provider.toLowerCase().includes(part),
 				)
 		) {
 			score = 20; // all parts present somewhere

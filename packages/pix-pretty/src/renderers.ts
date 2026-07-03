@@ -1,15 +1,6 @@
 import { truncateToWidth } from "@earendil-works/pi-tui";
 
-import {
-	BOLD,
-	FG_BLUE,
-	FG_DIM,
-	FG_GREEN,
-	FG_RED,
-	FG_RULE,
-	FG_YELLOW,
-	RST,
-} from "./ansi.js";
+import { BOLD, FG_BLUE, FG_DIM, FG_GREEN, FG_RED, FG_RULE, FG_YELLOW, RST } from "./ansi.js";
 import { MAX_PREVIEW_LINES } from "./config.js";
 import { hlBlock } from "./highlight.js";
 import { dirIcon, fileIcon } from "./icons.js";
@@ -49,9 +40,7 @@ export async function renderFileContent(
 
 	out.push(rule(tw));
 	if (total > maxLines) {
-		out.push(
-			`${FG_DIM}  … ${pluralize(total - maxLines, "more line")} (${total} total)${RST}`,
-		);
+		out.push(`${FG_DIM}  … ${pluralize(total - maxLines, "more line")} (${total} total)${RST}`);
 	}
 	return out.join("\n");
 }

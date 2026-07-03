@@ -13,21 +13,11 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type {
-	AssistantMessage,
-	AssistantMessageEvent,
-} from "@earendil-works/pi-ai";
-import type {
-	ExtensionAPI,
-	ReadonlyFooterDataProvider,
-} from "@earendil-works/pi-coding-agent";
+import type { AssistantMessage, AssistantMessageEvent } from "@earendil-works/pi-ai";
+import type { ExtensionAPI, ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
 import type { ModelsDevModel } from "@xynogen/pix-data";
-import {
-	benchScoreColor,
-	lookupBenchmark,
-	lookupModelsDev,
-} from "@xynogen/pix-data";
+import { benchScoreColor, lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
 
 // ─── Pure formatting helpers ─────────────────────────────────────────
@@ -56,8 +46,7 @@ function fmtCost(entry: ModelsDevModel | undefined): string {
 	const costIn = entry?.cost?.input ?? 0;
 	const costOut = entry?.cost?.output ?? 0;
 	if (costIn === 0 && costOut === 0) return "free";
-	const fmt = (n: number) =>
-		Number.isInteger(n) ? `${n}` : n.toFixed(2).replace(/\.?0+$/, "");
+	const fmt = (n: number) => (Number.isInteger(n) ? `${n}` : n.toFixed(2).replace(/\.?0+$/, ""));
 	return `$ ${fmt(costIn)}/${fmt(costOut)}`;
 }
 
@@ -87,9 +76,7 @@ async function getGitStatus(cwd: string): Promise<GitStatus | null> {
 		for (const line of stdout.split("\n")) {
 			if (!line) continue;
 			if (line.startsWith("## ")) {
-				const m = line.match(
-					/\[ahead (\d+)(?:, behind (\d+))?\]|\[behind (\d+)\]/,
-				);
+				const m = line.match(/\[ahead (\d+)(?:, behind (\d+))?\]|\[behind (\d+)\]/);
 				if (m) {
 					if (m[1]) ahead = parseInt(m[1], 10);
 					if (m[2]) behind = parseInt(m[2], 10);
@@ -137,11 +124,7 @@ function computeSessionTotals(entries: Iterable<unknown>): SessionTotals {
 		type: string;
 		message?: { role: string; usage?: AssistantMessage["usage"] };
 	}>) {
-		if (
-			e.type === "message" &&
-			e.message?.role === "assistant" &&
-			e.message.usage
-		) {
+		if (e.type === "message" && e.message?.role === "assistant" && e.message.usage) {
 			const u = e.message.usage;
 			input += u.input;
 			output += u.output;
@@ -153,11 +136,7 @@ function computeSessionTotals(entries: Iterable<unknown>): SessionTotals {
 }
 
 /** Tokens block (in/out + cache/cost). Always returns a string; caller decides visibility. */
-function renderTokens(
-	totals: SessionTotals,
-	theme: Theme,
-	dim = false,
-): string {
+function renderTokens(totals: SessionTotals, theme: Theme, dim = false): string {
 	let s = `${icon("net.in")} ${fmtToken(totals.input)} ${icon("net.out")} ${fmtToken(totals.output)}`;
 	if (totals.cost > 0) s += ` $${totals.cost.toFixed(3)}`;
 	return theme.fg(dim ? "dim" : "muted", s);
@@ -173,6 +152,7 @@ function renderCtxUsage(
 	const used = Math.round((usage.percent / 100) * usage.contextWindow);
 	const pctColor = pct >= 80 ? "error" : pct >= 50 ? "warning" : "success";
 	return (
+		theme.fg("muted", `${icon("tokens")}  `) +
 		theme.fg("success", fmtToken(used)) +
 		theme.fg("muted", `/${fmtToken(usage.contextWindow)} `) +
 		theme.fg(pctColor, `(${pct}%)`)
@@ -191,13 +171,10 @@ function renderBranch(
 	const markers: string[] = [];
 	if (gs) {
 		if (gs.staged > 0) markers.push(theme.fg("success", `+${gs.staged}`));
-		if (gs.unstaged > 0)
-			markers.push(theme.fg("error", `${icon("git.unstaged")}${gs.unstaged}`));
+		if (gs.unstaged > 0) markers.push(theme.fg("error", `${icon("git.unstaged")}${gs.unstaged}`));
 		if (gs.untracked > 0) markers.push(theme.fg("warning", `?${gs.untracked}`));
-		if (gs.ahead > 0)
-			markers.push(theme.fg("accent", `${icon("git.ahead")}${gs.ahead}`));
-		if (gs.behind > 0)
-			markers.push(theme.fg("accent", `${icon("git.behind")}${gs.behind}`));
+		if (gs.ahead > 0) markers.push(theme.fg("accent", `${icon("git.ahead")}${gs.ahead}`));
+		if (gs.behind > 0) markers.push(theme.fg("accent", `${icon("git.behind")}${gs.behind}`));
 	}
 	return { branchSeg, markersSeg: markers.join(" ") };
 }
@@ -234,9 +211,7 @@ function renderModel(
 	if (bench) {
 		const score = bench.overallScore ?? "?";
 		const scoreColor = benchScoreColor(bench.overallScore);
-		out +=
-			theme.fg("muted", " · ") +
-			theme.fg(scoreColor, `${icon("score")}${score}`);
+		out += theme.fg("muted", " · ") + theme.fg(scoreColor, `${icon("score")}${score}`);
 	}
 	return out;
 }
@@ -251,8 +226,7 @@ function compactStatus(key: string, value: string, theme: Theme): string {
 		case "pi-lens-lsp": {
 			const m = raw.match(/LSP Active \((\d+)\)/);
 			if (m) return theme.fg("success", `${icon("lsp")}  ${m[1]}`);
-			if (/LSP Inactive/.test(raw))
-				return theme.fg("error", `${icon("lsp")}  off`);
+			if (/LSP Inactive/.test(raw)) return theme.fg("error", `${icon("lsp")}  off`);
 			return value;
 		}
 		case "mcp": {
@@ -459,60 +433,52 @@ export default function (pi: ExtensionAPI) {
 			if (currentCwd) void refreshGit(currentCwd);
 		}, GIT_POLL_MS);
 
-		ctx.ui.setFooter(
-			(tui, theme: Theme, footerData: ReadonlyFooterDataProvider) => {
-				requestRender = () => tui.requestRender();
-				const unsub = footerData.onBranchChange(() => {
-					void refreshGit(ctx.cwd);
-					tui.requestRender();
-				});
+		ctx.ui.setFooter((tui, theme: Theme, footerData: ReadonlyFooterDataProvider) => {
+			requestRender = () => tui.requestRender();
+			const unsub = footerData.onBranchChange(() => {
+				void refreshGit(ctx.cwd);
+				tui.requestRender();
+			});
 
-				return {
-					dispose() {
-						unsub();
-						requestRender = null;
-					},
-					invalidate() {},
-					render(width: number): string[] {
-						const sep = theme.fg("muted", " | ");
+			return {
+				dispose() {
+					unsub();
+					requestRender = null;
+				},
+				invalidate() {},
+				render(width: number): string[] {
+					const sep = theme.fg("muted", " | ");
 
-						const totals = computeSessionTotals(ctx.sessionManager.getBranch());
-						const tokens =
-							tokensState === "off"
-								? ""
-								: renderTokens(totals, theme, tokensState === "dim");
-						const ctxUsage = renderCtxUsage(ctx.getContextUsage?.(), theme);
-						const model = renderModel(
-							ctx.model,
-							pi.getThinkingLevel?.() ?? "",
-							theme,
-						);
-						const { branchSeg, markersSeg } = renderBranch(
-							footerData.getGitBranch(),
-							gitStatus,
-							theme,
-						);
-						const { modePart, otherPart } = renderStatuses(
-							footerData.getExtensionStatuses(),
-							sep,
-							theme,
-						);
+					const totals = computeSessionTotals(ctx.sessionManager.getBranch());
+					const tokens =
+						tokensState === "off" ? "" : renderTokens(totals, theme, tokensState === "dim");
+					const ctxUsage = renderCtxUsage(ctx.getContextUsage?.(), theme);
+					const model = renderModel(ctx.model, pi.getThinkingLevel?.() ?? "", theme);
+					const { branchSeg, markersSeg } = renderBranch(
+						footerData.getGitBranch(),
+						gitStatus,
+						theme,
+					);
+					const { modePart, otherPart } = renderStatuses(
+						footerData.getExtensionStatuses(),
+						sep,
+						theme,
+					);
 
-						const loc =
-							theme.fg("muted", `${icon("cwd")}  `) +
-							theme.fg("accent", shortCwd(ctx.cwd)) +
-							branchSeg;
-						const markersPart = markersSeg ? sep + markersSeg : "";
-						const tpsPart = liveTps ? sep + theme.fg("accent", liveTps) : "";
+					const loc =
+						theme.fg("muted", `${icon("cwd")}  `) +
+						theme.fg("accent", shortCwd(ctx.cwd)) +
+						branchSeg;
+					const markersPart = markersSeg ? sep + markersSeg : "";
+					const tpsPart = liveTps ? sep + theme.fg("accent", liveTps) : "";
 
-						const tokensPart = tokens ? sep + tokens : "";
-						const ctxPart = ctxUsage ? sep + ctxUsage : "";
-						const line = `${modePart}${loc}${markersPart}${ctxPart}${sep}${model}${otherPart}${tokensPart}${tpsPart}`;
-						return [truncateToWidth(line, width)];
-					},
-				};
-			},
-		);
+					const tokensPart = tokens ? sep + tokens : "";
+					const ctxPart = ctxUsage ? sep + ctxUsage : "";
+					const line = `${modePart}${loc}${markersPart}${ctxPart}${sep}${model}${otherPart}${tokensPart}${tpsPart}`;
+					return [truncateToWidth(line, width)];
+				},
+			};
+		});
 	});
 
 	pi.on("session_shutdown", () => {

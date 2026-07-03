@@ -14,12 +14,7 @@
  *   - Single source of truth for the overlay look across pix-gate and pix-sudo.
  */
 
-import {
-	Input,
-	type SelectItem,
-	SelectList,
-	wrapTextWithAnsi,
-} from "@earendil-works/pi-tui";
+import { Input, type SelectItem, SelectList, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { frameLines, modalWidth, selectListTheme } from "./modal-frame.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -135,16 +130,7 @@ function buildLines(opts: {
 	countdownLine: string | undefined;
 	width: number;
 }): string[] {
-	const {
-		theme,
-		accent,
-		config,
-		stage,
-		selectList,
-		maskedInput,
-		countdownLine,
-		width,
-	} = opts;
+	const { theme, accent, config, stage, selectList, maskedInput, countdownLine, width } = opts;
 	const inner = width - 4; // CHROME = 2 border + 2 padding
 	const lines: string[] = [];
 
@@ -172,10 +158,7 @@ function buildLines(opts: {
 		lines.push("");
 		lines.push(theme.fg("dim", "↑↓ navigate • enter select • esc deny"));
 	} else {
-		const label =
-			config.mode === "sudo"
-				? (config.passwordLabel ?? "Sudo password:")
-				: "Password:";
+		const label = config.mode === "sudo" ? (config.passwordLabel ?? "Sudo password:") : "Password:";
 		lines.push(theme.fg("muted", label));
 		const inputLines = maskedInput.render(inner);
 		for (const l of inputLines) lines.push(l);
@@ -217,10 +200,7 @@ function buildLines(opts: {
  * if (result.action === "approved") runWithSudo(cmd, result.password!);
  * ```
  */
-export function showOverlay(
-	ui: OverlayUI,
-	config: OverlayConfig,
-): Promise<OverlayResult> {
+export function showOverlay(ui: OverlayUI, config: OverlayConfig): Promise<OverlayResult> {
 	const accent = config.accent ?? "accent";
 	const choices = config.choices ?? DEFAULT_CHOICES;
 	const approveVal = config.approveValue ?? "yes";
@@ -291,8 +271,7 @@ export function showOverlay(
 				};
 				selectList.onCancel = () => finish({ action: "denied" });
 
-				maskedInput.onSubmit = (pw) =>
-					finish({ action: "approved", password: pw });
+				maskedInput.onSubmit = (pw) => finish({ action: "approved", password: pw });
 				maskedInput.onEscape = () => finish({ action: "denied" });
 
 				// ── component interface ──────────────────────────────────────────

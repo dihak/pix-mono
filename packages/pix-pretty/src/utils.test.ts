@@ -49,20 +49,14 @@ describe("renderDimPreview", () => {
 	});
 
 	it("adds singular overflow marker for 1 extra line", () => {
-		const body = Array.from(
-			{ length: MAX_PREVIEW_LINES + 1 },
-			(_, i) => `L${i}`,
-		);
+		const body = Array.from({ length: MAX_PREVIEW_LINES + 1 }, (_, i) => `L${i}`);
 		const out = plain(renderDimPreview(body.join("\n"), theme));
 		expect(out).toContain("… 1 more line");
 		expect(out).not.toContain("more lines");
 	});
 
 	it("adds plural overflow marker for many extra lines", () => {
-		const body = Array.from(
-			{ length: MAX_PREVIEW_LINES + 3 },
-			(_, i) => `L${i}`,
-		);
+		const body = Array.from({ length: MAX_PREVIEW_LINES + 3 }, (_, i) => `L${i}`);
 		const out = plain(renderDimPreview(body.join("\n"), theme));
 		expect(out).toContain("… 3 more lines");
 	});
@@ -86,8 +80,6 @@ describe("renderDimPreview", () => {
 	});
 
 	it("does not throw on an invalid highlight regex", () => {
-		expect(() =>
-			renderDimPreview("text", theme, { highlight: "(" }),
-		).not.toThrow();
+		expect(() => renderDimPreview("text", theme, { highlight: "(" })).not.toThrow();
 	});
 });

@@ -41,21 +41,14 @@ export function fillToolBackground(text: string, bg = BG_BASE): string {
 		.split("\n")
 		.map((line) => {
 			const normalized = preserveToolBackground(line, bg);
-			const fitted = preserveToolBackground(
-				truncateToWidth(normalized, width, ""),
-				bg,
-			);
+			const fitted = preserveToolBackground(truncateToWidth(normalized, width, ""), bg);
 			const padding = Math.max(0, width - visibleWidth(fitted));
 			return `${bg}${fitted}${" ".repeat(padding)}${RST}`;
 		})
 		.join("\n");
 }
 
-export function pluralize(
-	count: number,
-	noun: string,
-	plural?: string,
-): string {
+export function pluralize(count: number, noun: string, plural?: string): string {
 	return `${count} ${count === 1 ? noun : (plural ?? `${noun}s`)}`;
 }
 
@@ -74,18 +67,12 @@ function safeHighlightRegex(pattern: string): RegExp | null {
 	}
 }
 
-function dimLineWithHighlight(
-	line: string,
-	theme: FgTheme,
-	re: RegExp | null,
-): string {
+function dimLineWithHighlight(line: string, theme: FgTheme, re: RegExp | null): string {
 	if (!re) return theme.fg("dim", line);
 	// split with capture group: odd indexes are matches
 	return line
 		.split(re)
-		.map((part, i) =>
-			i % 2 ? `${FG_GREEN}${BOLD}${part}${RST}` : theme.fg("dim", part),
-		)
+		.map((part, i) => (i % 2 ? `${FG_GREEN}${BOLD}${part}${RST}` : theme.fg("dim", part)))
 		.join("");
 }
 
@@ -204,15 +191,11 @@ export function humanSize(bytes: number): string {
 // Fallback: set PRETTY_ICONS=none to disable icons.
 // ---------------------------------------------------------------------------
 
-export function isTextContent(
-	content: ToolContent,
-): content is ToolTextContent {
+export function isTextContent(content: ToolContent): content is ToolTextContent {
 	return content.type === "text";
 }
 
-export function isImageContent(
-	content: ToolContent,
-): content is ToolImageContent {
+export function isImageContent(content: ToolContent): content is ToolImageContent {
 	return content.type === "image";
 }
 

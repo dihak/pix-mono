@@ -37,12 +37,9 @@ export function resolveAgentInvocationConfig(
 	return {
 		modelInput: params.model ?? agentConfig?.model,
 		modelFromParams: params.model != null,
-		thinking: (params.thinking ?? agentConfig?.thinking) as
-			| ThinkingLevel
-			| undefined,
+		thinking: (params.thinking ?? agentConfig?.thinking) as ThinkingLevel | undefined,
 		maxTurns: params.turns ?? params.max_turns ?? agentConfig?.maxTurns,
-		inheritContext:
-			params.inherit_context ?? agentConfig?.inheritContext ?? false,
+		inheritContext: params.inherit_context ?? agentConfig?.inheritContext ?? false,
 		isolated: params.isolated ?? agentConfig?.isolated ?? false,
 	};
 }

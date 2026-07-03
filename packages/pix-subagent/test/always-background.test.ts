@@ -22,9 +22,7 @@ describe("AgentManager has no foreground API", () => {
 		const manager = new AgentManager();
 		expect(typeof manager.spawn).toBe("function");
 		// No other spawn variant exists
-		expect(
-			(manager as Record<string, unknown>).spawnForeground,
-		).toBeUndefined();
+		expect((manager as Record<string, unknown>).spawnForeground).toBeUndefined();
 		expect((manager as Record<string, unknown>).spawnBlocking).toBeUndefined();
 		expect((manager as Record<string, unknown>).spawnSync).toBeUndefined();
 		manager.dispose();
@@ -90,13 +88,7 @@ describe("AgentInvocation type has no runInBackground", () => {
 		expect(invocation.modelName).toBe("haiku");
 		// The object should have exactly these keys and no more
 		const keys = Object.keys(invocation).sort();
-		expect(keys).toEqual([
-			"inheritContext",
-			"isolated",
-			"maxTurns",
-			"modelName",
-			"thinking",
-		]);
+		expect(keys).toEqual(["inheritContext", "isolated", "maxTurns", "modelName", "thinking"]);
 		// Explicitly: no background-related key
 		expect(keys).not.toContain("runInBackground");
 		expect(keys).not.toContain("background");

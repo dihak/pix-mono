@@ -97,21 +97,19 @@ interface DeferredResumeAgent {
 function installFakeResumeAgent(): DeferredResumeAgent[] {
 	const calls: DeferredResumeAgent[] = [];
 
-	__setResumeAgentForTests(
-		(_session, _prompt, _opts): Promise<ResumeResult> => {
-			const deferred: DeferredResumeAgent = {
-				resolve: () => {},
-				reject: () => {},
-			};
-			const promise = new Promise<ResumeResult>((resolve, reject) => {
-				deferred.resolve = (text = "resumed") =>
-					resolve({ responseText: text, aborted: false, steered: false });
-				deferred.reject = reject;
-			});
-			calls.push(deferred);
-			return promise;
-		},
-	);
+	__setResumeAgentForTests((_session, _prompt, _opts): Promise<ResumeResult> => {
+		const deferred: DeferredResumeAgent = {
+			resolve: () => {},
+			reject: () => {},
+		};
+		const promise = new Promise<ResumeResult>((resolve, reject) => {
+			deferred.resolve = (text = "resumed") =>
+				resolve({ responseText: text, aborted: false, steered: false });
+			deferred.reject = reject;
+		});
+		calls.push(deferred);
+		return promise;
+	});
 
 	return calls;
 }
@@ -631,36 +629,34 @@ describe("AgentManager", () => {
 
 	test("steers queued before session ready are flushed on session creation", async () => {
 		const steeredMessages: string[] = [];
-		__setRunAgentForTests(
-			(_ctx, _type, _prompt, options): Promise<RunResult> => {
-				// Delay session creation to simulate async startup
-				const session = {
-					dispose() {},
-					steer: async (msg: string) => {
-						steeredMessages.push(msg);
-					},
-					subscribe: () => () => {},
-					messages: [],
-				} as unknown as AgentSession;
+		__setRunAgentForTests((_ctx, _type, _prompt, options): Promise<RunResult> => {
+			// Delay session creation to simulate async startup
+			const session = {
+				dispose() {},
+				steer: async (msg: string) => {
+					steeredMessages.push(msg);
+				},
+				subscribe: () => () => {},
+				messages: [],
+			} as unknown as AgentSession;
 
-				return new Promise<RunResult>((resolve) => {
-					// Fire session after a delay so pendingSteers can accumulate
-					setTimeout(() => {
-						options.onSessionCreated?.(session);
-						setTimeout(
-							() =>
-								resolve({
-									responseText: "done",
-									session,
-									aborted: false,
-									steered: false,
-								}),
-							10,
-						);
-					}, 30);
-				});
-			},
-		);
+			return new Promise<RunResult>((resolve) => {
+				// Fire session after a delay so pendingSteers can accumulate
+				setTimeout(() => {
+					options.onSessionCreated?.(session);
+					setTimeout(
+						() =>
+							resolve({
+								responseText: "done",
+								session,
+								aborted: false,
+								steered: false,
+							}),
+						10,
+					);
+				}, 30);
+			});
+		});
 
 		manager = new AgentManager(undefined, 4);
 

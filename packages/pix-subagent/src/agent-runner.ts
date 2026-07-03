@@ -4,16 +4,8 @@
 
 import { homedir } from "node:os";
 import { basename, dirname, isAbsolute, resolve } from "node:path";
-import type {
-	Api,
-	AssistantMessage,
-	Model,
-	ToolCall,
-} from "@earendil-works/pi-ai";
-import type {
-	ExtensionContext,
-	LoadExtensionsResult,
-} from "@earendil-works/pi-coding-agent";
+import type { Api, AssistantMessage, Model, ToolCall } from "@earendil-works/pi-ai";
+import type { ExtensionContext, LoadExtensionsResult } from "@earendil-works/pi-coding-agent";
 import {
 	type AgentSession,
 	type AgentSessionEvent,
@@ -92,8 +84,7 @@ export function parseExtensionsSpec(
 			wildcard = true;
 			continue;
 		}
-		const isPathEntry =
-			entry.includes("/") || entry.includes("\\") || entry.startsWith("~");
+		const isPathEntry = entry.includes("/") || entry.includes("\\") || entry.startsWith("~");
 		if (!isPathEntry) {
 			names.add(entry.toLowerCase());
 			continue;
@@ -132,9 +123,7 @@ export function parseExtSelectors(entries: string[]): {
 		// Extension name matches case-insensitively (matches the loader-side canonical
 		// name). Tool names are case-preserved — they're matched against pi-mono's
 		// registered identifiers, which are case-sensitive.
-		const name = (slash === -1 ? body : body.slice(0, slash))
-			.trim()
-			.toLowerCase();
+		const name = (slash === -1 ? body : body.slice(0, slash)).trim().toLowerCase();
 		if (!name) continue;
 		extNames.add(name);
 		if (slash === -1) continue;
@@ -227,11 +216,7 @@ export interface RunOptions {
 	 * Lets callers maintain a lifetime accumulator that survives compaction
 	 * (which replaces session.state.messages and resets stats-derived sums).
 	 */
-	onAssistantUsage?: (usage: {
-		input: number;
-		output: number;
-		cacheWrite: number;
-	}) => void;
+	onAssistantUsage?: (usage: { input: number; output: number; cacheWrite: number }) => void;
 	/**
 	 * Called when the session successfully compacts. `tokensBefore` is upstream's
 	 * pre-compaction context size estimate. Aborted compactions don't fire.
@@ -273,10 +258,7 @@ function collectResponseText(session: AgentSession) {
 		if (event.type === "message_start") {
 			text = "";
 		}
-		if (
-			event.type === "message_update" &&
-			event.assistantMessageEvent.type === "text_delta"
-		) {
+		if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
 			text += event.assistantMessageEvent.delta;
 		}
 	});
@@ -309,11 +291,7 @@ export function attachTurnLimit(
 		onTurnEnd?: (turnCount: number) => void;
 		onTextDelta?: (delta: string, fullText: string) => void;
 		onToolActivity?: (activity: ToolActivity) => void;
-		onAssistantUsage?: (usage: {
-			input: number;
-			output: number;
-			cacheWrite: number;
-		}) => void;
+		onAssistantUsage?: (usage: { input: number; output: number; cacheWrite: number }) => void;
 		onCompaction?: (info: {
 			reason: "manual" | "threshold" | "overflow";
 			tokensBefore: number;
@@ -336,10 +314,7 @@ export function attachTurnLimit(
 					session.steer(
 						"You have reached your turn limit. Wrap up immediately \u2014 provide your final answer now.",
 					);
-				} else if (
-					softLimitReached &&
-					turnCount >= options.maxTurns + effectiveGrace
-				) {
+				} else if (softLimitReached && turnCount >= options.maxTurns + effectiveGrace) {
 					aborted = true;
 					session.abort();
 				}
@@ -348,15 +323,9 @@ export function attachTurnLimit(
 		if (event.type === "message_start") {
 			currentMessageText = "";
 		}
-		if (
-			event.type === "message_update" &&
-			event.assistantMessageEvent.type === "text_delta"
-		) {
+		if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
 			currentMessageText += event.assistantMessageEvent.delta;
-			options.onTextDelta?.(
-				event.assistantMessageEvent.delta,
-				currentMessageText,
-			);
+			options.onTextDelta?.(event.assistantMessageEvent.delta, currentMessageText);
 		}
 		if (event.type === "tool_execution_start") {
 			options.onToolActivity?.({ type: "start", toolName: event.toolName });
@@ -406,10 +375,7 @@ function getLastAssistantText(session: AgentSession): string {
  * Wire an AbortSignal to abort a session.
  * Returns a cleanup function to remove the listener.
  */
-function forwardAbortSignal(
-	session: AgentSession,
-	signal?: AbortSignal,
-): () => void {
+function forwardAbortSignal(session: AgentSession, signal?: AbortSignal): () => void {
 	if (!signal) return () => {};
 	const onAbort = () => session.abort();
 	signal.addEventListener("abort", onAbort, { once: true });
@@ -443,9 +409,7 @@ export async function runAgent(
 	const extensions = options.isolated ? false : config.extensions;
 	// Nulling excludes under isolated also suppresses the orphaned-exclude warning —
 	// isolation is an intentional override, not a misconfiguration.
-	const excludeExtensions = options.isolated
-		? undefined
-		: config.excludeExtensions;
+	const excludeExtensions = options.isolated ? undefined : config.excludeExtensions;
 	const skills = options.isolated ? false : config.skills;
 
 	// ponytail: skill-preload + persistent memory deferred to v2
@@ -459,21 +423,12 @@ export async function runAgent(
 	// Build system prompt from agent config
 	let systemPrompt: string;
 	if (agentConfig) {
-		systemPrompt = buildAgentPrompt(
-			agentConfig,
-			effectiveCwd,
-			env,
-			parentSystemPrompt,
-			extras,
-		);
+		systemPrompt = buildAgentPrompt(agentConfig, effectiveCwd, env, parentSystemPrompt, extras);
 	} else {
 		// Unknown type fallback: spread the canonical general-purpose config (defensive —
 		// unreachable in practice since index.ts resolves unknown types before calling runAgent).
 		const fallback = DEFAULT_AGENTS.get("general-purpose");
-		if (!fallback)
-			throw new Error(
-				`No fallback config available for unknown type "${type}"`,
-			);
+		if (!fallback) throw new Error(`No fallback config available for unknown type "${type}"`);
 		systemPrompt = buildAgentPrompt(
 			{ ...fallback, name: type },
 			effectiveCwd,
@@ -519,30 +474,22 @@ export async function runAgent(
 	// Plain canonical names only (case-insensitive). Note: excluded extensions'
 	// factories still run once during reload() (see comment above) — exclusion
 	// suppresses handler binding and tool registration; it is not a sandbox.
-	const excludeNames = new Set(
-		(excludeExtensions ?? []).map((n) => n.toLowerCase()),
-	);
+	const excludeNames = new Set((excludeExtensions ?? []).map((n) => n.toLowerCase()));
 	const hasExcludes = excludeNames.size > 0;
 	// The override filters loaded extensions down to `keepNames` minus `excludeNames`.
 	// It's only needed when we're neither loading everything without excludes
 	// (`extensions: true` or a `"*"` wildcard) nor nothing (`noExtensions`).
 	const loadAll = extensions === true || extensionsSpec?.wildcard === true;
-	const additionalExtensionPaths = extensionsSpec?.paths.length
-		? extensionsSpec.paths
-		: undefined;
+	const additionalExtensionPaths = extensionsSpec?.paths.length ? extensionsSpec.paths : undefined;
 	// Pre-filter discovered set, captured by the override — the exclude-typo warning
 	// must compare against this, not the surviving set (absence from survivors is
 	// an exclude *succeeding*).
 	let discoveredNames: Set<string> | undefined;
-	const extensionsOverride:
-		| ((base: LoadExtensionsResult) => LoadExtensionsResult)
-		| undefined =
+	const extensionsOverride: ((base: LoadExtensionsResult) => LoadExtensionsResult) | undefined =
 		noExtensions || (loadAll && !hasExcludes)
 			? undefined
 			: (base) => {
-					discoveredNames = new Set(
-						base.extensions.map((e) => extensionCanonicalName(e.path)),
-					);
+					discoveredNames = new Set(base.extensions.map((e) => extensionCanonicalName(e.path)));
 					return {
 						...base,
 						extensions: base.extensions.filter((e) => {
@@ -576,9 +523,7 @@ export async function runAgent(
 		const knownBuiltins = new Set(BUILTIN_TOOL_NAMES);
 		for (const name of agentConfig.builtinToolNames) {
 			if (!knownBuiltins.has(name)) {
-				options.onWarning?.(
-					`tool "${name}" requested by agent "${type}" is not a known built-in`,
-				);
+				options.onWarning?.(`tool "${name}" requested by agent "${type}" is not a known built-in`);
 			}
 		}
 	}
@@ -612,9 +557,7 @@ export async function runAgent(
 	}
 	if (keepNames.size > 0 || extNames.size > 0) {
 		const survivingNames = new Set(
-			loader
-				.getExtensions()
-				.extensions.map((e) => extensionCanonicalName(e.path)),
+			loader.getExtensions().extensions.map((e) => extensionCanonicalName(e.path)),
 		);
 		for (const name of keepNames) {
 			if (!survivingNames.has(name)) {
@@ -715,9 +658,7 @@ export async function runAgent(
 
 	const baseSessionName = agentConfig?.name ?? type;
 	session.setSessionName(
-		options.agentId
-			? `${baseSessionName}#${options.agentId.slice(0, 8)}`
-			: baseSessionName,
+		options.agentId ? `${baseSessionName}#${options.agentId.slice(0, 8)}` : baseSessionName,
 	);
 
 	// Bind extensions so that session_start fires and extensions can initialize
@@ -733,9 +674,7 @@ export async function runAgent(
 	options.onSessionCreated?.(session);
 
 	// Track turns for graceful max_turns enforcement via the shared helper.
-	const maxTurns = normalizeMaxTurns(
-		options.maxTurns ?? agentConfig?.maxTurns ?? defaultMaxTurns,
-	);
+	const maxTurns = normalizeMaxTurns(options.maxTurns ?? agentConfig?.maxTurns ?? defaultMaxTurns);
 	const turnLimit = attachTurnLimit(session, {
 		maxTurns,
 		onTurnEnd: options.onTurnEnd,
@@ -765,8 +704,7 @@ export async function runAgent(
 		cleanupAbort();
 	}
 
-	const responseText =
-		collector.getText().trim() || getLastAssistantText(session);
+	const responseText = collector.getText().trim() || getLastAssistantText(session);
 	return {
 		responseText,
 		session,
@@ -799,11 +737,7 @@ export async function resumeAgent(
 		onTurnEnd?: (turnCount: number) => void;
 		onTextDelta?: (delta: string, fullText: string) => void;
 		onToolActivity?: (activity: ToolActivity) => void;
-		onAssistantUsage?: (usage: {
-			input: number;
-			output: number;
-			cacheWrite: number;
-		}) => void;
+		onAssistantUsage?: (usage: { input: number; output: number; cacheWrite: number }) => void;
 		onCompaction?: (info: {
 			reason: "manual" | "threshold" | "overflow";
 			tokensBefore: number;
@@ -832,8 +766,7 @@ export async function resumeAgent(
 		cleanupAbort();
 	}
 
-	const responseText =
-		collector.getText().trim() || getLastAssistantText(session);
+	const responseText = collector.getText().trim() || getLastAssistantText(session);
 	return {
 		responseText,
 		aborted: turnLimit.wasAborted(),
@@ -845,10 +778,7 @@ export async function resumeAgent(
  * Send a steering message to a running subagent.
  * The message will interrupt the agent after its current tool execution.
  */
-export async function steerAgent(
-	session: AgentSession,
-	message: string,
-): Promise<void> {
+export async function steerAgent(session: AgentSession, message: string): Promise<void> {
 	await session.steer(message);
 }
 
@@ -860,18 +790,12 @@ export async function steerAgent(
  * RECENT parts are kept, oldest are dropped, and a marker line indicates how
  * many entries were omitted (same pattern as `buildParentContext`).
  */
-export function getAgentConversation(
-	session: AgentSession,
-	maxChars = 30_000,
-): string {
+export function getAgentConversation(session: AgentSession, maxChars = 30_000): string {
 	const parts: string[] = [];
 
 	for (const msg of session.messages) {
 		if (msg.role === "user") {
-			const text =
-				typeof msg.content === "string"
-					? msg.content
-					: extractText(msg.content);
+			const text = typeof msg.content === "string" ? msg.content : extractText(msg.content);
 			if (text.trim()) parts.push(`[User]: ${text.trim()}`);
 		} else if (msg.role === "assistant") {
 			const textParts: string[] = [];
@@ -881,10 +805,8 @@ export function getAgentConversation(
 				else if (c.type === "toolCall")
 					toolCalls.push(`  Tool: ${(c as ToolCall).name ?? "unknown"}`);
 			}
-			if (textParts.length > 0)
-				parts.push(`[Assistant]: ${textParts.join("\n")}`);
-			if (toolCalls.length > 0)
-				parts.push(`[Tool Calls]:\n${toolCalls.join("\n")}`);
+			if (textParts.length > 0) parts.push(`[Assistant]: ${textParts.join("\n")}`);
+			if (toolCalls.length > 0) parts.push(`[Tool Calls]:\n${toolCalls.join("\n")}`);
 		} else if (msg.role === "toolResult") {
 			const text = extractText(msg.content);
 			const truncated = text.length > 200 ? `${text.slice(0, 200)}...` : text;

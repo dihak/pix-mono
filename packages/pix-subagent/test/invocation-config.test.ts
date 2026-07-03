@@ -51,19 +51,15 @@ describe("return shape", () => {
 
 describe("model precedence", () => {
 	test("params.model wins over config.model", () => {
-		const r = resolveAgentInvocationConfig(
-			makeConfig({ model: "config-model" }),
-			{ model: "param-model" },
-		);
+		const r = resolveAgentInvocationConfig(makeConfig({ model: "config-model" }), {
+			model: "param-model",
+		});
 		expect(r.modelInput).toBe("param-model");
 		expect(r.modelFromParams).toBe(true);
 	});
 
 	test("config.model used when params.model is absent", () => {
-		const r = resolveAgentInvocationConfig(
-			makeConfig({ model: "config-model" }),
-			{},
-		);
+		const r = resolveAgentInvocationConfig(makeConfig({ model: "config-model" }), {});
 		expect(r.modelInput).toBe("config-model");
 		expect(r.modelFromParams).toBe(false);
 	});
@@ -148,18 +144,14 @@ describe("maxTurns precedence", () => {
 
 describe("inheritContext precedence", () => {
 	test("params.inherit_context wins", () => {
-		const r = resolveAgentInvocationConfig(
-			makeConfig({ inheritContext: false }),
-			{ inherit_context: true },
-		);
+		const r = resolveAgentInvocationConfig(makeConfig({ inheritContext: false }), {
+			inherit_context: true,
+		});
 		expect(r.inheritContext).toBe(true);
 	});
 
 	test("config.inheritContext used as default", () => {
-		const r = resolveAgentInvocationConfig(
-			makeConfig({ inheritContext: true }),
-			{},
-		);
+		const r = resolveAgentInvocationConfig(makeConfig({ inheritContext: true }), {});
 		expect(r.inheritContext).toBe(true);
 	});
 
