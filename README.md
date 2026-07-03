@@ -6,6 +6,8 @@ Monorepo of Pix, a distro of [Pi Coding Agent](https://github.com/badlogic/pi-mo
 
 > **🐧 Linux only.** This project has only been tested on Linux. macOS and Windows are **not tested** and may not work correctly.
 
+> **🤖 Claude-tested only.** Agent behavior is mostly tested against Claude models. I don't currently have access to GPT models, so usage and compatibility with OpenAI models is untested. Feel free to submit issues if a model consistently misuses tools (e.g. Claude found `rtk find` hard to use and failed consistently).
+
 ## Packages
 
 ### Core bundle
