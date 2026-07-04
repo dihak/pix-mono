@@ -28,19 +28,37 @@ export function addUsage(into: LifetimeUsage, delta: LifetimeUsage): void {
 /** Minimal shape we read from upstream `getSessionStats()`. */
 export type SessionStatsLike = {
 	tokens: { input: number; output: number; cacheWrite: number };
-	contextUsage?: { percent: number | null };
+	contextUsage?: { tokens?: number | null; contextWindow?: number; percent: number | null };
 };
 export type SessionLike = { getSessionStats(): SessionStatsLike };
+
+/** Context usage snapshot: estimated used tokens, window size, percent. */
+export type ContextUsageLike = {
+	tokens: number | null;
+	contextWindow: number | null;
+	percent: number | null;
+};
+
+/** Full context usage, or null when unavailable. */
+export function getSessionContextUsage(session: SessionLike | undefined): ContextUsageLike | null {
+	if (!session) return null;
+	try {
+		const cu = session.getSessionStats().contextUsage;
+		if (!cu) return null;
+		return {
+			tokens: cu.tokens ?? null,
+			contextWindow: cu.contextWindow ?? null,
+			percent: cu.percent ?? null,
+		};
+	} catch {
+		return null;
+	}
+}
 
 /**
  * Context-window utilization (0–100), or null when unavailable
  * (no model contextWindow, or post-compaction before the next response).
  */
 export function getSessionContextPercent(session: SessionLike | undefined): number | null {
-	if (!session) return null;
-	try {
-		return session.getSessionStats().contextUsage?.percent ?? null;
-	} catch {
-		return null;
-	}
+	return getSessionContextUsage(session)?.percent ?? null;
 }

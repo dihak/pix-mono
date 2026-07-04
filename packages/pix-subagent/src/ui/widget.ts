@@ -24,7 +24,7 @@ import {
 	SPINNER,
 } from "../tools.ts";
 import type { AgentInvocation, SubagentType } from "../types.ts";
-import { getSessionContextPercent, type SessionLike } from "../usage.ts";
+import { type ContextUsageLike, getSessionContextUsage, type SessionLike } from "../usage.ts";
 
 export type { AgentActivity, AgentDetails, Theme };
 export {
@@ -65,32 +65,24 @@ export type UICtx = {
  * count annotation. Returns "" when context percent is unavailable.
  */
 export function formatSessionContext(
-	percent: number | null,
+	usage: ContextUsageLike | null,
 	theme: Theme,
 	compactions = 0,
 ): string {
-	if (percent == null && compactions === 0) return "";
-	const base = formatContext(percent);
+	if (usage?.percent == null && compactions === 0) return "";
+	const base = formatContext(usage);
+	const color =
+		usage?.percent != null && usage.percent >= 85
+			? "error"
+			: usage?.percent != null && usage.percent >= 70
+				? "warning"
+				: "dim";
 	if (compactions > 0) {
 		const compactStr = theme.fg("dim", `⇊${compactions}`);
 		if (!base) return compactStr;
-		const color =
-			percent != null && percent >= 85
-				? "error"
-				: percent != null && percent >= 70
-					? "warning"
-					: "dim";
-		return `${icon("tokens")} ${theme.fg(color, `${Math.round(percent!)}%`)} ctx ${theme.fg("dim", "(")}${compactStr}${theme.fg("dim", ")")}`;
+		return `${theme.fg(color, base)} ${theme.fg("dim", "(")}${compactStr}${theme.fg("dim", ")")}`;
 	}
-	if (!base) return "";
-	// Color the percent based on thresholds
-	const color =
-		percent != null && percent >= 85
-			? "error"
-			: percent != null && percent >= 70
-				? "warning"
-				: "dim";
-	return `${icon("tokens")} ${theme.fg(color, `${Math.round(percent!)}% ctx`)}`;
+	return base ? theme.fg(color, base) : "";
 }
 
 export function getDisplayName(type: SubagentType): string {
@@ -229,12 +221,12 @@ export class AgentWidget {
 		if (a.toolUses > 0) parts.push(formatToolUses(a.toolUses));
 		// Context% + speed read from the record (survives the
 		// agentActivity delete that fires in onComplete before this renders).
-		const contextPercent = a.session ? getSessionContextPercent(a.session as SessionLike) : null;
-		const ctxText = formatSessionContext(contextPercent, theme, a.compactionCount ?? 0);
+		const contextUsage = a.session ? getSessionContextUsage(a.session as SessionLike) : null;
+		const ctxText = formatSessionContext(contextUsage, theme, a.compactionCount ?? 0);
 		if (ctxText) parts.push(ctxText);
-		parts.push(duration);
 		const speed = formatSpeed(a.lifetimeUsage?.output ?? 0, a.streamingMs ?? durationMs);
 		if (speed) parts.push(speed);
+		parts.push(duration);
 
 		return `${icon} ${theme.fg("dim", name)}${modelLabel}${modeTag} ${theme.fg("dim", "·")} ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`;
 	}
@@ -282,18 +274,16 @@ export class AgentWidget {
 
 			const bg = this.agentActivity.get(a.id);
 			const toolUses = bg?.toolUses ?? a.toolUses;
-			const contextPercent = bg?.session
-				? getSessionContextPercent(bg.session as Parameters<typeof getSessionContextPercent>[0])
-				: null;
-			const ctxText = formatSessionContext(contextPercent, theme, a.compactionCount);
+			const contextUsage = bg?.session ? getSessionContextUsage(bg.session as SessionLike) : null;
+			const ctxText = formatSessionContext(contextUsage, theme, a.compactionCount);
 
 			const parts: string[] = [];
 			if (bg && bg.turnCount > 0) parts.push(formatTurns(bg.turnCount, bg.maxTurns));
 			if (toolUses > 0) parts.push(formatToolUses(toolUses));
 			if (ctxText) parts.push(ctxText);
-			parts.push(elapsed);
 			const liveSpeed = formatSpeed(bg?.lifetimeUsage.output ?? 0, bg?.streamingMs ?? 0);
 			if (liveSpeed) parts.push(liveSpeed);
+			parts.push(elapsed);
 			const statsText = parts.join(" · ");
 
 			// Activity trails at the end (after stats) so its variable width

@@ -111,8 +111,16 @@ export interface NotificationDetails {
 	toolUses: number;
 	turnCount: number;
 	maxTurns?: number;
-	/** Context-window utilization 0–100, or null when unavailable. */
-	contextPercent: number | null;
+	/** Context usage snapshot, or null when unavailable. */
+	contextUsage: {
+		tokens: number | null;
+		contextWindow: number | null;
+		percent: number | null;
+	} | null;
+	/** Raw output tokens (for t/s). */
+	outputTokens?: number;
+	/** Cumulative streaming-only milliseconds (for accurate t/s). */
+	streamingMs?: number;
 	durationMs: number;
 	error?: string;
 	resultPreview: string;

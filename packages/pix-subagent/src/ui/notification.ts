@@ -2,7 +2,7 @@
  * ui/notification.ts — subagent-notification custom message renderer.
  *
  * Renders background agent completion notifications as compact themed boxes:
- *   ✓ Explore [haiku]  scout auth flow  ↻5 · 3 tool uses · 12.4k · 8.3s
+ *   ✓ Explore [haiku]  scout auth flow  ↻5 · 3 · 12.4k · 55 t/s · 8.3s
  *     ⎿  Found 3 references in src/middleware/…
  *
  * Pix twist: model name always in the stats line (even when same as parent).
@@ -12,7 +12,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { formatContext, formatMs, formatToolUses, formatTurns } from "../tools.ts";
+import { formatContext, formatMs, formatSpeed, formatToolUses, formatTurns } from "../tools.ts";
 import type { NotificationDetails } from "../types.ts";
 
 /**
@@ -42,8 +42,10 @@ export function registerNotificationRenderer(pi: ExtensionAPI): void {
 			if (d.modelName) parts.push(theme.fg("muted", `[${d.modelName}]`));
 			if (d.turnCount > 0) parts.push(formatTurns(d.turnCount, d.maxTurns));
 			if (d.toolUses > 0) parts.push(formatToolUses(d.toolUses));
-			const ctxText = formatContext(d.contextPercent);
+			const ctxText = formatContext(d.contextUsage);
 			if (ctxText) parts.push(ctxText);
+			const speed = formatSpeed(d.outputTokens ?? 0, d.streamingMs ?? d.durationMs);
+			if (speed) parts.push(speed);
 			if (d.durationMs > 0) parts.push(formatMs(d.durationMs));
 			if (parts.length) {
 				line += `\n  ${parts.map((p) => theme.fg("dim", p)).join(` ${theme.fg("dim", "·")} `)}`;

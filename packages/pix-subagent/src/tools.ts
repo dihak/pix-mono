@@ -30,7 +30,7 @@ import { BUILTIN_TOOL_NAMES, getAgentConfig, getAvailableTypes, getConfig } from
 import { resolveAgentInvocationConfig } from "./invocation-config.ts";
 import { resolveModel } from "./model-resolver.ts";
 import type { AgentInvocation, LifetimeUsage } from "./types.ts";
-import { getSessionContextPercent, type SessionLike } from "./usage.ts";
+import { type ContextUsageLike, getSessionContextUsage, type SessionLike } from "./usage.ts";
 
 // ── Types shared with ui/widget.ts (widget imports from here to avoid circular) ─
 
@@ -56,7 +56,7 @@ export interface AgentDetails {
 	description: string;
 	subagentType: string;
 	toolUses: number;
-	/** Context-window utilization as a pre-formatted string (e.g. "42% ctx"), or "" when unavailable. */
+	/** Context-window utilization as a pre-formatted string (e.g. "30.1K/1.00M (3%)"), or "" when unavailable. */
 	context: string;
 	/** Raw output tokens — for t/s = outputTokens / streamingMs. */
 	outputTokens?: number;
@@ -104,14 +104,25 @@ export function formatTokens(count: number): string {
 	return `${t} ${count} token`;
 }
 
+/** Compact token count: 500 → "500", 30_100 → "30.1K", 1_000_000 → "1.00M". */
+export function fmtTokenCount(n: number): string {
+	if (n < 1_000) return `${n}`;
+	if (n < 1_000_000) return `${(n / 1_000).toFixed(1)}K`;
+	return `${(n / 1_000_000).toFixed(2)}M`;
+}
+
 /**
- * Format context-window utilization as a compact string.
+ * Format context-window utilization: "󰉿 30.1K/1.00M (3%)".
+ * Falls back to "󰉿 3% ctx" when the window size is unknown.
  * Returns "" when percent is null/unavailable (caller should skip the segment).
  */
-export function formatContext(percent: number | null | undefined): string {
-	if (percent == null) return "";
+export function formatContext(usage: ContextUsageLike | null | undefined): string {
+	if (usage?.percent == null) return "";
 	const t = icon("tokens");
-	return `${t} ${Math.round(percent)}% ctx`;
+	const pct = Math.round(usage.percent);
+	if (!usage.contextWindow) return `${t} ${pct}% ctx`;
+	const used = usage.tokens ?? Math.round((usage.percent / 100) * usage.contextWindow);
+	return `${t} ${fmtTokenCount(used)}/${fmtTokenCount(usage.contextWindow)} (${pct}%)`;
 }
 
 export function formatTurns(turnCount: number, maxTurns?: number | null): string {
@@ -120,7 +131,7 @@ export function formatTurns(turnCount: number, maxTurns?: number | null): string
 }
 
 export function formatToolUses(count: number): string {
-	return `${icon("tools")} ${count} tool use${count === 1 ? "" : "s"}`;
+	return `${icon("tools")} ${count}`;
 }
 
 export function formatMs(ms: number): string {
@@ -356,6 +367,8 @@ export function createAgentTool(
 					parts.push(formatTurns(details.turnCount, details.maxTurns));
 				if (details.toolUses > 0) parts.push(formatToolUses(details.toolUses));
 				if (details.context) parts.push(details.context);
+				const liveSpeed = formatSpeed(details.outputTokens ?? 0, details.streamingMs ?? 0);
+				if (liveSpeed) parts.push(liveSpeed);
 				if (details.durationMs > 0) parts.push(formatMs(details.durationMs));
 				if (details.activity) parts.push(details.activity);
 				const statsText =
@@ -633,15 +646,17 @@ export function createAgentTool(
 						const activity = act
 							? describeActivity(act.activeTools, act.responseText)
 							: "thinking…";
-						const contextPercent = act?.session
-							? getSessionContextPercent(act.session as SessionLike)
+						const contextUsage = act?.session
+							? getSessionContextUsage(act.session as SessionLike)
 							: null;
 						onUpdate({
 							content: [{ type: "text" as const, text: "" }],
 							details: {
 								...detailBase,
 								toolUses: act?.toolUses ?? 0,
-								context: formatContext(contextPercent),
+								context: formatContext(contextUsage),
+								outputTokens: act?.lifetimeUsage.output,
+								streamingMs: act?.streamingMs,
 								durationMs: Date.now() - fgStartedAt,
 								status: "running" as const,
 								activity,
@@ -1046,13 +1061,13 @@ function buildDetails(
 	},
 	activity?: AgentActivity & { durationMs?: number },
 ): AgentDetails {
-	const contextPercent = activity?.session
-		? getSessionContextPercent(activity.session as SessionLike)
+	const contextUsage = activity?.session
+		? getSessionContextUsage(activity.session as SessionLike)
 		: null;
 	return {
 		...base,
 		toolUses: record.toolUses,
-		context: formatContext(contextPercent),
+		context: formatContext(contextUsage),
 		outputTokens: record.lifetimeUsage.output,
 		streamingMs: activity?.streamingMs,
 		turnCount: activity?.turnCount,

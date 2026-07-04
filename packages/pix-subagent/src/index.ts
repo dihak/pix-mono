@@ -25,7 +25,7 @@ import {
 import type { NotificationDetails } from "./types.ts";
 import { registerNotificationRenderer } from "./ui/notification.ts";
 import { AgentWidget } from "./ui/widget.ts";
-import { getSessionContextPercent, type SessionLike } from "./usage.ts";
+import { getSessionContextUsage, type SessionLike } from "./usage.ts";
 
 const EXTENSION_KEY = "pix-subagent";
 
@@ -94,8 +94,8 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 				return;
 			}
 
-			const contextPercent = record.session
-				? getSessionContextPercent(record.session as SessionLike)
+			const contextUsage = record.session
+				? getSessionContextUsage(record.session as SessionLike)
 				: null;
 			const resultPreview = record.result
 				? record.result.length > 500
@@ -111,7 +111,9 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 				toolUses: record.toolUses,
 				turnCount: record.turnCount,
 				maxTurns: record.maxTurns,
-				contextPercent,
+				contextUsage,
+				outputTokens: record.lifetimeUsage.output,
+				streamingMs: record.streamingMs,
 				durationMs: record.completedAt ? record.completedAt - record.startedAt : 0,
 				error: record.error,
 				resultPreview,

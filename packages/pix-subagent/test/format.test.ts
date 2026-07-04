@@ -1,18 +1,26 @@
 import { expect, test } from "bun:test";
-import { formatContext, formatMs, formatTokens, formatTurns } from "../src/tools.ts";
+import { icon } from "@xynogen/pix-pretty/icon-catalog";
+import {
+	fmtTokenCount,
+	formatContext,
+	formatMs,
+	formatTokens,
+	formatToolUses,
+	formatTurns,
+} from "../src/tools.ts";
 import { describeActivity, formatSpeed } from "../src/ui/widget.ts";
 
 test("formatTokens < 1k", () => {
 	// nerd-mode default: nf-md-file-document-outline (U+F027F) + space
-	expect(formatTokens(500)).toBe("\u{F027F} 500 token");
+	expect(formatTokens(500)).toBe(`${icon("tokens")} 500 token`);
 });
 
 test("formatTokens 1k–1M", () => {
-	expect(formatTokens(12_400)).toBe("\u{F027F} 12.4k token");
+	expect(formatTokens(12_400)).toBe(`${icon("tokens")} 12.4k token`);
 });
 
 test("formatTokens >= 1M", () => {
-	expect(formatTokens(2_500_000)).toBe("\u{F027F} 2.5M token");
+	expect(formatTokens(2_500_000)).toBe(`${icon("tokens")} 2.5M token`);
 });
 
 test("formatMs rounds to 1dp", () => {
@@ -21,11 +29,11 @@ test("formatMs rounds to 1dp", () => {
 
 test("formatTurns no max", () => {
 	// nerd-mode default: nf-md-autorenew glyph (U+F006A) + space before count
-	expect(formatTurns(3)).toBe("\u{F006A} 3");
+	expect(formatTurns(3)).toBe(`${icon("turns")} 3`);
 });
 
 test("formatTurns with max", () => {
-	expect(formatTurns(3, 10)).toBe("\u{F006A} 3≤10");
+	expect(formatTurns(3, 10)).toBe(`${icon("turns")} 3≤10`);
 });
 
 test("formatSpeed computes output t/s", () => {
@@ -40,21 +48,58 @@ test("formatSpeed empty on zero duration", () => {
 	expect(formatSpeed(1500, 0)).toBe("");
 });
 
-test("formatContext with percent", () => {
-	// nerd-mode default: nf-md-file-document-outline (U+F027F) + space
-	expect(formatContext(42)).toBe("\u{F027F} 42% ctx");
+test("formatToolUses drops label", () => {
+	expect(formatToolUses(15)).toBe(`${icon("tools")} 15`);
 });
 
-test("formatContext rounds to nearest integer", () => {
-	expect(formatContext(73.6)).toBe("\u{F027F} 74% ctx");
+test("formatToolUses singular count", () => {
+	expect(formatToolUses(1)).toBe(`${icon("tools")} 1`);
+});
+
+test("fmtTokenCount under 1K", () => {
+	expect(fmtTokenCount(500)).toBe("500");
+});
+
+test("fmtTokenCount 1K to 1M", () => {
+	expect(fmtTokenCount(30_100)).toBe("30.1K");
+});
+
+test("fmtTokenCount >= 1M", () => {
+	expect(fmtTokenCount(1_000_000)).toBe("1.00M");
+});
+
+test("formatContext full usage object", () => {
+	expect(formatContext({ tokens: 30_100, contextWindow: 1_000_000, percent: 3 })).toBe(
+		`${icon("tokens")} 30.1K/1.00M (3%)`,
+	);
+});
+
+test("formatContext computes used from percent when tokens null", () => {
+	// 42% of 200,000 = 84,000 → "84.0K"
+	expect(formatContext({ tokens: null, contextWindow: 200_000, percent: 42 })).toBe(
+		`${icon("tokens")} 84.0K/200.0K (42%)`,
+	);
+});
+
+test("formatContext falls back to pct-only when window unknown", () => {
+	expect(formatContext({ tokens: 5_000, contextWindow: 0, percent: 42 })).toBe(
+		`${icon("tokens")} 42% ctx`,
+	);
 });
 
 test("formatContext empty on null", () => {
 	expect(formatContext(null)).toBe("");
 });
 
-test("formatContext empty on undefined", () => {
-	expect(formatContext(undefined)).toBe("");
+test("formatContext empty on null percent", () => {
+	expect(formatContext({ tokens: null, contextWindow: 1000, percent: null })).toBe("");
+});
+
+test("formatContext rounds percent", () => {
+	// contextWindow 0 → fallback to pct-only, 73.6 rounds to 74
+	expect(formatContext({ tokens: null, contextWindow: 0, percent: 73.6 })).toBe(
+		`${icon("tokens")} 74% ctx`,
+	);
 });
 
 test("describeActivity: active tool wins over output", () => {
