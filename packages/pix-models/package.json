@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-models",
-	"version": "0.1.16",
+	"version": "0.1.17",
 	"description": "Pi extension — enhanced /models picker with BenchLM ranks",
 	"type": "module",
 	"main": "src/index.ts",
