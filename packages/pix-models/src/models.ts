@@ -87,6 +87,68 @@ export function sortModels<T extends SortableModel>(models: T[]): T[] {
 	});
 }
 
+/** Lowercase and strip all non-alphanumerics: "glm-5.2" → "glm52". */
+export function normalizeModelText(s: string): string {
+	return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+export type ModelSearchLookup = {
+	/** benchlm local rank per item value (ranked models only). */
+	rankByValue: Map<string, number>;
+	/** Clean haystack per value: `${id} ${name ?? ""}` (no ANSI, no rank cell). */
+	searchTextByValue: Map<string, string>;
+	/** normalizeModelText(haystack) per value — for family+version substring matches. */
+	normalizedByValue: Map<string, string>;
+};
+
+/**
+ * Filter+order picker items for a search query.
+ *  - "" → all items unchanged.
+ *  - digits-only → items whose benchlm rank equals the number, followed by
+ *    normalized-substring matches ("52" ⊂ "glm52") rank-sorted.
+ *  - otherwise → normalized-substring matches first (rank-sorted), then
+ *    fuzzy matches over the clean haystack (rank-sorted, stable), deduped.
+ */
+export function filterModelItems<T extends { value: string }>(
+	items: T[],
+	query: string,
+	lookup: ModelSearchLookup,
+): T[] {
+	const q = query.trim();
+	if (q.length === 0) return items;
+
+	const rankSort = (arr: T[]): T[] => {
+		return arr
+			.map((it, i) => ({ it, i }))
+			.sort((a, b) => {
+				const ra = lookup.rankByValue.get(a.it.value) ?? Infinity;
+				const rb = lookup.rankByValue.get(b.it.value) ?? Infinity;
+				if (ra !== rb) return ra - rb;
+				return a.i - b.i;
+			})
+			.map(({ it }) => it);
+	};
+
+	const nq = normalizeModelText(q);
+	const subMatches =
+		nq.length > 0
+			? items.filter((it) => (lookup.normalizedByValue.get(it.value) ?? "").includes(nq))
+			: [];
+
+	if (/^\d+$/.test(q)) {
+		const wanted = Number(q);
+		const rankMatches = items.filter((it) => lookup.rankByValue.get(it.value) === wanted);
+		const rankValues = new Set(rankMatches.map((it) => it.value));
+		const extraSub = rankSort(subMatches).filter((it) => !rankValues.has(it.value));
+		return [...rankMatches, ...extraSub];
+	}
+
+	const fuzzy = fuzzyFilter(items, q, (it) => lookup.searchTextByValue.get(it.value) ?? "");
+	const subValues = new Set(subMatches.map((it) => it.value));
+	const extraFuzzy = rankSort(fuzzy).filter((it) => !subValues.has(it.value));
+	return [...rankSort(subMatches), ...extraFuzzy];
+}
+
 async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Promise<void> {
 	// Mirror the built-in /model selector, which calls refresh() then awaits
 	// getAvailable() (see model-selector.js). Without refresh(), this extension
@@ -182,6 +244,17 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 			const rankByValue = new Map<string, number>();
 			for (const { m, localRank } of dedupedRows) {
 				if (localRank) rankByValue.set(`${m.provider}/${m.id}`, localRank);
+			}
+
+			// Clean search haystacks — labels are ANSI-laden and carry the rank cell,
+			// so matching runs against raw id+name instead (see filterModelItems).
+			const searchTextByValue = new Map<string, string>();
+			const normalizedByValue = new Map<string, string>();
+			for (const { m } of dedupedRows) {
+				const value = `${m.provider}/${m.id}`;
+				const text = `${m.id} ${m.name ?? ""}`;
+				searchTextByValue.set(value, text);
+				normalizedByValue.set(value, normalizeModelText(text));
 			}
 
 			const items: SelectItem[] = dedupedRows.map(({ m, dev, bench, localRank }) => {
@@ -282,27 +355,11 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 					selectedIndex: number;
 					invalidate(): void;
 				};
-				const q = query.trim();
-				let next: SelectItem[];
-				if (q.length === 0) {
-					next = internal.items;
-				} else if (/^\d+$/.test(q)) {
-					// Pure number → match by benchlm rank, not name.
-					const wanted = Number(q);
-					next = internal.items.filter((it) => rankByValue.get(it.value) === wanted);
-				} else {
-					next = fuzzyFilter(internal.items, q, (it) => `${it.label} ${it.description ?? ""}`);
-					// Stable sort: ranked models (by rank asc) before unranked.
-					next = next
-						.map((it, i) => ({ it, i }))
-						.sort((a, b) => {
-							const ra = rankByValue.get(a.it.value) ?? Infinity;
-							const rb = rankByValue.get(b.it.value) ?? Infinity;
-							if (ra !== rb) return ra - rb;
-							return a.i - b.i;
-						})
-						.map(({ it }) => it);
-				}
+				const next = filterModelItems(internal.items, query, {
+					rankByValue,
+					searchTextByValue,
+					normalizedByValue,
+				});
 				internal.filteredItems = next;
 				internal.selectedIndex = 0;
 				internal.invalidate();
