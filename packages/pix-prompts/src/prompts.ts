@@ -4,16 +4,15 @@
  * Injects structured context into every agent turn via `before_agent_start`.
  * Sources (injected in order):
  *   1. Own bundled SOP.md — the pix agent operating spec baseline.
- *   2. Repo CWD directive files — AGENTS.md, CLAUDE.md, GEMINI.md,
+ *   2. Repo CWD directive files the Pi host does NOT auto-load — GEMINI.md,
  *      .cursorrules, .windsurfrules (extend/override the baseline).
  *
- * Each file is wrapped in a labelled XML tag so the model knows provenance.
- * Injection is idempotent and host-aware: a file is skipped when either our
- * own tag is already present (retry) OR the Pi host has already injected the
- * same absolute path as <project_instructions path="..."> (resource-loader.js
- * auto-loads AGENTS.md / CLAUDE.md). This stays correct whichever files the
- * host decides to inject — no static assumption about host behaviour, so the
- * host coverage and pix-prompts coverage can never silently double or drop.
+ * The host (resource-loader.js) unconditionally loads AGENTS.md / CLAUDE.md
+ * as <project_instructions path="...">. Those are intentionally NOT in our
+ * scan list — a path-normalization mismatch between the host's resolvePath(cwd)
+ * and the extension's process.cwd() broke the string-match dedup and silently
+ * double-injected them (~2500 wasted tokens/turn). Host coverage wins; we only
+ * add what the host cannot.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -21,10 +20,12 @@ import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-/** Repo-root filenames scanned for per-project directives. */
+/**
+ * Repo-root filenames scanned for per-project directives.
+ * AGENTS.md / CLAUDE.md are intentionally absent — the host resource-loader
+ * already injects those. See file header for why the dedup was unreliable.
+ */
 const REPO_DIRECTIVE_FILES = [
-	"AGENTS.md",
-	"CLAUDE.md",
 	"GEMINI.md",
 	".cursorrules",
 	".windsurfrules",

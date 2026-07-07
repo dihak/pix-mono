@@ -67,15 +67,20 @@ describe("pix-prompts host-aware injection", () => {
 		expect(result?.systemPrompt).not.toContain("<pix-prompts-agents-md>");
 	});
 
-	it("re-injects AGENTS.md if the host did NOT (self-healing)", async () => {
+	it("does NOT inject AGENTS.md / CLAUDE.md — host resource-loader owns those", async () => {
+		// The host unconditionally loads AGENTS.md / CLAUDE.md as
+		// <project_instructions path="...">. pix-prompts must not also inject them;
+		// a path-normalization mismatch broke the string-match dedup and silently
+		// double-injected them (~2500 wasted tokens/turn). Host coverage wins.
 		writeFileSync(join(dir, "AGENTS.md"), "repo directives");
+		writeFileSync(join(dir, "CLAUDE.md"), "claude directives");
 		const { pi, getHandler } = fakePi();
 		registerPrompts(pi);
 
 		const result = await getHandler()({ systemPrompt: "BASE" });
 
-		expect(result?.systemPrompt).toContain("<pix-prompts-agents-md>");
-		expect(result?.systemPrompt).toContain("repo directives");
+		expect(result?.systemPrompt).not.toContain("<pix-prompts-agents-md>");
+		expect(result?.systemPrompt).not.toContain("<pix-prompts-claude-md>");
 	});
 
 	it("is idempotent on retry — does not double-inject its own tag", async () => {
