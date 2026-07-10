@@ -11,6 +11,7 @@
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { $ } from "bun";
+import { lastReleaseTagCommand } from "./release-tag.ts";
 
 const packagesDir = join(import.meta.dir, "..", "packages");
 
@@ -35,7 +36,7 @@ for (const entry of readdirSync(packagesDir)) {
 
 let lastTag: string | undefined;
 try {
-	const result = await $`git describe --tags --abbrev=0 --match=release-* HEAD^`.quiet();
+	const result = await $`git ${lastReleaseTagCommand("HEAD^")}`.quiet();
 	lastTag = result.stdout.toString().trim() || undefined;
 } catch {
 	// No previous release tag — check all packages.
