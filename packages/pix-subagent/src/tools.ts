@@ -253,10 +253,9 @@ If the target is already known, use a direct tool — \`read\` for a known path,
 - Always include a short (3-5 word) \`description\` (shown in UI).
 - Launch independent agents concurrently: send multiple \`agent\` tool calls in one message.
 - The agent's result is not visible to the user — summarize it in a text message. Trust but verify: check the actual changes before reporting done.
-- Agents run in **foreground** by default (blocking — waits and returns the result inline). Set \`background: true\` for non-blocking execution.
-- **Foreground** (default): the tool blocks until the agent finishes and returns its result directly. Use when you need the result before proceeding (e.g. Plan, Explore before editing, Mentor review).
-- **Background** (\`background: true\`): the tool returns immediately. The system automatically delivers the result as a follow-up notification when the agent finishes. Use for independent parallel tasks. Do NOT poll or sleep-wait — just continue working.
-- \`agent_result\` is only needed to re-read a past result or get verbose conversation history — never to wait.
+- Agents run in **background** by default: the tool returns immediately and automatically delivers the result when the agent finishes. Use this for independent work; do NOT poll or sleep-wait.
+- **Foreground** (\`background: false\`): the tool blocks until the agent finishes and returns its result inline. Use it only when the result is required before proceeding (e.g. Plan or Explore before editing).
+- \`agent_result\` is only needed to re-read a past background result or get verbose conversation history — never to wait.
 - \`resume\` with an agent ID to continue a prior agent's work; \`agent_steer\` to redirect a running background agent or force-stop it (action: 'stop').
 - Pick the model yourself via \`model:\` (provider/id or fuzzy e.g. "haiku"). For mechanical/read-only work prefer a cheap tier; for hard reasoning match or exceed the parent. Type sets the tool belt + persona only — never the model.
 - \`thinking\`: off|minimal|low|medium|high|xhigh.
@@ -320,8 +319,9 @@ export function createAgentTool(
 			),
 			background: Type.Optional(
 				Type.Boolean({
+					default: true,
 					description:
-						"Run in background (non-blocking). Default false (foreground — blocks until done). Set true for independent parallel tasks.",
+						"Run in background (non-blocking). Default true. Set false only when the tool must block and return the result inline.",
 				}),
 			),
 		}),
@@ -584,7 +584,7 @@ export function createAgentTool(
 				allowedToolNames = valid.length > 0 ? valid : undefined;
 			}
 
-			const isBackground = (params.background as boolean | undefined) === true;
+			const isBackground = runsInBackground(params.background);
 
 			if (isBackground) {
 				// ── Background mode: spawn and return immediately ──────────
@@ -636,7 +636,7 @@ export function createAgentTool(
 				);
 			}
 
-			// ── Foreground mode (default): await inline with streaming progress ──
+			// ── Foreground mode (background: false): await inline with streaming progress ──
 			let fgSpinnerFrame = 0;
 			const fgStartedAt = Date.now();
 			const fgUpdateInterval = onUpdate
@@ -684,7 +684,9 @@ export function createAgentTool(
 					isolated,
 					inheritContext,
 					thinkingLevel: thinking,
-					isBackground: true, // still uses background spawn for concurrency
+					// Keep the manager record foreground so the widget does not render
+					// a second status line while this blocking tool call streams inline.
+					isBackground: false,
 					invocation: agentInvocation,
 					signal, // foreground: parent abort kills the agent
 					allowedToolNames,
@@ -746,6 +748,14 @@ export function createAgentTool(
 			);
 		},
 	});
+}
+
+/**
+ * Background is the safe default: parent work can continue while an independent
+ * child runs. Only an explicit `false` opts into the blocking inline-result path.
+ */
+export function runsInBackground(background: unknown): boolean {
+	return background !== false;
 }
 
 /**

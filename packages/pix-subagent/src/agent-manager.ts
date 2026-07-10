@@ -200,6 +200,9 @@ export class AgentManager {
 			streamingMs: 0,
 			maxTurns: options.maxTurns,
 			invocation: options.invocation,
+			// Persist the invocation mode for UI/notification routing. Use an
+			// explicit false for foreground records rather than leaving it unknown.
+			isBackground: options.isBackground === true,
 		};
 		this.agents.set(id, record);
 

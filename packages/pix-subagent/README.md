@@ -48,7 +48,10 @@ allowed_tools?   string[]  Restrict child's tools (intersected, never widens)
 thinking?        string    off|minimal|low|medium|high|xhigh
 max_turns?       number    Omit for unlimited
 resume?          string    Agent ID to continue
+background?      boolean   Default true (non-blocking); false waits for an inline result
 ```
+
+**Background is the default.** Omit `background` (or set it to `true`) to return immediately and receive the result automatically on completion. Set `background: false` only when the parent must block until the result is available inline.
 
 **`allowed_tools[]`** is the work-splitting hook. Pass `["read","grep","find"]` to scope an Explore agent to read-only ops. The list is intersected with the agent type's default set — it can only narrow, never widen.
 
@@ -57,7 +60,7 @@ resume?          string    Agent ID to continue
 ### `agent_result` — fetch result
 
 ```
-agent_id   string   ID returned by agent (background)
+agent_id   string   ID returned by a background agent
 verbose?   bool     true = full conversation; false (default) = latest text
 ```
 

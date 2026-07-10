@@ -116,6 +116,23 @@ function installFakeResumeAgent(): DeferredResumeAgent[] {
 
 describe("AgentManager", () => {
 	// 1. Queueing
+	test("foreground agents are marked foreground and do not trigger completion notifications", async () => {
+		const calls = installFakeRunAgent();
+		let completed = 0;
+		manager = new AgentManager(() => completed++);
+
+		const id = manager.spawn(pi, ctx, "general-purpose", "task", {
+			description: "foreground task",
+		});
+
+		expect(manager.getRecord(id)?.isBackground).toBeFalse();
+		calls[0].resolve();
+		await new Promise((r) => setTimeout(r, 10));
+
+		expect(manager.getRecord(id)?.status).toBe("completed");
+		expect(completed).toBe(0);
+	});
+
 	test("with maxConcurrent=1, second bg agent is queued then drains", async () => {
 		const calls = installFakeRunAgent();
 		manager = new AgentManager(undefined, 1);

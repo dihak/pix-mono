@@ -1,20 +1,36 @@
 /**
- * always-background.test.ts — Regression guards for the "agents always run in
- * background" invariant. These tests make it hard to accidentally reintroduce
- * foreground / blocking execution.
+ * always-background.test.ts — Regression guards for the background-by-default
+ * policy. An explicit background: false is the only foreground/blocking opt-in.
  */
 
 import { describe, expect, test } from "bun:test";
 import { AgentManager } from "../src/agent-manager.ts";
 import { resolveAgentInvocationConfig } from "../src/invocation-config.ts";
+import { runsInBackground } from "../src/tools.ts";
 import type { AgentConfig, AgentInvocation } from "../src/types.ts";
+
+// ── Tool execution mode ──────────────────────────────────────────────────────
+
+describe("agent execution mode", () => {
+	test("omitted background defaults to non-blocking execution", () => {
+		expect(runsInBackground(undefined)).toBe(true);
+	});
+
+	test("background: true remains non-blocking", () => {
+		expect(runsInBackground(true)).toBe(true);
+	});
+
+	test("only background: false opts into blocking inline results", () => {
+		expect(runsInBackground(false)).toBe(false);
+	});
+});
 
 // ── AgentManager: no foreground API ──────────────────────────────────────────
 
 describe("AgentManager has no foreground API", () => {
 	test("spawnAndWait does not exist on AgentManager", () => {
 		const manager = new AgentManager();
-		expect((manager as Record<string, unknown>).spawnAndWait).toBeUndefined();
+		expect((manager as unknown as Record<string, unknown>).spawnAndWait).toBeUndefined();
 		manager.dispose();
 	});
 
@@ -22,9 +38,9 @@ describe("AgentManager has no foreground API", () => {
 		const manager = new AgentManager();
 		expect(typeof manager.spawn).toBe("function");
 		// No other spawn variant exists
-		expect((manager as Record<string, unknown>).spawnForeground).toBeUndefined();
-		expect((manager as Record<string, unknown>).spawnBlocking).toBeUndefined();
-		expect((manager as Record<string, unknown>).spawnSync).toBeUndefined();
+		expect((manager as unknown as Record<string, unknown>).spawnForeground).toBeUndefined();
+		expect((manager as unknown as Record<string, unknown>).spawnBlocking).toBeUndefined();
+		expect((manager as unknown as Record<string, unknown>).spawnSync).toBeUndefined();
 		manager.dispose();
 	});
 });
