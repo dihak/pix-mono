@@ -25,11 +25,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
  * AGENTS.md / CLAUDE.md are intentionally absent — the host resource-loader
  * already injects those. See file header for why the dedup was unreliable.
  */
-const REPO_DIRECTIVE_FILES = [
-	"GEMINI.md",
-	".cursorrules",
-	".windsurfrules",
-] as const;
+const REPO_DIRECTIVE_FILES = ["GEMINI.md", ".cursorrules", ".windsurfrules"] as const;
 
 interface PromptSource {
 	/** Unique tag name — used for idempotency check. */
