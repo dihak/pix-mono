@@ -160,6 +160,44 @@ describe("showOverlay — sudo mode", () => {
 		expect(result.password).toBeUndefined();
 	});
 
+	test("wrong password retries inside the same overlay", async () => {
+		let component: Wired | undefined;
+		let overlayCount = 0;
+		const attempts: string[] = [];
+		const ui: OverlayUI = {
+			custom: <T>(cb: Parameters<OverlayUI["custom"]>[0]): Promise<T | undefined> => {
+				overlayCount += 1;
+				return new Promise((resolve) => {
+					component = cb({ requestRender: () => {} }, theme, undefined, (value) =>
+						resolve(value as T),
+					);
+				});
+			},
+		};
+
+		const pending = showOverlay(ui, {
+			mode: "sudo",
+			title: "ROOT",
+			timeoutMs: 0,
+			maxPasswordAttempts: 3,
+			validatePassword: async (password) => {
+				attempts.push(password);
+				return password === "correct";
+			},
+		});
+		component?.handleInput(ENTER);
+		component?.handleInput("wrong");
+		component?.handleInput(ENTER);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(component?.render(80).join("\n")).toContain("Incorrect password — attempt 1 of 3");
+		component?.handleInput("correct");
+		component?.handleInput(ENTER);
+
+		expect(await pending).toEqual({ action: "approved", password: "correct" });
+		expect(attempts).toEqual(["wrong", "correct"]);
+		expect(overlayCount).toBe(1);
+	});
+
 	test("password is masked in render (● not plaintext)", async () => {
 		let pwFrame: string[] = [];
 		await showOverlay(
