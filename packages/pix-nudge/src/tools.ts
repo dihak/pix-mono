@@ -24,10 +24,12 @@
  * the menu.
  */
 
-import {
-	type ExtensionAPI,
-	isToolCallEventType,
-} from "@earendil-works/pi-coding-agent";
+import { type ExtensionAPI, isToolCallEventType } from "@earendil-works/pi-coding-agent";
+
+/** In-bounds array access that satisfies noUncheckedIndexedAccess without casting. */
+function at<T>(arr: T[], i: number): T {
+	return arr[i] as T;
+}
 
 /** Categories that map a raw shell command to a dedicated Pi tool. */
 type Category = "read" | "ls" | "grep" | "find" | "edit";
@@ -44,7 +46,7 @@ interface Rule {
 const leadWord = (segment: string): string => {
 	const toks = segment.trim().split(/\s+/);
 	let i = 0;
-	while (i < toks.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(toks[i])) i++;
+	while (i < toks.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(toks[i] ?? "")) i++;
 	return (toks[i] ?? "").replace(/^\\/, ""); // unalias e.g. \grep
 };
 
@@ -115,10 +117,12 @@ export function splitSegments(command: string): Segment[] {
 	const out: Segment[] = [];
 	const re = /(\|\||&&|[|;&\n])/g;
 	let last = 0;
-	let m: RegExpExecArray | null;
-	while ((m = re.exec(command)) !== null) {
-		out.push({ text: command.slice(last, m.index), followedBy: m[1] });
-		last = m.index + m[1].length;
+	for (const m of command.matchAll(re)) {
+		out.push({
+			text: command.slice(last, m.index),
+			followedBy: m[1] ?? "",
+		});
+		last = m.index + (m[1] ?? "").length;
 	}
 	out.push({ text: command.slice(last), followedBy: "" });
 	return out.filter((s) => s.text.trim().length > 0);
@@ -149,9 +153,9 @@ export function classifyCompound(command: string): Rule | undefined {
 	// pipe relationship are candidate tool stand-ins.
 	const segs = splitSegments(cmd);
 	for (let i = 0; i < segs.length; i++) {
-		const seg = segs[i];
+		const seg = at(segs, i);
 		if (seg.followedBy === "|") continue; // producer feeding a pipe
-		if (i > 0 && segs[i - 1].followedBy === "|") continue; // consumer of a pipe
+		if (i > 0 && at(segs, i - 1).followedBy === "|") continue; // consumer of a pipe
 		// Per-segment we reuse the strict single-command classifier, which itself
 		// rejects redirects/subshells/nested operators inside the segment.
 		const rule = classify(seg.text);
@@ -165,11 +169,7 @@ export function classifyCompound(command: string): Rule | undefined {
  * straight at it. When it's gated out, point at toolbox to enable it — never
  * imply a gated tool is callable now. Pure + exported for unit testing.
  */
-export function nudgeReason(
-	baseReason: string,
-	tool: string,
-	toolActive: boolean,
-): string {
+export function nudgeReason(baseReason: string, tool: string, toolActive: boolean): string {
 	const how = toolActive
 		? `Use \`${tool}\` instead — it's in the function definitions, call it directly.`
 		: `\`${tool}\` is prompt-hidden — enable it via toolbox(action:"enable", name:"${tool}") to make it known, then call it; bash is fine until then. (All tools are always callable via function definitions.)`;

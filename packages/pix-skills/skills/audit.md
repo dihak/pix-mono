@@ -1,6 +1,7 @@
 ---
 name: audit
 description: Security audit, integrity check, and health scan. Use only on explicit request — "audit this", "security scan", "check for secrets", "is this safe", "find vulnerabilities".
+disable-model-invocation: true
 ---
 # Audit Directive
 

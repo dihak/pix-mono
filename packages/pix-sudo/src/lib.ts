@@ -62,6 +62,15 @@ export interface SudoResult {
 }
 
 /**
+ * Validate a sudo password with a minimal command and refresh the PAM ticket.
+ * This keeps password checking separate from the requested command, so the UI
+ * does not display "Checking password…" for the command's full runtime.
+ */
+export function validateSudoPassword(password: string, signal?: AbortSignal): Promise<SudoResult> {
+	return spawnSudo(["-S", "-v"], password, signal);
+}
+
+/**
  * True when sudo has a valid cached PAM ticket — `sudo -n true` exits 0
  * without prompting. Lets the caller skip the password stage on repeat calls
  * within the system sudoers timeout (default ~15 min).
@@ -87,8 +96,12 @@ export function runWithSudo(
 	password: string,
 	signal?: AbortSignal,
 ): Promise<SudoResult> {
+	return spawnSudo(["-S", "--", "sh", "-c", command], password, signal);
+}
+
+function spawnSudo(args: string[], password: string, signal?: AbortSignal): Promise<SudoResult> {
 	return new Promise((resolve, reject) => {
-		const proc = spawn("sudo", ["-S", "--", "sh", "-c", command], {
+		const proc = spawn("sudo", args, {
 			stdio: ["pipe", "pipe", "pipe"],
 		});
 
@@ -113,10 +126,14 @@ export function runWithSudo(
 		proc.stdin.end();
 
 		if (signal) {
-			signal.addEventListener("abort", () => {
-				proc.kill("SIGTERM");
-				reject(new Error("Cancelled"));
-			});
+			signal.addEventListener(
+				"abort",
+				() => {
+					proc.kill("SIGTERM");
+					reject(new Error("Cancelled"));
+				},
+				{ once: true },
+			);
 		}
 	});
 }

@@ -29,9 +29,7 @@ test("defaults register and Explore is read-only", () => {
 
 test("getToolNamesForType falls back to all built-ins for unknown type", () => {
 	registerAgents(new Map());
-	expect(new Set(getToolNamesForType("does-not-exist"))).toEqual(
-		new Set(BUILTIN_TOOL_NAMES),
-	);
+	expect(new Set(getToolNamesForType("does-not-exist"))).toEqual(new Set(BUILTIN_TOOL_NAMES));
 });
 
 test("no default agent carries a baked-in model", () => {
@@ -39,9 +37,10 @@ test("no default agent carries a baked-in model", () => {
 	for (const [_name, config] of DEFAULT_AGENTS) {
 		expect(config.model).toBeUndefined();
 	}
-	// Sanity: built-ins are general-purpose, Explore, Plan
+	// Sanity: built-ins are general-purpose, Explore, Plan, Mentor
 	expect([...DEFAULT_AGENTS.keys()].sort()).toEqual([
 		"Explore",
+		"Mentor",
 		"Plan",
 		"general-purpose",
 	]);
@@ -71,12 +70,53 @@ test("caller params.model always wins over agentConfig.model", () => {
 	expect(r2.modelFromParams).toBe(false);
 
 	// Caller silent + no config model → undefined (caller inherits parent)
-	const r3 = resolveAgentInvocationConfig(
-		{ ...customConfig, model: undefined },
-		{},
-	);
+	const r3 = resolveAgentInvocationConfig({ ...customConfig, model: undefined }, {});
 	expect(r3.modelInput).toBeUndefined();
 	expect(r3.modelFromParams).toBe(false);
+});
+
+test("caller params.thinking always wins over agentConfig.thinking", () => {
+	const customConfig: AgentConfig = {
+		name: "test-thinking",
+		description: "test",
+		extensions: true,
+		skills: true,
+		systemPrompt: "",
+		promptMode: "append",
+		thinking: "low" as AgentConfig["thinking"],
+	};
+
+	// Caller passes high → high wins, not the low baked into the config
+	const r1 = resolveAgentInvocationConfig(customConfig, { thinking: "high" });
+	expect(r1.thinking).toBe("high");
+
+	// Caller silent → config thinking applies as default
+	const r2 = resolveAgentInvocationConfig(customConfig, {});
+	expect(r2.thinking).toBe("low");
+});
+
+test("caller params.turns always wins over agentConfig.maxTurns", () => {
+	const customConfig: AgentConfig = {
+		name: "test-turns",
+		description: "test",
+		extensions: true,
+		skills: true,
+		systemPrompt: "",
+		promptMode: "append",
+		maxTurns: 10,
+	};
+
+	// Caller passes turns: 5 → 5 wins over config's 10
+	const r1 = resolveAgentInvocationConfig(customConfig, { turns: 5 });
+	expect(r1.maxTurns).toBe(5);
+
+	// Legacy max_turns spelling also wins
+	const r2 = resolveAgentInvocationConfig(customConfig, { max_turns: 3 });
+	expect(r2.maxTurns).toBe(3);
+
+	// Caller silent → config maxTurns applies as default
+	const r3 = resolveAgentInvocationConfig(customConfig, {});
+	expect(r3.maxTurns).toBe(10);
 });
 
 test("defaults resolve with no model — caller inherits parent", () => {

@@ -1,6 +1,7 @@
 ---
 name: command-runner
 description: Inspect workspace health using pre-populated git context (status + diff).
+disable-model-invocation: true
 ---
 
 # Command Runner Skill

@@ -1,6 +1,7 @@
 ---
 name: ui
 description: UI/UX design and implementation guidance for distinctive, production-grade frontend interfaces
+disable-model-invocation: true
 ---
 # UI Design Directive
 

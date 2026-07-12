@@ -12,29 +12,37 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import { pixConfig } from "@xynogen/pix-data/pix-config";
 import type { OptimizerTool } from "./status.ts";
 
-type OptimizerConfig = Partial<Record<OptimizerTool, string>>;
+type OptimizerFileConfig = Partial<Record<OptimizerTool, string>>;
 
 function getStatePath(): string {
 	return join(getAgentDir(), "optimizer.json");
 }
 
-function readAll(): OptimizerConfig {
+function readFile(): OptimizerFileConfig {
 	try {
 		const sp = getStatePath();
 		if (!existsSync(sp)) return {};
-		const raw = JSON.parse(readFileSync(sp, "utf-8")) as OptimizerConfig;
+		const raw = JSON.parse(readFileSync(sp, "utf-8")) as OptimizerFileConfig;
 		return raw && typeof raw === "object" ? raw : {};
 	} catch {
-		// Missing, corrupt, or no getAgentDir (tests/headless) — start clean.
 		return {};
 	}
 }
 
-/** Read a single tool's persisted value, or undefined if none. */
+/**
+ * Read a single tool's persisted value.
+ * Precedence: optimizer.json (runtime toggle) → pix.json → undefined
+ */
 export function loadOptValue(tool: OptimizerTool): string | undefined {
-	return readAll()[tool];
+	const fromFile = readFile()[tool];
+	if (fromFile !== undefined) return fromFile;
+	// Fall back to pix.json
+	const pix = pixConfig().optimizer;
+	const val = pix[tool as keyof typeof pix];
+	return val && val !== "off" ? val : undefined;
 }
 
 /** Persist a single tool's value, merging into the shared config file. */
@@ -42,7 +50,7 @@ export function saveOptValue(tool: OptimizerTool, value: string): void {
 	try {
 		const sp = getStatePath();
 		mkdirSync(dirname(sp), { recursive: true });
-		const next = { ...readAll(), [tool]: value };
+		const next = { ...readFile(), [tool]: value };
 		writeFileSync(sp, JSON.stringify(next, null, 2), "utf-8");
 	} catch (err) {
 		console.warn(`optimizer: persist ${tool} failed:`, err);

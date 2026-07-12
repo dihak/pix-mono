@@ -1,10 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import {
-	buildModelsDevIndex,
-	lookupInIndex,
-	type ModelGrepModel,
-	routerBaseUrl,
-} from "./data.ts";
+import { buildModelsDevIndex, lookupInIndex, type ModelGrepModel, routerBaseUrl } from "./data.ts";
 
 // modelgrep-shaped fixture builder (buildModelsDevIndex now takes ModelGrepModel[]).
 function mg(
@@ -92,33 +87,25 @@ describe("lookupInIndex", () => {
 	]);
 
 	it("finds exact match", () => {
-		expect(lookupInIndex("claude-sonnet-4-5", index)?.name).toBe(
-			"Claude Sonnet 4.5",
-		);
+		expect(lookupInIndex("claude-sonnet-4-5", index)?.name).toBe("Claude Sonnet 4.5");
 	});
 
 	it("finds by stripping provider prefix (router style: provider/model)", () => {
-		expect(lookupInIndex("anthropic/claude-opus-4", index)?.name).toBe(
-			"Claude Opus 4",
-		);
+		expect(lookupInIndex("anthropic/claude-opus-4", index)?.name).toBe("Claude Opus 4");
 	});
 
 	it("finds with deep prefix e.g. cc/claude-opus-4", () => {
-		expect(lookupInIndex("cc/claude-opus-4", index)?.name).toBe(
-			"Claude Opus 4",
-		);
+		expect(lookupInIndex("cc/claude-opus-4", index)?.name).toBe("Claude Opus 4");
 	});
 
 	it("finds with date suffix stripped", () => {
-		expect(lookupInIndex("claude-sonnet-4-5-20250514", index)?.name).toBe(
-			"Claude Sonnet 4.5",
-		);
+		expect(lookupInIndex("claude-sonnet-4-5-20250514", index)?.name).toBe("Claude Sonnet 4.5");
 	});
 
 	it("finds with provider prefix + date suffix", () => {
-		expect(
-			lookupInIndex("anthropic/claude-sonnet-4-5-20250514", index)?.name,
-		).toBe("Claude Sonnet 4.5");
+		expect(lookupInIndex("anthropic/claude-sonnet-4-5-20250514", index)?.name).toBe(
+			"Claude Sonnet 4.5",
+		);
 	});
 
 	it("returns undefined for unknown model", () => {

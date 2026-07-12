@@ -20,15 +20,11 @@ export function safeMarkdownTheme(): MarkdownTheme | undefined {
 // ── Option / question helpers ──────────────────────────────────────────
 
 export function hasAnyPreview(q: QuestionData): boolean {
-	return q.options.some(
-		(o) => typeof o.preview === "string" && o.preview.length > 0,
-	);
+	return q.options.some((o) => typeof o.preview === "string" && o.preview.length > 0);
 }
 
 /** Which sentinel rows are auto-appended for a question. */
-export function sentinelsFor(
-	q: QuestionData,
-): Array<{ kind: string; label: string }> {
+export function sentinelsFor(q: QuestionData): Array<{ kind: string; label: string }> {
 	const out: Array<{ kind: string; label: string }> = [];
 	if (q.multiSelect) {
 		out.push({ kind: "next", label: SENTINEL_NEXT });
@@ -47,10 +43,7 @@ export function formatAnswerScalar(a: QuestionAnswer): string {
 	return a.answer ?? "(selected)";
 }
 
-export function buildResponseText(
-	answers: QuestionAnswer[],
-	questions: QuestionData[],
-): string {
+export function buildResponseText(answers: QuestionAnswer[], questions: QuestionData[]): string {
 	const segs: string[] = [];
 	for (const a of answers) {
 		const q = questions[a.questionIndex]?.question ?? `Q${a.questionIndex + 1}`;
@@ -58,9 +51,7 @@ export function buildResponseText(
 		if (a.preview) s += `. selected preview: ${a.preview}`;
 		segs.push(s);
 	}
-	return segs.length
-		? `User answered: ${segs.join(". ")}.`
-		: "User declined to answer questions.";
+	return segs.length ? `User answered: ${segs.join(". ")}.` : "User declined to answer questions.";
 }
 
 // ── Scroll indicator ───────────────────────────────────────────────────

@@ -35,9 +35,11 @@ npm:@xynogen/pix-footer
 npm:@xynogen/pix-commands
 npm:@xynogen/pix-nudge
 npm:@xynogen/pix-diagnostics
+npm:@xynogen/pix-display
 npm:@xynogen/pix-prompts
 npm:@xynogen/pix-skills
 npm:@xynogen/pix-models
+npm:@xynogen/pix-subagent
 "
 
 # EXTENSION module — standalone extension + tool packages.
@@ -72,17 +74,11 @@ fi
 
 # Restore Pi's built-in /model slash command.
 #
-# pix-models strips the `/model` line from Pi's compiled slash-commands.js at
-# load time (see packages/pix-models/src/patch-builtin.ts). Removing the
-# package leaves that edit in place, so we re-insert the line here — mirroring
-# the same host-resolution strategy and placing /model back as the first entry
-# in BUILTIN_SLASH_COMMANDS, its original stock position. This exactly counters
-# the strip in patch-builtin.ts. Idempotent: a no-op if the line is already present.
-# Restore Pi's built-in /model slash command.
-#
-# pix-models strips the `/model` line from Pi's compiled slash-commands.js.
-# On uninstall we re-insert it. Uses sed — no JS runtime required.
-# Idempotent: no-op if the line is already present or the file is missing.
+# pix-models strips Pi's `/model` entry from compiled slash-commands.js at load
+# time (see packages/pix-models/src/patch-builtin.ts). Removing the package
+# leaves that edit in place, so re-insert the current Pi form as the first item
+# in BUILTIN_SLASH_COMMANDS. This is intentionally independent of the removed
+# entry's historical shape and is idempotent when `/model` already exists.
 restore_builtin_model_command() {
 	# Locate slash-commands.js via the running pi binary.
 	pi_bin=$(command -v pi 2>/dev/null) || true
@@ -118,9 +114,9 @@ restore_builtin_model_command() {
 	fi
 
 	info "Restoring Pi's built-in /model command..."
-	# Insert /model as first item in BUILTIN_SLASH_COMMANDS.
-	# Use a temp file to avoid sed -i portability issues (macOS vs Linux).
-	model_line='  { name: "model", description: "Select model (opens selector UI)" },'
+	# Insert the current Pi /model form as the first built-in entry. Use a temp
+	# file to avoid sed -i portability issues (macOS vs Linux).
+	model_line='  { name: "model", description: "Select model (opens selector UI)", argumentHint: "<provider/model>" },'
 	tmp=$(mktemp) || {
 		warn "mktemp failed — skipping /model restore."
 		return 0

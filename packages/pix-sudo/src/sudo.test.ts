@@ -16,19 +16,13 @@ describe("truncate", () => {
 	});
 
 	test("exact-limit line count is not truncated", () => {
-		const text = Array.from(
-			{ length: MAX_OUTPUT_LINES },
-			(_, i) => `line ${i}`,
-		).join("\n");
+		const text = Array.from({ length: MAX_OUTPUT_LINES }, (_, i) => `line ${i}`).join("\n");
 		const result = truncate(text);
 		expect(result.truncated).toBe(false);
 	});
 
 	test("one-over line limit truncates", () => {
-		const text = Array.from(
-			{ length: MAX_OUTPUT_LINES + 1 },
-			(_, i) => `line ${i}`,
-		).join("\n");
+		const text = Array.from({ length: MAX_OUTPUT_LINES + 1 }, (_, i) => `line ${i}`).join("\n");
 		const result = truncate(text);
 		expect(result.truncated).toBe(true);
 		expect(result.text.split("\n")).toHaveLength(MAX_OUTPUT_LINES);
@@ -40,9 +34,7 @@ describe("truncate", () => {
 		const text = [bigLine, bigLine, bigLine, bigLine].join("\n");
 		const result = truncate(text);
 		expect(result.truncated).toBe(true);
-		expect(Buffer.byteLength(result.text, "utf8")).toBeLessThanOrEqual(
-			MAX_OUTPUT_BYTES,
-		);
+		expect(Buffer.byteLength(result.text, "utf8")).toBeLessThanOrEqual(MAX_OUTPUT_BYTES);
 	});
 
 	test("custom maxLines override", () => {
@@ -93,8 +85,7 @@ describe("filterSudoPrompt", () => {
 	});
 
 	test("preserves non-prompt stderr lines", () => {
-		const raw =
-			"real error: file not found\n[sudo] password for x:\nanother line";
+		const raw = "real error: file not found\n[sudo] password for x:\nanother line";
 		const out = filterSudoPrompt(raw);
 		expect(out).toContain("real error: file not found");
 		expect(out).toContain("another line");
@@ -133,9 +124,7 @@ describe("detectAuthFailure", () => {
 	});
 
 	test("detects '3 incorrect password attempts'", () => {
-		expect(detectAuthFailure(1, "sudo: 3 incorrect password attempts")).toBe(
-			true,
-		);
+		expect(detectAuthFailure(1, "sudo: 3 incorrect password attempts")).toBe(true);
 	});
 
 	test("non-zero exit with unrelated stderr is not auth failure", () => {
@@ -175,6 +164,11 @@ import type { SudoResult } from "./lib.ts";
 let sudoMock: (cmd: string, pw: string) => Promise<SudoResult> = async () => {
 	throw new Error("runWithSudo not stubbed for this test");
 };
+let validationMock: (pw: string) => Promise<SudoResult> = async () => ({
+	stdout: "",
+	stderr: "",
+	code: 0,
+});
 // Default: no cached ticket — the password stage runs (matches most tests).
 let ticketMock = false;
 mock.module("./lib.ts", () => {
@@ -182,6 +176,7 @@ mock.module("./lib.ts", () => {
 	return {
 		...actual,
 		runWithSudo: (c: string, p: string) => sudoMock(c, p),
+		validateSudoPassword: (p: string) => validationMock(p),
 		hasValidTicket: async () => ticketMock,
 	};
 });
@@ -221,10 +216,7 @@ type ExecuteFn = (
 	ctx: {
 		hasUI: boolean;
 		ui: {
-			custom: <T>(
-				cb: CustomCb<T>,
-				opts?: { overlay?: boolean },
-			) => Promise<T | undefined>;
+			custom: <T>(cb: CustomCb<T>, opts?: { overlay?: boolean }) => Promise<T | undefined>;
 			notify: (msg: string, level: string) => void;
 			theme: typeof stubTheme;
 		};
@@ -264,22 +256,43 @@ function makeCtx(
 	opts: {
 		hasUI?: boolean;
 		overlayResult?: OverlayResult;
+		overlayResults?: OverlayResult[];
 		onCustom?: (lines: string[]) => void;
 	} = {},
 ) {
-	const overlayResult: OverlayResult = opts.overlayResult ?? {
-		action: "denied",
-	};
+	const overlayResults = opts.overlayResults ?? [opts.overlayResult ?? { action: "denied" }];
+	let overlayIndex = 0;
 	return {
 		hasUI: opts.hasUI ?? true,
 		ui: {
 			custom: async <T>(cb: CustomCb<T>): Promise<T | undefined> => {
-				// Invoke the callback so components initialise and render.
-				const comp = cb(stubTui, stubTheme, undefined, (_v: T) => {});
+				let completed: T | undefined;
+				const comp = cb(stubTui, stubTheme, undefined, (value: T) => {
+					completed = value;
+				});
 				const lines = comp.render(80);
 				opts.onCustom?.(lines);
-				// Return the preset overlay result.
-				return overlayResult as T;
+
+				// Multi-result tests drive the real two-stage overlay so validation and
+				// retries occur while this single custom component remains mounted.
+				if (
+					opts.overlayResults ||
+					(overlayResults[0]?.action === "approved" && Boolean(overlayResults[0].password?.trim()))
+				) {
+					comp.handleInput("\r");
+					for (const result of overlayResults) {
+						if (result.action !== "approved") return result as T;
+						comp.handleInput(result.password ?? "");
+						comp.handleInput("\r");
+						await new Promise((resolve) => setTimeout(resolve, 0));
+						if (completed) return completed;
+					}
+					return completed;
+				}
+
+				const result = overlayResults[Math.min(overlayIndex, overlayResults.length - 1)];
+				overlayIndex += 1;
+				return result as T;
 			},
 			notify: (_msg: string, _level: string) => {},
 			theme: stubTheme,
@@ -384,22 +397,84 @@ describe("sudo_run tool execute()", () => {
 		expect(result.isError).toBe(false);
 	});
 
-	test("action=approved + wrong password => auth failure", async () => {
-		sudoMock = async () => ({
-			stdout: "",
-			stderr: "sudo: incorrect password",
-			code: 1,
-		});
+	test("wrong password is prompted three times before auth failure", async () => {
+		let attempts = 0;
+		validationMock = async () => {
+			attempts += 1;
+			return { stdout: "", stderr: "sudo: incorrect password", code: 1 };
+		};
+		const host = makeHost();
+		let overlayCount = 0;
+		const result = await host.execute(
+			"id",
+			{ command: "whoami" },
+			undefined,
+			undefined,
+			makeCtx({
+				overlayResults: [
+					{ action: "approved", password: "wrong-1" },
+					{ action: "approved", password: "wrong-2" },
+					{ action: "approved", password: "wrong-3" },
+				],
+				onCustom: () => {
+					overlayCount += 1;
+				},
+			}),
+		);
+		expect(attempts).toBe(3);
+		expect(overlayCount).toBe(1);
+		expect(text(result)).toContain("authentication failed after 3 attempts");
+		expect(result.isError).toBe(true);
+	});
+
+	test("correct password on a retry runs successfully", async () => {
+		const seenPasswords: string[] = [];
+		validationMock = async (password) => {
+			seenPasswords.push(password);
+			return password === "correct"
+				? { stdout: "", stderr: "", code: 0 }
+				: { stdout: "", stderr: "Sorry, try again.", code: 1 };
+		};
+		sudoMock = async () => ({ stdout: "root", stderr: "", code: 0 });
 		const host = makeHost();
 		const result = await host.execute(
 			"id",
 			{ command: "whoami" },
 			undefined,
 			undefined,
-			makeCtx({ overlayResult: { action: "approved", password: "wrong" } }),
+			makeCtx({
+				overlayResults: [
+					{ action: "approved", password: "wrong" },
+					{ action: "approved", password: "correct" },
+				],
+			}),
 		);
-		expect(text(result)).toContain("authentication failed");
-		expect(result.isError).toBe(true);
+		expect(seenPasswords).toEqual(["wrong", "correct"]);
+		expect(text(result)).toContain("Exit code: 0");
+		expect(text(result)).toContain("root");
+		expect(result.isError).toBe(false);
+	});
+
+	test("password validation is separate from command execution", async () => {
+		const events: string[] = [];
+		validationMock = async (password) => {
+			events.push(`validate:${password}`);
+			return { stdout: "", stderr: "", code: 0 };
+		};
+		sudoMock = async (command, password) => {
+			events.push(`run:${command}:${password}`);
+			return { stdout: "done", stderr: "", code: 0 };
+		};
+		const host = makeHost();
+		const result = await host.execute(
+			"id",
+			{ command: "slow-command" },
+			undefined,
+			undefined,
+			makeCtx({ overlayResult: { action: "approved", password: "secret" } }),
+		);
+		expect(events).toEqual(["validate:secret", "run:slow-command:"]);
+		expect(text(result)).toContain("done");
 	});
 
 	test("cached ticket => confirm only, runs sudo with empty password", async () => {

@@ -120,9 +120,7 @@ describe("classifyCompound", () => {
 	test("catches the chaining-dodge (|| && ;)", () => {
 		// seg1 `cat x 2>/dev/null` has a redirect (opaque per-segment); seg2
 		// `ls -la` is a clean stand-in — still nudged, as `ls`.
-		expect(classifyCompound("cat x 2>/dev/null || ls -la")?.category).toBe(
-			"ls",
-		);
+		expect(classifyCompound("cat x 2>/dev/null || ls -la")?.category).toBe("ls");
 		// Pure clean read stand-in chained with another clean cmd.
 		expect(classifyCompound("cat x || ls -la")?.category).toBe("read");
 		expect(classifyCompound("ls -la && echo done")?.category).toBe("ls");
@@ -152,22 +150,14 @@ describe("classifyCompound", () => {
 
 describe("nudgeReason", () => {
 	test("active tool: point straight at it, no toolbox", () => {
-		const msg = nudgeReason(
-			"Searching file contents via bash grep/rg.",
-			"grep",
-			true,
-		);
+		const msg = nudgeReason("Searching file contents via bash grep/rg.", "grep", true);
 		expect(msg).toContain("Use `grep` instead");
 		expect(msg).toContain("function definitions");
 		expect(msg).not.toContain("toolbox");
 	});
 
 	test("gated tool: route through toolbox enable, not a direct call", () => {
-		const msg = nudgeReason(
-			"Listing a directory via bash ls/tree.",
-			"ls",
-			false,
-		);
+		const msg = nudgeReason("Listing a directory via bash ls/tree.", "ls", false);
 		expect(msg).toContain('toolbox(action:"enable", name:"ls")');
 		expect(msg).toContain("prompt-hidden");
 		expect(msg).toContain("function definitions");
@@ -176,17 +166,13 @@ describe("nudgeReason", () => {
 	});
 
 	test("gated find tool names itself in the enable hint", () => {
-		expect(
-			nudgeReason("Locating files via bash find/fd.", "find", false),
-		).toContain('toolbox(action:"enable", name:"find")');
+		expect(nudgeReason("Locating files via bash find/fd.", "find", false)).toContain(
+			'toolbox(action:"enable", name:"find")',
+		);
 	});
 
 	test("is a single short line — no inventory dump, no newlines", () => {
-		const msg = nudgeReason(
-			"Listing a directory via bash ls/tree.",
-			"ls",
-			false,
-		);
+		const msg = nudgeReason("Listing a directory via bash ls/tree.", "ls", false);
 		expect(msg).not.toContain("\n");
 		expect(msg).not.toContain("Available tools");
 		expect(msg.length).toBeLessThan(400);
@@ -194,6 +180,7 @@ describe("nudgeReason", () => {
 });
 
 describe("registerToolsNudge handler", () => {
+	type Notice = { msg: string; type?: string };
 	test("warns yellow and does NOT block the command", async () => {
 		const handler = makeHandler();
 		const { ctx, notices } = makeCtx();
@@ -204,8 +191,9 @@ describe("registerToolsNudge handler", () => {
 		expect(result).toBeUndefined();
 		// Surfaced as a single yellow warning.
 		expect(notices).toHaveLength(1);
-		expect(notices[0].type).toBe("warning");
-		expect(notices[0].msg).toContain("Use `read` instead");
+		const n0 = notices[0] as Notice;
+		expect(n0.type).toBe("warning");
+		expect(n0.msg).toContain("Use `read` instead");
 	});
 
 	test("warns once per category, silent thereafter", async () => {
@@ -218,7 +206,7 @@ describe("registerToolsNudge handler", () => {
 
 		await handler(bashEvent("grep x y"), ctx); // new category → new warning
 		expect(notices).toHaveLength(2);
-		expect(notices[1].msg).toContain("Use `grep` instead");
+		expect((notices[1] as Notice).msg).toContain("Use `grep` instead");
 	});
 
 	test("ignores commands with no tool stand-in", async () => {
@@ -237,7 +225,8 @@ describe("registerToolsNudge handler", () => {
 		const result = await handler(bashEvent("ls -la"), ctx);
 
 		expect(result).toBeUndefined();
-		expect(notices[0].type).toBe("warning");
-		expect(notices[0].msg).toContain('toolbox(action:"enable", name:"ls")');
+		const gn0 = notices[0] as Notice;
+		expect(gn0.type).toBe("warning");
+		expect(gn0.msg).toContain('toolbox(action:"enable", name:"ls")');
 	});
 });

@@ -43,9 +43,10 @@ import registerWrite from "@xynogen/pix-write/src/extension.ts";
 type Factory = (pi: never) => void;
 
 const MEMBERS: Factory[] = [
+	// pix-data warms model caches and registers the /pix settings command.
 	registerData,
 	// pix-pretty seeds the global icon mode (initIconMode) and registers
-	// /pretty + FFF commands. It must run before icon() consumers (footer,
+	// FFF commands. It must run before icon() consumers (footer,
 	// display, models, welcome, optimizer) so the mode is set when they paint.
 	registerPretty,
 	registerWelcome,

@@ -1,6 +1,7 @@
 ---
 name: search
 description: Deep logic discovery and project context mapping. Use when user asks "where is X", "find all usages of Y", "how is Z wired up", "what handles this", or location of a behavior is unknown across many files.
+disable-model-invocation: true
 ---
 # Deep Context Search Directive
 

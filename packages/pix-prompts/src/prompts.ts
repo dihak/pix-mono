@@ -94,15 +94,23 @@ export default function registerPrompts(pi: ExtensionAPI): void {
 		// already injected this file as <project_instructions path="...">.
 		// The host uses the absolute file path verbatim (system-prompt.js),
 		// so a path match means the content is already present byte-for-byte.
-		let prompt = existing;
+		// ── Patch pi's default identity line ──────────────────────────
+		// Pi hardcodes "You are an expert coding assistant…" which triggers
+		// safety refusals on some models when asked to run sysadmin/network
+		// commands (nmap, tcpdump, etc.). Replace with a generic identity
+		// that doesn't pigeonhole the agent. The SOP §1 already covers
+		// no-self-censorship and full tool access.
+		let prompt = existing.replace(
+			"You are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files.",
+			"You are Pix Coding Agent. You help users accomplish any task they request.",
+		);
+
 		for (const { tag, path } of sources) {
 			if (prompt.includes(`<${tag}>`)) continue;
 			if (prompt.includes(`path="${path}"`)) continue; // host already injected it
 			const content = safeRead(path);
 			if (!content) continue;
-			prompt = prompt
-				? `${prompt}\n\n${wrap(tag, content)}`
-				: wrap(tag, content);
+			prompt = prompt ? `${prompt}\n\n${wrap(tag, content)}` : wrap(tag, content);
 		}
 
 		if (prompt === existing) return; // nothing new to inject

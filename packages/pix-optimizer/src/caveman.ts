@@ -108,8 +108,7 @@ export function resolveLevel(arg: string): Level | null {
  * Help text shown when /caveman is run with no argument.
  */
 export function buildHelp(current: Level): string {
-	const statusLine =
-		current === "off" ? "off" : `${STATUS_LABELS[current]} (${current})`;
+	const statusLine = current === "off" ? "off" : `${STATUS_LABELS[current]} (${current})`;
 	return [
 		`Caveman mode: ${statusLine}`,
 		"",
@@ -133,10 +132,7 @@ export function toggleLevel(current: Level): Level {
 
 // ── Pi extension ────────────────────────────────────────────────────────────
 
-export function caveman(
-	pi: ExtensionAPI,
-	status: OptimizerStatus,
-): OptimizerHandle {
+export function caveman(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle {
 	let level: Level = "off";
 
 	// -- Status: report into the shared optimizer indicator. --
@@ -179,10 +175,7 @@ export function caveman(
 
 	// -- Overlay value handler (called by the /optimizer overlay) --
 
-	async function run(
-		value: string,
-		ctx: ExtensionCommandContext,
-	): Promise<void> {
+	async function run(value: string, ctx: ExtensionCommandContext): Promise<void> {
 		const resolved = resolveLevel(value);
 		if (resolved === null) return;
 		level = resolved;
@@ -192,9 +185,7 @@ export function caveman(
 		syncStatus(ctx);
 
 		ctx.ui.notify(
-			level === "off"
-				? "Caveman mode off."
-				: `Caveman: ${STATUS_LABELS[level]}`,
+			level === "off" ? "Caveman mode off." : `Caveman: ${STATUS_LABELS[level]}`,
 			"info",
 		);
 	}

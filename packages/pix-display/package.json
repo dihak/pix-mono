@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-display",
-	"version": "0.1.4",
+	"version": "0.1.7",
 	"description": "Pi core extension — paste chip rendering and thinking block display",
 	"type": "module",
 	"main": "src/index.ts",
@@ -36,7 +36,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-pretty": "*"
+		"@xynogen/pix-pretty": "^1.7.9"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

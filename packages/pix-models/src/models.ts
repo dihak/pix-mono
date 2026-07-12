@@ -8,10 +8,7 @@
  * Sorted by benchlm rank when available (best first), then alphabetical.
  */
 
-import type {
-	ExtensionAPI,
-	ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	fuzzyFilter,
 	Input,
@@ -20,11 +17,7 @@ import {
 	SelectList,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
-import {
-	benchScoreColor,
-	lookupBenchmark,
-	lookupModelsDev,
-} from "@xynogen/pix-data";
+import { benchScoreColor, lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
 import { frameLines, modalWidth } from "@xynogen/pix-pretty/modal-frame";
 import { patchOutBuiltinModelCommand } from "./patch-builtin";
@@ -40,9 +33,7 @@ export function fmtCtx(n: number): string {
 	return `${Math.round(n / 1_000)}k`;
 }
 
-export function fmtCost(
-	entry: { cost?: { input?: number; output?: number } } | undefined,
-): string {
+export function fmtCost(entry: { cost?: { input?: number; output?: number } } | undefined): string {
 	if (!entry?.cost) return "\u2014";
 	const i = entry.cost.input ?? 0;
 	const o = entry.cost.output ?? 0;
@@ -96,10 +87,69 @@ export function sortModels<T extends SortableModel>(models: T[]): T[] {
 	});
 }
 
-async function showEnhancedPicker(
-	pi: ExtensionAPI,
-	ctx: ExtensionContext,
-): Promise<void> {
+/** Lowercase and strip all non-alphanumerics: "glm-5.2" → "glm52". */
+export function normalizeModelText(s: string): string {
+	return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+export type ModelSearchLookup = {
+	/** benchlm local rank per item value (ranked models only). */
+	rankByValue: Map<string, number>;
+	/** Clean haystack per value: `${id} ${name ?? ""}` (no ANSI, no rank cell). */
+	searchTextByValue: Map<string, string>;
+	/** normalizeModelText(haystack) per value — for family+version substring matches. */
+	normalizedByValue: Map<string, string>;
+};
+
+/**
+ * Filter+order picker items for a search query.
+ *  - "" → all items unchanged.
+ *  - digits-only → items whose benchlm rank equals the number, followed by
+ *    normalized-substring matches ("52" ⊂ "glm52") rank-sorted.
+ *  - otherwise → normalized-substring matches first (rank-sorted), then
+ *    fuzzy matches over the clean haystack (rank-sorted, stable), deduped.
+ */
+export function filterModelItems<T extends { value: string }>(
+	items: T[],
+	query: string,
+	lookup: ModelSearchLookup,
+): T[] {
+	const q = query.trim();
+	if (q.length === 0) return items;
+
+	const rankSort = (arr: T[]): T[] => {
+		return arr
+			.map((it, i) => ({ it, i }))
+			.sort((a, b) => {
+				const ra = lookup.rankByValue.get(a.it.value) ?? Infinity;
+				const rb = lookup.rankByValue.get(b.it.value) ?? Infinity;
+				if (ra !== rb) return ra - rb;
+				return a.i - b.i;
+			})
+			.map(({ it }) => it);
+	};
+
+	const nq = normalizeModelText(q);
+	const subMatches =
+		nq.length > 0
+			? items.filter((it) => (lookup.normalizedByValue.get(it.value) ?? "").includes(nq))
+			: [];
+
+	if (/^\d+$/.test(q)) {
+		const wanted = Number(q);
+		const rankMatches = items.filter((it) => lookup.rankByValue.get(it.value) === wanted);
+		const rankValues = new Set(rankMatches.map((it) => it.value));
+		const extraSub = rankSort(subMatches).filter((it) => !rankValues.has(it.value));
+		return [...rankMatches, ...extraSub];
+	}
+
+	const fuzzy = fuzzyFilter(items, q, (it) => lookup.searchTextByValue.get(it.value) ?? "");
+	const subValues = new Set(subMatches.map((it) => it.value));
+	const extraFuzzy = rankSort(fuzzy).filter((it) => !subValues.has(it.value));
+	return [...rankSort(subMatches), ...extraFuzzy];
+}
+
+async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Promise<void> {
 	// Mirror the built-in /model selector, which calls refresh() then awaits
 	// getAvailable() (see model-selector.js). Without refresh(), this extension
 	// reads whatever `this.models` was last loaded into — which, depending on
@@ -182,9 +232,7 @@ async function showEnhancedPicker(
 
 			// Find max rank width across all benchmarked rows for # padding
 			const maxRankWidth = Math.max(
-				...dedupedRows.map((r) =>
-					r.localRank ? String(r.localRank).length : 0,
-				),
+				...dedupedRows.map((r) => (r.localRank ? String(r.localRank).length : 0)),
 				1,
 			);
 
@@ -198,84 +246,85 @@ async function showEnhancedPicker(
 				if (localRank) rankByValue.set(`${m.provider}/${m.id}`, localRank);
 			}
 
-			const items: SelectItem[] = dedupedRows.map(
-				({ m, dev, bench, localRank }) => {
-					const isCurrent =
-						current && m.provider === current.provider && m.id === current.id;
+			// Clean search haystacks — labels are ANSI-laden and carry the rank cell,
+			// so matching runs against raw id+name instead (see filterModelItems).
+			const searchTextByValue = new Map<string, string>();
+			const normalizedByValue = new Map<string, string>();
+			for (const { m } of dedupedRows) {
+				const value = `${m.provider}/${m.id}`;
+				const text = `${m.id} ${m.name ?? ""}`;
+				searchTextByValue.set(value, text);
+				normalizedByValue.set(value, normalizeModelText(text));
+			}
 
-					// Label: marker + rank cell + accent-colored model name.
-					// Ranked models show muted '#' + colored rank. Unranked (no
-					// modelgrep entry) show a muted em-dash sized to the rank
-					// column, so the model name aligns across rows.
-					const marker = isCurrent ? theme.fg(accent, "▶") : " ";
-					let rankPrefix: string;
-					if (localRank) {
-						const rankStr = String(localRank).padEnd(maxRankWidth);
-						// Color rank by the model's bench score (same scale as ⚡score),
-						// not by list position — keeps the two colors consistent.
-						const rankColor = benchScoreColor(bench?.overallScore);
-						rankPrefix = mute("#") + theme.fg(rankColor, rankStr);
-					} else {
-						// Width = "#" + maxRankWidth chars (e.g. "#   " or "#——" for 2-digit ranks).
-						const dash = "—".padEnd(maxRankWidth, " ");
-						rankPrefix = mute("#") + mute(dash);
-					}
-					// Display model id only; m.provider is routing provider, not part of id.
-					const idColored = theme.fg(accent, m.id);
-					const label = `${marker} ${rankPrefix} ${idColored}`;
+			const items: SelectItem[] = dedupedRows.map(({ m, dev, bench, localRank }) => {
+				const isCurrent = current && m.provider === current.provider && m.id === current.id;
 
-					// Description: ctx · cost · score stars
-					// Colors: ctx muted · cost success (free muted) · score+stars warning
-					const ctxRaw = fmtCtx(dev?.limit?.context ?? 0);
-					const ctxStr = mute(ctxRaw.padStart(4));
-					const rawCost = fmtCost(dev);
-					let costSeg: string;
-					if (rawCost === "—") {
-						costSeg = theme.fg("dim", "—".padEnd(10));
-					} else if (rawCost === "free") {
-						costSeg = mute("free".padEnd(10));
-					} else {
-						costSeg = theme.fg("success", rawCost.padEnd(10));
-					}
-					let benchSeg = "";
-					if (bench) {
-						const score = bench.overallScore ?? "?";
-						const s = bench.overallScore;
-						const scoreColor = benchScoreColor(s);
-						let filled = 1;
-						if (typeof s === "number") {
-							if (s >= 90) filled = 5;
-							else if (s >= 80) filled = 4;
-							else if (s >= 70) filled = 3;
-							else if (s >= 50) filled = 2;
-						}
-						const starBar =
-							theme.fg(scoreColor, "★".repeat(filled)) +
-							mute("☆".repeat(5 - filled));
-						benchSeg = `⚡${theme.fg(scoreColor, String(score))} ${starBar}`;
-					}
-					const desc = [ctxStr, costSeg, benchSeg].filter(Boolean).join(sep);
+				// Label: marker + rank cell + accent-colored model name.
+				// Ranked models show muted '#' + colored rank. Unranked (no
+				// modelgrep entry) show a muted em-dash sized to the rank
+				// column, so the model name aligns across rows.
+				const marker = isCurrent ? theme.fg(accent, "▶") : " ";
+				let rankPrefix: string;
+				if (localRank) {
+					const rankStr = String(localRank).padEnd(maxRankWidth);
+					// Color rank by the model's bench score (same scale as ⚡score),
+					// not by list position — keeps the two colors consistent.
+					const rankColor = benchScoreColor(bench?.overallScore);
+					rankPrefix = mute("#") + theme.fg(rankColor, rankStr);
+				} else {
+					// Width = "#" + maxRankWidth chars (e.g. "#   " or "#——" for 2-digit ranks).
+					const dash = "—".padEnd(maxRankWidth, " ");
+					rankPrefix = mute("#") + mute(dash);
+				}
+				// Display model id only; m.provider is routing provider, not part of id.
+				const idColored = theme.fg(accent, m.id);
+				const label = `${marker} ${rankPrefix} ${idColored}`;
 
-					return {
-						value: `${m.provider}/${m.id}`,
-						label,
-						description: desc,
-					};
-				},
-			);
+				// Description: ctx · cost · score stars
+				// Colors: ctx muted · cost success (free muted) · score+stars warning
+				const ctxRaw = fmtCtx(dev?.limit?.context ?? 0);
+				const ctxStr = mute(ctxRaw.padStart(4));
+				const rawCost = fmtCost(dev);
+				let costSeg: string;
+				if (rawCost === "—") {
+					costSeg = theme.fg("dim", "—".padEnd(10));
+				} else if (rawCost === "free") {
+					costSeg = mute("free".padEnd(10));
+				} else {
+					costSeg = theme.fg("success", rawCost.padEnd(10));
+				}
+				let benchSeg = "";
+				if (bench) {
+					const score = bench.overallScore ?? "?";
+					const s = bench.overallScore;
+					const scoreColor = benchScoreColor(s);
+					let filled = 1;
+					if (typeof s === "number") {
+						if (s >= 90) filled = 5;
+						else if (s >= 80) filled = 4;
+						else if (s >= 70) filled = 3;
+						else if (s >= 50) filled = 2;
+					}
+					const starBar = theme.fg(scoreColor, "★".repeat(filled)) + mute("☆".repeat(5 - filled));
+					benchSeg = `⚡${theme.fg(scoreColor, String(score))} ${starBar}`;
+				}
+				const desc = [ctxStr, costSeg, benchSeg].filter(Boolean).join(sep);
+
+				return {
+					value: `${m.provider}/${m.id}`,
+					label,
+					description: desc,
+				};
+			});
 
 			const currentIdx = current
-				? items.findIndex(
-						(it) => it.value === `${current.provider}/${current.id}`,
-					)
+				? items.findIndex((it) => it.value === `${current.provider}/${current.id}`)
 				: 0;
 
 			// Widest label (visible width, ANSI-stripped) so the model name
 			// column never truncates to "…". Add gap headroom.
-			const widestLabel = items.reduce(
-				(w, it) => Math.max(w, visibleWidth(it.label)),
-				0,
-			);
+			const widestLabel = items.reduce((w, it) => Math.max(w, visibleWidth(it.label)), 0);
 
 			const search = new Input();
 			const list = new SelectList(
@@ -306,33 +355,11 @@ async function showEnhancedPicker(
 					selectedIndex: number;
 					invalidate(): void;
 				};
-				const q = query.trim();
-				let next: SelectItem[];
-				if (q.length === 0) {
-					next = internal.items;
-				} else if (/^\d+$/.test(q)) {
-					// Pure number → match by benchlm rank, not name.
-					const wanted = Number(q);
-					next = internal.items.filter(
-						(it) => rankByValue.get(it.value) === wanted,
-					);
-				} else {
-					next = fuzzyFilter(
-						internal.items,
-						q,
-						(it) => `${it.label} ${it.description ?? ""}`,
-					);
-					// Stable sort: ranked models (by rank asc) before unranked.
-					next = next
-						.map((it, i) => ({ it, i }))
-						.sort((a, b) => {
-							const ra = rankByValue.get(a.it.value) ?? Infinity;
-							const rb = rankByValue.get(b.it.value) ?? Infinity;
-							if (ra !== rb) return ra - rb;
-							return a.i - b.i;
-						})
-						.map(({ it }) => it);
-				}
+				const next = filterModelItems(internal.items, query, {
+					rankByValue,
+					searchTextByValue,
+					normalizedByValue,
+				});
 				internal.filteredItems = next;
 				internal.selectedIndex = 0;
 				internal.invalidate();
@@ -343,21 +370,12 @@ async function showEnhancedPicker(
 					const mw = modalWidth(w);
 					const inner = mw - 4; // CHROME = 2 border + 2 padding
 					const lines: string[] = [
-						theme.fg(
-							accent,
-							theme.bold(`${icon("picker.model")}  Select model`),
-						),
-						theme.fg(
-							"dim",
-							"context · pricing · coding rank & score from modelgrep.com",
-						),
+						theme.fg(accent, theme.bold(`${icon("picker.model")}  Select model`)),
+						theme.fg("dim", "context · pricing · coding rank & score from modelgrep.com"),
 						theme.fg("muted", "Search:"),
 						...search.render(inner),
 						...list.render(inner),
-						theme.fg(
-							"dim",
-							"fuzzy search · ↑↓ navigate · enter select · esc cancel",
-						),
+						theme.fg("dim", "fuzzy search · ↑↓ navigate · enter select · esc cancel"),
 					];
 					return frameLines({
 						width: mw,

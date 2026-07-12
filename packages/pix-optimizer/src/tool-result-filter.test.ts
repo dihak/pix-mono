@@ -1,8 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-	filterModelWarnings,
-	stripModelWarningParagraphs,
-} from "./tool-result-filter.ts";
+import { filterModelWarnings, stripModelWarningParagraphs } from "./tool-result-filter.ts";
 
 // ── stripModelWarningParagraphs ───────────────────────────────────────────────
 
@@ -29,8 +26,7 @@ describe("stripModelWarningParagraphs", () => {
 	});
 
 	it("strips multiple warning paragraphs", () => {
-		const text =
-			"output\n\n⚠ BLIND WRITE — foo\n\n🔴 THRASHING — bar\n\nmore output";
+		const text = "output\n\n⚠ BLIND WRITE — foo\n\n🔴 THRASHING — bar\n\nmore output";
 		const result = stripModelWarningParagraphs(text);
 		expect(result).not.toContain("BLIND WRITE");
 		expect(result).not.toContain("THRASHING");
@@ -75,9 +71,7 @@ describe("filterModelWarnings", () => {
 		expect(result).not.toBe(content);
 		expect(result[0]?.type).toBe("text");
 		if (result[0]?.type === "text") {
-			expect((result[0] as { type: string; text: string }).text).not.toContain(
-				"BLIND WRITE",
-			);
+			expect((result[0] as { type: string; text: string }).text).not.toContain("BLIND WRITE");
 		}
 	});
 

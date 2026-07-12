@@ -1,6 +1,7 @@
 ---
 name: finish
 description: Structured branch completion — verify, decide, and clean up when implementation is done
+disable-model-invocation: true
 ---
 # Finish Directive
 

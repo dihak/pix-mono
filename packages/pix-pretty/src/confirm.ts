@@ -55,19 +55,13 @@ const COUNTDOWN_WARN_S = 5;
 /**
  * Show a Yes/No overlay. Resolves true on confirm, false otherwise.
  */
-export function confirmOverlay(
-	ui: ConfirmUI,
-	opts: ConfirmOptions,
-): Promise<boolean> {
+export function confirmOverlay(ui: ConfirmUI, opts: ConfirmOptions): Promise<boolean> {
 	const accent = opts.accent ?? "accent";
 	const timeoutMs = opts.timeoutMs ?? 0;
 
 	return new Promise((resolve) => {
 		const controller = new AbortController();
-		const timer =
-			timeoutMs > 0
-				? setTimeout(() => controller.abort(), timeoutMs)
-				: undefined;
+		const timer = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
 
 		ui.custom<boolean>(
 			(tui, theme, _kb, done) => {
@@ -87,25 +81,15 @@ export function confirmOverlay(
 					},
 				];
 
-				const selectList = new SelectList(
-					choices,
-					choices.length,
-					selectListTheme(theme, accent),
-				);
+				const selectList = new SelectList(choices, choices.length, selectListTheme(theme, accent));
 
 				if (timeoutMs > 0) {
 					const deadlineMs = Date.now() + timeoutMs;
 					const updateCountdown = () => {
-						const remaining = Math.max(
-							0,
-							Math.ceil((deadlineMs - Date.now()) / SECOND_MS),
-						);
+						const remaining = Math.max(0, Math.ceil((deadlineMs - Date.now()) / SECOND_MS));
 						countdownLine =
 							theme.fg("dim", "Auto-cancel in ") +
-							theme.fg(
-								remaining <= COUNTDOWN_WARN_S ? accent : "muted",
-								`${remaining}s`,
-							);
+							theme.fg(remaining <= COUNTDOWN_WARN_S ? accent : "muted", `${remaining}s`);
 					};
 					updateCountdown();
 					ticker = setInterval(() => {
@@ -148,9 +132,7 @@ export function confirmOverlay(
 						for (const l of selectList.render(inner)) lines.push(l);
 
 						lines.push("");
-						lines.push(
-							theme.fg("dim", "↑↓ navigate • enter select • esc cancel"),
-						);
+						lines.push(theme.fg("dim", "↑↓ navigate • enter select • esc cancel"));
 
 						return frameLines({
 							width: mw,

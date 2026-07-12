@@ -58,13 +58,19 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Upgrade npm for trusted publishing
-        if: steps.tag.outputs.value != ''
-        run: npm install -g npm@latest
+      # Node 24 ships a compatible npm with its provenance dependencies intact.
+      # Do not globally upgrade npm here: npm@latest has caused incomplete global
+      # installations on GitHub runners (missing `sigstore` during --provenance).
 
       - name: Install dependencies
         if: steps.tag.outputs.value != ''
         run: bun install --frozen-lockfile
+
+      # Pre-publish guard: fail fast if any changed package forgot to
+      # bump its version (already published to npm at that version).
+      - name: Check versions not already on npm
+        if: steps.tag.outputs.value != ''
+        run: bun scripts/check-versions.ts
 
       # Publishes every package whose version is not yet on npm (idempotent).
       # Authentication is via OIDC trusted publishing (no NPM_TOKEN); provenance

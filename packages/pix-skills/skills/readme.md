@@ -1,6 +1,7 @@
 ---
 name: readme
 description: Create or update a project README in a fixed, deployment-focused style with required sections, env-var tables, and an enforced tone
+disable-model-invocation: true
 ---
 # README Directive
 

@@ -4,6 +4,10 @@ Monorepo of Pix, a distro of [Pi Coding Agent](https://github.com/badlogic/pi-mo
 
 > **⚠ Expect breaking changes.** This project is under active development. Packages are regularly split, merged, renamed, or removed. The recommended upgrade path is to **uninstall then reinstall** the distro rather than incrementally updating individual packages. When in doubt, run the uninstall script first.
 
+> **🐧 Linux only.** This project has only been tested on Linux. macOS and Windows are **not tested** and may not work correctly.
+
+> **🤖 Claude-tested only.** Agent behavior is mostly tested against Claude models. I don't currently have access to GPT models, so usage and compatibility with OpenAI models is untested. Feel free to submit issues if a model consistently misuses tools (e.g. Claude found `rtk find` hard to use and failed consistently).
+
 ## Packages
 
 ### Core bundle
@@ -93,7 +97,7 @@ Straight from GitHub (no clone needed):
 curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
 ```
 
-Or from a local checkout:
+Or from a local clones:
 
 ```bash
 sh scripts/install.sh   # or: bun run distro:install

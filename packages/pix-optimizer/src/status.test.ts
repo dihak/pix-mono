@@ -1,10 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-	OptimizerStatus,
-	renderStatus,
-	STATUS_KEY,
-	toolIcon,
-} from "./status.ts";
+import { OptimizerStatus, renderStatus, STATUS_KEY, toolIcon } from "./status.ts";
 
 /** Tagging colorizer: <accent>X</accent> / <dim>X</dim> for assertions. */
 const tag = (c: string, t: string) => `<${c}>${t}</${c}>`;
@@ -17,23 +12,13 @@ const PT = toolIcon("ponytail");
 
 describe("renderStatus", () => {
 	it("shows ALL icons in order, accent when enabled", () => {
-		expect(
-			renderStatus(
-				{ caveman: true, rtk: true, toon: true, ponytail: true },
-				tag,
-			),
-		).toBe(
+		expect(renderStatus({ caveman: true, rtk: true, toon: true, ponytail: true }, tag)).toBe(
 			`<accent>${CV}</accent>  <accent>${RK}</accent>  <accent>${TN}</accent>  <accent>${PT}</accent> `,
 		);
 	});
 
 	it("dims disabled tools but still shows them", () => {
-		expect(
-			renderStatus(
-				{ caveman: false, rtk: true, toon: true, ponytail: true },
-				tag,
-			),
-		).toBe(
+		expect(renderStatus({ caveman: false, rtk: true, toon: true, ponytail: true }, tag)).toBe(
 			`<dim>${CV}</dim>  <accent>${RK}</accent>  <accent>${TN}</accent>  <accent>${PT}</accent> `,
 		);
 	});
@@ -63,8 +48,7 @@ describe("OptimizerStatus", () => {
 		return {
 			calls,
 			ui: {
-				setStatus: (key: string, text: string | undefined) =>
-					calls.push({ key, text: text ?? "" }),
+				setStatus: (key: string, text: string | undefined) => calls.push({ key, text: text ?? "" }),
 				theme: { fg: (c: string, t: string) => `<${c}>${t}</${c}>` },
 			},
 		} as const;
@@ -74,7 +58,8 @@ describe("OptimizerStatus", () => {
 		const status = new OptimizerStatus();
 		const ctx = fakeCtx();
 		status.set("rtk", true, ctx as never);
-		const last = ctx.calls.at(-1)!;
+		const last = ctx.calls.at(-1);
+		if (!last) throw new Error("no calls");
 		expect(last.key).toBe(STATUS_KEY);
 		// caveman + toon + ponytail still unset (dim), rtk accent.
 		expect(last.text).toBe(
@@ -87,7 +72,8 @@ describe("OptimizerStatus", () => {
 		const ctx = fakeCtx();
 		status.set("caveman", true, ctx as never);
 		status.set("toon", true, ctx as never);
-		const last = ctx.calls.at(-1)!;
+		const last = ctx.calls.at(-1);
+		if (!last) throw new Error("no calls");
 		expect(last.text).toBe(
 			`<accent>${CV}</accent>  <dim>${RK}</dim>  <accent>${TN}</accent>  <dim>${PT}</dim> `,
 		);
@@ -98,7 +84,8 @@ describe("OptimizerStatus", () => {
 		const ctx = fakeCtx();
 		status.set("rtk", true, ctx as never);
 		status.set("rtk", false, ctx as never);
-		const last = ctx.calls.at(-1)!;
+		const last = ctx.calls.at(-1);
+		if (!last) throw new Error("no calls");
 		expect(last.text).toBe(
 			`<dim>${CV}</dim>  <dim>${RK}</dim>  <dim>${TN}</dim>  <dim>${PT}</dim> `,
 		);

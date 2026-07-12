@@ -21,7 +21,7 @@ There is no text-arg form: the overlay is the only UI. Selecting a value calls
 the tool's `run()` handler, which persists the new value and repaints the
 shared status cell. Headless/test fallbacks print a plain status summary.
 
-State persists to `~/.pi/agent/optimizer.json` (caveman/rtk/toon/ponytail).
+State persists to `~/.pi/agent/optimizer.json` (caveman/rtk/toon/ponytail). **Initial values** for a new session can be set in the `optimizer` section of `~/.pi/agent/pix.json` — the runtime toggle via `/optimizer` still persists changes to `optimizer.json` as before.
 
 ## Status bar
 
@@ -44,7 +44,7 @@ Switch the style live from the **`/optimizer` overlay** — a fifth `icons` row
 at the bottom cycles `nerd → unicode → ascii` with `←→`; the choice persists to
 `~/.pi/agent/optimizer.json`.
 
-Icons follow the **global** `pix-pretty` mode — set via `/pretty` or `PRETTY_ICONS`
+Icons follow the **global** `pix-pretty` mode — set via `/pix` or `PRETTY_ICONS`
 env var. The optimizer no longer has its own toggle.
 
 ## Features
@@ -118,6 +118,21 @@ works. Validation, error handling, security, and accessibility are never cut.
 **No install required** — pure prompt injection, no external binary or PATH
 dependency (unlike RTK and TOON).
 
+## Configuration via `pix.json`
+
+Set the initial optimizer state for new sessions in `~/.pi/agent/pix.json`. These values are applied once at session start; subsequent changes via `/optimizer` persist to `optimizer.json` and take precedence.
+
+```jsonc
+{
+  "optimizer": {
+    "caveman": "lite",   // off | lite | full | ultra | micro
+    "rtk":     true,
+    "toon":    false,
+    "ponytail": "off"   // off | lite | full | ultra
+  }
+}
+```
+
 ## Installation
 
 ```bash
@@ -141,7 +156,7 @@ pi install npm:@xynogen/pix-optimizer
 | `src/rtk.ts`      | RTK prompt + bash command rewriting                       |
 | `src/json.ts`     | jq+TOON guidance, heuristics, system-prompt injection     |
 | `src/ponytail.ts` | Ponytail logic, levels, prompt                            |
-| `src/persist.ts`  | Disk-backed `~/.pi/agent/optimizer.json` persistence      |
+| `src/persist.ts`  | Disk-backed `~/.pi/agent/optimizer.json` persistence; seeds initial state from `pix.json` |
 | `src/tool-result-filter.ts` | Strips model-guidance warnings from tool_result |
 
 Each tool registers its own lifecycle hooks and exposes an `OptimizerHandle`

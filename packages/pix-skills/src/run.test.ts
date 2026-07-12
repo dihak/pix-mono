@@ -3,9 +3,7 @@ import { runArgv } from "./run.ts";
 
 describe("runArgv", () => {
 	it("captures stdout", async () => {
-		expect(
-			(await runArgv(["echo", "hello"], { cwd: process.cwd() })).trim(),
-		).toBe("hello");
+		expect((await runArgv(["echo", "hello"], { cwd: process.cwd() })).trim()).toBe("hello");
 	});
 
 	it("caps output at maxBytes", async () => {

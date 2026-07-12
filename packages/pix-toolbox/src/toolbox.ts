@@ -39,12 +39,7 @@ import { frameLines, modalWidth } from "@xynogen/pix-pretty/modal-frame";
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 /** Tools that can never be disabled — always prompt-visible. */
-export const CORE_TOOLS: ReadonlySet<string> = new Set([
-	"bash",
-	"edit",
-	"read",
-	"write",
-]);
+export const CORE_TOOLS: ReadonlySet<string> = new Set(["bash", "edit", "read", "write"]);
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -134,14 +129,10 @@ export function toggleTool(
 
 	if (action === "enable") {
 		const did = ops.onActivate(name);
-		return did
-			? `Enabled ${name} — now prompt-visible.`
-			: `${name} is already active.`;
+		return did ? `Enabled ${name} — now prompt-visible.` : `${name} is already active.`;
 	}
 	const did = ops.onDeactivate(name);
-	return did
-		? `Disabled ${name} — hidden from prompt.`
-		: `${name} is already gated.`;
+	return did ? `Disabled ${name} — hidden from prompt.` : `${name} is already gated.`;
 }
 
 // ─── Persistence ───────────────────────────────────────────────────────────
@@ -173,11 +164,7 @@ function createState(pi: ExtensionAPI) {
 		try {
 			const sp = getStatePath();
 			mkdirSync(dirname(sp), { recursive: true });
-			writeFileSync(
-				sp,
-				JSON.stringify({ enabledTools: [...enabledTools] }, null, 2),
-				"utf-8",
-			);
+			writeFileSync(sp, JSON.stringify({ enabledTools: [...enabledTools] }, null, 2), "utf-8");
 		} catch (err) {
 			console.warn("toolbox: file persist failed:", err);
 		}
@@ -203,9 +190,7 @@ function createState(pi: ExtensionAPI) {
 		const fileSaved = loadFromFile();
 		if (fileSaved) {
 			const validNames = new Set((pi.getAllTools() ?? []).map((t) => t.name));
-			enabledTools = new Set(
-				fileSaved.filter((n) => validNames.has(n) || CORE_TOOLS.has(n)),
-			);
+			enabledTools = new Set(fileSaved.filter((n) => validNames.has(n) || CORE_TOOLS.has(n)));
 			for (const ct of CORE_TOOLS) enabledTools.add(ct);
 			initialized = true;
 			apply();
@@ -233,9 +218,7 @@ function createState(pi: ExtensionAPI) {
 
 		if (saved) {
 			const validNames = new Set((pi.getAllTools() ?? []).map((t) => t.name));
-			enabledTools = new Set(
-				saved.filter((n) => validNames.has(n) || CORE_TOOLS.has(n)),
-			);
+			enabledTools = new Set(saved.filter((n) => validNames.has(n) || CORE_TOOLS.has(n)));
 			for (const ct of CORE_TOOLS) enabledTools.add(ct);
 		} else {
 			const names = (pi.getAllTools() ?? []).map((t) => t.name);
@@ -351,34 +334,24 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 		};
 	}): Promise<void> {
 		await ctx.ui.custom<null>(
-			(
-				tui: TUI,
-				theme: Theme,
-				_kb: KeybindingsManager,
-				done: (r: null) => void,
-			) => {
+			(tui: TUI, theme: Theme, _kb: KeybindingsManager, done: (r: null) => void) => {
 				const accent = "accent";
 				const mute = (s: string) => theme.fg("muted", s);
 
 				type RowState = "active" | "gated";
-				const stateOf = (name: string): RowState =>
-					ops.isActive(name) ? "active" : "gated";
+				const stateOf = (name: string): RowState => (ops.isActive(name) ? "active" : "gated");
 
 				const labelFor = (r: ToolRow): string => {
 					const active = stateOf(r.name) === "active";
 					const marker = active ? " " : theme.fg("warning", "#");
-					const name = active
-						? theme.fg("success", r.name)
-						: theme.fg("dim", r.name);
+					const name = active ? theme.fg("success", r.name) : theme.fg("dim", r.name);
 					const kind = mute(`[${r.mcp ? "MCP" : "tool"}]`);
 					return `${marker} ${name}  ${kind}`;
 				};
 
 				const descFor = (r: ToolRow): string => {
 					const active = stateOf(r.name) === "active";
-					const tag = active
-						? theme.fg("success", "active")
-						: theme.fg("warning", "gated");
+					const tag = active ? theme.fg("success", "active") : theme.fg("warning", "gated");
 					return `${tag} ${mute("·")} ${r.description || "(no description)"}`;
 				};
 
@@ -394,10 +367,7 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 				};
 
 				const allItems = rows.map(toItem);
-				const widest = allItems.reduce(
-					(w, it) => Math.max(w, visibleWidth(it.label)),
-					0,
-				);
+				const widest = allItems.reduce((w, it) => Math.max(w, visibleWidth(it.label)), 0);
 
 				const list = new SelectList(
 					allItems,
@@ -480,10 +450,7 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 						];
 						if (statusText) lines.push(statusText);
 						lines.push(
-							theme.fg(
-								"dim",
-								"↑↓ navigate · e enable · d disable · space toggle · esc close",
-							),
+							theme.fg("dim", "↑↓ navigate · e enable · d disable · space toggle · esc close"),
 						);
 						return frameLines({
 							width: mw,
@@ -499,16 +466,10 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 					handleInput(data: string) {
 						if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
 							list.handleInput?.(data);
-						} else if (
-							matchesKey(data, Key.enter) ||
-							matchesKey(data, Key.escape)
-						) {
+						} else if (matchesKey(data, Key.enter) || matchesKey(data, Key.escape)) {
 							done(null);
 							return;
-						} else if (
-							matchesKey(data, Key.space) ||
-							matchesKey(data, Key.tab)
-						) {
+						} else if (matchesKey(data, Key.space) || matchesKey(data, Key.tab)) {
 							flipSelected();
 						} else {
 							const printable = decodeKittyPrintable(data);
@@ -553,9 +514,7 @@ export default function registerToolbox(pi: ExtensionAPI): void {
 					return;
 				}
 				const rows = getRows();
-				const msg = targets
-					.map((t) => toggleTool(verb, t, rows, ops))
-					.join("\n");
+				const msg = targets.map((t) => toggleTool(verb, t, rows, ops)).join("\n");
 				ctx.ui.notify(msg, "info");
 				return;
 			}

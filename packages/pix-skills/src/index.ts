@@ -5,8 +5,10 @@
  * full SKILL.md (or flat .md) by name. This is the safe "agent prompts itself"
  * pattern: the agent calls the tool explicitly; no autonomous injection.
  *
- * Also bundles the skills folder so pi auto-loads skill descriptions into the
- * system prompt at startup (names + descriptions only — full content on demand).
+ * Also bundles the skills folder via resources_discover. Bundled skills carry
+ * `disable-model-invocation: true`, so pi keeps their descriptions OUT of the
+ * system prompt — the agent finds them by calling read_skills() and loads the
+ * body on demand. This keeps baseline context flat as the skill set grows.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -104,15 +106,15 @@ function discoverSkills(): SkillEntry[] {
 export function extractDescription(content: string): string | null {
 	const m = content.match(/^---\s*\n([\s\S]*?)\n---/);
 	if (!m) return null;
-	const dm = m[1]!.match(/^description\s*:\s*["']?(.+?)["']?\s*$/m);
-	return dm ? dm[1]!.trim() : null;
+	const dm = m[1]?.match(/^description\s*:\s*["']?(.+?)["']?\s*$/m);
+	return dm ? (dm[1]?.trim() ?? null) : null;
 }
 
 export function extractName(content: string): string | null {
 	const m = content.match(/^---\s*\n([\s\S]*?)\n---/);
 	if (!m) return null;
-	const nm = m[1]!.match(/^name\s*:\s*["']?(.+?)["']?\s*$/m);
-	return nm ? nm[1]!.trim() : null;
+	const nm = m[1]?.match(/^name\s*:\s*["']?(.+?)["']?\s*$/m);
+	return nm ? (nm[1]?.trim() ?? null) : null;
 }
 
 // ─── Command directive interpolation ───────────────────────────────────────────
@@ -155,7 +157,9 @@ export async function interpolateSkill(
 
 	let out = content;
 	for (let i = resolved.length - 1; i >= 0; i--) {
-		const { d, text, blocked } = resolved[i]!;
+		const entry = resolved[i];
+		if (!entry) continue;
+		const { d, text, blocked } = entry;
 		out = replaceSpan(out, d.start, d.end, blocked ? text : fence(text));
 	}
 	return out;
@@ -184,7 +188,7 @@ export function formatSkillSummary(text: string, theme: ThemeLike): string {
 		.map((line) => {
 			const match = line.match(/^(\S+):\s+(.+)$/);
 			if (!match) return theme.fg("muted", line);
-			return `${theme.fg("accent", theme.bold(match[1]!))} ${theme.fg("muted", match[2]!)}`;
+			return `${theme.fg("accent", theme.bold(match[1] ?? ""))} ${theme.fg("muted", match[2] ?? "")}`;
 		})
 		.join("\n");
 }
@@ -194,8 +198,7 @@ export function formatSkillSummary(text: string, theme: ThemeLike): string {
 const ParamsSchema = Type.Object({
 	name: Type.Optional(
 		Type.String({
-			description:
-				'Skill name, e.g. "commit", "debug". Omit to list all skills.',
+			description: 'Skill name, e.g. "commit", "debug". Omit to list all skills.',
 		}),
 	),
 	full: Type.Optional(
@@ -214,12 +217,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 		description:
 			"Browse and load bundled skills. No args → list all skills with descriptions. name only → description for that skill. name + full=true → full instructions.",
 		promptSnippet: "Browse and load bundled skill instructions",
-		promptGuidelines: [
-			"Call read_skills() with no arguments to list all available skills and their descriptions.",
-			"Call read_skills(name=<skill>) to read the description of a specific skill before deciding to load it.",
-			"Call read_skills(name=<skill>, full=true) to load the full procedure for a skill before executing it.",
-			"Prefer read_skills() over the read tool for skills — it resolves the correct path regardless of install location.",
-		],
+		promptGuidelines: ["Matching skill? Call read_skills() first."],
 		executionMode: "sequential",
 		parameters: ParamsSchema,
 
@@ -251,22 +249,16 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 					}
 				});
 
-				return ok(
-					`Available skills (${skills.length}):\n\n${lines.join("\n")}`,
-				);
+				return ok(`Available skills (${skills.length}):\n\n${lines.join("\n")}`);
 			}
 
 			// Resolve skill
 			const skills = discoverSkills();
-			const entry = skills.find(
-				(s) => s.name === name || s.name === name.replace(/\.md$/, ""),
-			);
+			const entry = skills.find((s) => s.name === name || s.name === name.replace(/\.md$/, ""));
 
 			if (!entry) {
 				const names = skills.map((s) => s.name).join(", ");
-				return fail(
-					`Skill "${name}" not found. Available: ${names || "(none)"}`,
-				);
+				return fail(`Skill "${name}" not found. Available: ${names || "(none)"}`);
 			}
 
 			try {
@@ -275,9 +267,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 				// full=false (default) → description only
 				if (!full) {
 					const desc = extractDescription(content);
-					return ok(
-						desc ? `${entry.name}: ${desc}` : `${entry.name}: (no description)`,
-					);
+					return ok(desc ? `${entry.name}: ${desc}` : `${entry.name}: (no description)`);
 				}
 
 				// full=true → interpolate !`cmd` directives (pix-gate-gated, no
@@ -287,9 +277,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 				return ok(expanded);
 			} catch (err) {
 				return fail(
-					`Failed to read skill "${name}": ${
-						err instanceof Error ? err.message : String(err)
-					}`,
+					`Failed to read skill "${name}": ${err instanceof Error ? err.message : String(err)}`,
 				);
 			}
 		},

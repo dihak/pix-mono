@@ -17,11 +17,7 @@ import type {
 	ExtensionContext,
 	ThemeColor,
 } from "@earendil-works/pi-coding-agent";
-import {
-	type IconKey,
-	icon,
-	onIconModeChange,
-} from "@xynogen/pix-pretty/icon-catalog";
+import { type IconKey, icon, onIconModeChange } from "@xynogen/pix-pretty/icon-catalog";
 
 /**
  * Each optimizer tool (caveman/rtk/toon/ponytail) exposes a handle so the
@@ -49,7 +45,7 @@ export type OptimizerTool = "caveman" | "rtk" | "toon" | "ponytail";
 
 /**
  * Icons come from the shared pix-pretty catalog and follow the ONE global icon
- * mode (set via /pretty). The optimizer no longer owns a mode: each tool maps
+ * mode (set via /pix). The optimizer no longer owns a mode: each tool maps
  * to a semantic catalog key, and the cell renders whatever the active mode
  * resolves — nerd / unicode / ascii — with no per-package knob.
  */
@@ -66,12 +62,7 @@ export function toolIcon(tool: OptimizerTool): string {
 }
 
 /** Fixed left-to-right order of icons in the cell. */
-const TOOL_ORDER: readonly OptimizerTool[] = [
-	"caveman",
-	"rtk",
-	"toon",
-	"ponytail",
-];
+const TOOL_ORDER: readonly OptimizerTool[] = ["caveman", "rtk", "toon", "ponytail"];
 
 /** Theme color for enabled icons. */
 const ENABLED_COLOR: ThemeColor = "accent";
@@ -85,7 +76,7 @@ export type Colorize = (color: ThemeColor, text: string) => string;
  * Build the colored status string for a set of tool states. ALL tool icons are
  * always shown, in TOOL_ORDER; each is accent-colored when its tool is enabled
  * and dim when disabled. Glyphs resolve against the active global icon mode
- * (see /pretty). `color` applies the theme color (e.g. theme.fg).
+ * (see /pix). `color` applies the theme color (e.g. theme.fg).
  *
  * Pure + exported for tests (pass a tagging colorizer to assert per-icon color).
  * A trailing space separates the cell from the next status segment.
@@ -111,7 +102,7 @@ export class OptimizerStatus {
 
 	constructor() {
 		// The cell is a pushed status (setStatus), so it does NOT auto-refresh
-		// when /pretty flips the global icon mode. Repaint it on mode change
+		// when /pix flips the global icon mode. Repaint it on mode change
 		// using the last-seen ctx (no-op until the cell has painted once).
 		onIconModeChange(() => {
 			if (this.lastCtx) this.paint(this.lastCtx);
@@ -124,11 +115,7 @@ export class OptimizerStatus {
 	}
 
 	/** Update one tool's enabled state and repaint the shared cell. */
-	set(
-		tool: OptimizerTool,
-		enabled: boolean,
-		ctx: Pick<ExtensionContext, "ui">,
-	): void {
+	set(tool: OptimizerTool, enabled: boolean, ctx: Pick<ExtensionContext, "ui">): void {
 		this.states[tool] = enabled;
 		this.paint(ctx);
 	}

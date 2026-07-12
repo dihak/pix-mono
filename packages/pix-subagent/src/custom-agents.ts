@@ -6,7 +6,26 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import { BUILTIN_TOOL_NAMES } from "./agent-types.ts";
-import type { AgentConfig, ThinkingLevel } from "./types.ts";
+import type { AgentConfig } from "./types.ts";
+
+/**
+ * Valid thinking levels. Includes "off" (ModelThinkingLevel) alongside the
+ * ThinkingLevel union — the tool schema and README both document "off" as a
+ * valid value, so frontmatter should accept it too.
+ */
+const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
+
+/**
+ * Parse and validate a thinking level value.
+ * Returns the value only when it matches a known level; otherwise undefined.
+ */
+function thinkingLevel(val: unknown): (typeof THINKING_LEVELS)[number] | undefined {
+	if (typeof val !== "string") return undefined;
+	const lower = val.trim().toLowerCase();
+	return (THINKING_LEVELS as readonly string[]).includes(lower)
+		? (lower as (typeof THINKING_LEVELS)[number])
+		: undefined;
+}
 
 /**
  * Scan for custom agent .md files from multiple locations.
@@ -52,10 +71,19 @@ function loadFromDir(
 			continue;
 		}
 
-		const { frontmatter: fm, body } =
-			parseFrontmatter<Record<string, unknown>>(content);
+		const { frontmatter: fm, body } = parseFrontmatter<Record<string, unknown>>(content);
 
 		const { builtinToolNames, extSelectors } = parseToolsField(fm.tools);
+
+		// Validate thinking level and collect warnings for invalid values
+		const warnings: string[] = [];
+		const rawThinking = str(fm.thinking);
+		const parsedThinking = rawThinking !== undefined ? thinkingLevel(rawThinking) : undefined;
+		if (rawThinking !== undefined && parsedThinking === undefined) {
+			warnings.push(
+				`thinking: "${rawThinking}" is not a valid level (${THINKING_LEVELS.join("|")}) \u2014 ignored`,
+			);
+		}
 
 		agents.set(name, {
 			name,
@@ -68,16 +96,13 @@ function loadFromDir(
 			excludeExtensions: csvListOptional(fm.exclude_extensions),
 			skills: inheritField(fm.skills ?? fm.inherit_skills),
 			model: str(fm.model),
-			thinking: str(fm.thinking) as ThinkingLevel | undefined,
+			thinking: parsedThinking as AgentConfig["thinking"],
+			warnings: warnings.length > 0 ? warnings : undefined,
 			maxTurns: nonNegativeInt(fm.max_turns),
 			systemPrompt: body.trim(),
 			promptMode: fm.prompt_mode === "append" ? "append" : "replace",
-			inheritContext:
-				fm.inherit_context != null ? fm.inherit_context === true : undefined,
-			runInBackground:
-				fm.run_in_background != null
-					? fm.run_in_background === true
-					: undefined,
+			inheritContext: fm.inherit_context != null ? fm.inherit_context === true : undefined,
+
 			isolated: fm.isolated != null ? fm.isolated === true : undefined,
 			enabled: fm.enabled !== false, // default true; explicitly false disables
 			source,
@@ -138,9 +163,7 @@ function parseToolsField(val: unknown): {
 	const plain = entries.filter((e) => !isWildcard(e) && !e.startsWith("ext:"));
 	const extEntries = entries.filter((e) => e.startsWith("ext:"));
 	return {
-		builtinToolNames: hasWildcard
-			? [...new Set([...BUILTIN_TOOL_NAMES, ...plain])]
-			: plain,
+		builtinToolNames: hasWildcard ? [...new Set([...BUILTIN_TOOL_NAMES, ...plain])] : plain,
 		extSelectors: extEntries.length > 0 ? extEntries : undefined,
 	};
 }

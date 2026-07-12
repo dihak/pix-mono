@@ -44,6 +44,21 @@ for (const entry of readdirSync(packagesDir)) {
 	pkgs.push({ dir: join(packagesDir, entry), name: pkg.name, version: pkg.version });
 }
 
+// ── Pre-flight: reject workspace: protocol in any dependency ──────────────────
+
+let hasWorkspaceProtocol = false;
+for (const { dir, name } of pkgs) {
+	const raw = readFileSync(join(dir, "package.json"), "utf8");
+	if (raw.includes('"workspace:')) {
+		console.error(`✖ ${name}: package.json contains workspace: protocol — replace with a semver range before publishing.`);
+		hasWorkspaceProtocol = true;
+	}
+}
+if (hasWorkspaceProtocol) {
+	console.error("\nAborted. Fix workspace: references and retry.");
+	process.exit(1);
+}
+
 if (DRY_RUN) console.log("[dry-run mode]");
 console.log(`Found ${pkgs.length} publishable packages. Checking registry...`);
 

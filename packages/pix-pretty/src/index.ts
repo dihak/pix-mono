@@ -8,33 +8,19 @@
  * UI features (paste chips, thinking blocks) live in pix-display.
  */
 
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { registerFffCommands } from "./commands/fff.js";
-import { registerPrettyCommand } from "./commands/pretty.js";
-import { getDefaultAgentDir, setPrettyTheme } from "./config.js";
 import { fffState } from "./fff.js";
 import { clearHighlightCache } from "./highlight.js";
 import { initIconMode } from "./icon-persist.js";
 import type { PiPrettyApi } from "./types.js";
 
 export default function piPrettyExtension(pi: PiPrettyApi): void {
-	// ── Theme init ──────────────────────────────────────────────────────
-	setPrettyTheme(
-		(() => {
-			try {
-				return getAgentDir?.() ?? getDefaultAgentDir();
-			} catch {
-				return getDefaultAgentDir();
-			}
-		})(),
-	);
 	clearHighlightCache();
 
 	// ── Icon mode ───────────────────────────────────────────
-	// Seed the global icon mode from pretty.json (overrides env default), then
-	// register the single /pretty switch.
+	// Seed the global icon mode from pix.json (overrides env default).
+	// The /pix settings command lives in pix-data.
 	initIconMode();
-	registerPrettyCommand(pi);
 
 	// ── FFF slash commands ──────────────────────────────────────────────
 	// fffState is a module-level singleton shared with pix-grep/pix-find.

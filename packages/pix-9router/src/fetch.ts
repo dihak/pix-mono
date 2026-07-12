@@ -28,9 +28,7 @@ async function apiPost(
 	const key = auth();
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-	const s = signal
-		? AbortSignal.any([signal, controller.signal])
-		: controller.signal;
+	const s = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
 	try {
 		const res = await fetch(url, {
@@ -93,10 +91,7 @@ export function formatFetchResult(raw: string): string {
 		content?: { text?: string | null } | string | null;
 	};
 
-	const text =
-		typeof obj.content === "string"
-			? obj.content
-			: (obj.content?.text ?? undefined);
+	const text = typeof obj.content === "string" ? obj.content : (obj.content?.text ?? undefined);
 	if (typeof text !== "string") return raw;
 
 	const header: string[] = [];
@@ -110,15 +105,13 @@ export default function registerFetch(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "fetch",
 		label: "Fetch",
-		description:
-			"Fetch a web page as markdown, text, or raw HTML via exa. Returns page content.",
+		description: "Fetch a web page as markdown, text, or raw HTML via exa. Returns page content.",
 		promptSnippet:
 			"fetch(url, format, max_characters?) — format: 'markdown', 'text', or 'html'. Read page content via exa.",
 		promptGuidelines: [
 			"Use fetch when you need to read the full content of a specific URL.",
 			"Prefer format='markdown' for readable content, 'text' for plain text extraction, 'html' for raw source.",
 			"Set max_characters to cap response size (default 1000, 0 = unlimited). Use 5000-10000 for typical pages.",
-			"Always prefer fetch over raw curl/browser for reading page content.",
 		],
 		renderCall: makeRenderCall("fetch", (args) => String(args.url ?? "")),
 		renderResult: makeRenderResult(),
@@ -142,9 +135,7 @@ export default function registerFetch(pi: ExtensionAPI): void {
 
 			try {
 				onUpdate?.({
-					content: [
-						{ type: "text", text: `Fetching (${fmt}): ${params.url}...` },
-					],
+					content: [{ type: "text", text: `Fetching (${fmt}): ${params.url}...` }],
 					details: undefined,
 				});
 
@@ -203,8 +194,7 @@ export default function registerFetch(pi: ExtensionAPI): void {
 					details: { source: "curl-fallback", chars: html.length },
 				};
 			} catch (curlErr: unknown) {
-				const curlMsg =
-					curlErr instanceof Error ? curlErr.message : String(curlErr);
+				const curlMsg = curlErr instanceof Error ? curlErr.message : String(curlErr);
 				return {
 					content: [
 						{

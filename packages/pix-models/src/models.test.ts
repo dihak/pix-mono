@@ -1,5 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { benchStars, fmtCost, fmtCtx, sortModels } from "./models.ts";
+import {
+	benchStars,
+	filterModelItems,
+	fmtCost,
+	fmtCtx,
+	type ModelSearchLookup,
+	normalizeModelText,
+	sortModels,
+} from "./models.ts";
 
 describe("fmtCtx", () => {
 	it("formats 0 as 0", () => expect(fmtCtx(0)).toBe("0"));
@@ -16,8 +24,7 @@ describe("fmtCtx", () => {
 });
 
 describe("fmtCost", () => {
-	it("returns — for undefined entry", () =>
-		expect(fmtCost(undefined)).toBe("—"));
+	it("returns — for undefined entry", () => expect(fmtCost(undefined)).toBe("—"));
 	it("returns — when no cost field", () => expect(fmtCost({})).toBe("—"));
 	it("returns free when both 0", () => {
 		expect(fmtCost({ cost: { input: 0, output: 0 } })).toBe("free");
@@ -69,10 +76,11 @@ describe("sortModels", () => {
 		{ provider: "a", id: "m3", name: "Middle", score: null },
 		{ provider: "a", id: "m4", name: "Beta", score: 80 },
 	];
+	type ModelEntry = (typeof models)[number];
 
 	it("sorts by score descending", () => {
 		const sorted = sortModels(models);
-		expect(sorted[0].name).toBe("Alpha"); // score 95
+		expect((sorted[0] as ModelEntry).name).toBe("Alpha"); // score 95
 	});
 
 	it("breaks score ties alphabetically by name", () => {
@@ -84,7 +92,7 @@ describe("sortModels", () => {
 
 	it("puts null score models last", () => {
 		const sorted = sortModels(models);
-		expect(sorted[sorted.length - 1].name).toBe("Middle");
+		expect((sorted[sorted.length - 1] as ModelEntry).name).toBe("Middle");
 	});
 
 	it("does not mutate the original array", () => {
@@ -117,11 +125,127 @@ describe("sortModels", () => {
 			{ provider: "a", id: "m4", name: "Delta", score: 60, tier: 0 },
 		];
 		const sorted = sortModels(mixed);
-		expect(sorted.map((m) => m.name)).toEqual([
-			"Alpha",
-			"Delta",
-			"Beta",
-			"Gamma",
-		]);
+		expect(sorted.map((m) => m.name)).toEqual(["Alpha", "Delta", "Beta", "Gamma"]);
+	});
+});
+
+// ─── normalizeModelText ───────────────────────────────────────────────────────
+
+describe("normalizeModelText", () => {
+	it("lowercases", () => {
+		expect(normalizeModelText("GLM-5.2")).toBe("glm52");
+	});
+
+	it("strips hyphens", () => {
+		expect(normalizeModelText("claude-opus-4-8")).toBe("claudeopus48");
+	});
+
+	it("strips dots", () => {
+		expect(normalizeModelText("qwen3.7-max")).toBe("qwen37max");
+	});
+
+	it("strips all non-alphanumeric", () => {
+		expect(normalizeModelText("a!b@c#d$e%f^g&h")).toBe("abcdefgh");
+	});
+
+	it("handles plain alphanumeric", () => {
+		expect(normalizeModelText("abc123")).toBe("abc123");
+	});
+
+	it("handles empty string", () => {
+		expect(normalizeModelText("")).toBe("");
+	});
+});
+
+// ─── filterModelItems ─────────────────────────────────────────────────────────
+
+describe("filterModelItems", () => {
+	// Fixture: models with ids matching the acceptance criteria.
+	// Ranks are assigned so some overlap with digit-queries.
+	const mk = (id: string, rank?: number) => ({
+		value: `p/${id}`,
+		_rank: rank,
+	});
+
+	type Fixture = ReturnType<typeof mk>;
+
+	/** Build lookup maps exactly like production: haystack = `${id} ${name ?? ""}`. */
+	function buildLookup(items: Fixture[]): ModelSearchLookup {
+		const rankByValue = new Map<string, number>();
+		const searchTextByValue = new Map<string, string>();
+		const normalizedByValue = new Map<string, string>();
+		for (const it of items) {
+			// value is "p/glm-5.2" — extract the id part.
+			const id = it.value.split("/")[1] ?? "";
+			if (it._rank != null) rankByValue.set(it.value, it._rank);
+			const text = `${id} ${""}`; // no name in test fixture
+			searchTextByValue.set(it.value, text);
+			normalizedByValue.set(it.value, normalizeModelText(text));
+		}
+		return { rankByValue, searchTextByValue, normalizedByValue };
+	}
+
+	// Full fixture with ranks: glm-5.2→3, minimax-m3→8, claude-opus-4-8→2.
+	const allItems: Fixture[] = [
+		mk("glm-5.2", 3),
+		mk("glm-5.1"),
+		mk("minimax-m3", 8),
+		mk("claude-opus-4-8", 2),
+		mk("claude-sonnet-4-6"),
+		mk("qwen3.7-max"),
+	];
+	const allLookup = buildLookup(allItems);
+
+	function values(result: Fixture[]): string[] {
+		return result.map((it) => it.value);
+	}
+
+	it("empty query returns all items in original order", () => {
+		const result = filterModelItems(allItems, "", allLookup);
+		expect(values(result)).toEqual(allItems.map((it) => it.value));
+	});
+
+	it("query '52' includes glm-5.2 via normalized substring", () => {
+		const result = filterModelItems(allItems, "52", allLookup);
+		expect(values(result)).toContain("p/glm-5.2");
+	});
+
+	it("query 'm3' includes minimax-m3 first (substring priority over fuzzy noise)", () => {
+		const result = filterModelItems(allItems, "m3", allLookup);
+		expect(values(result)[0]).toBe("p/minimax-m3");
+	});
+
+	it("query '48' includes claude-opus-4-8", () => {
+		const result = filterModelItems(allItems, "48", allLookup);
+		expect(values(result)).toContain("p/claude-opus-4-8");
+	});
+
+	it("exact id query 'glm-5.2' still matches glm-5.2", () => {
+		const result = filterModelItems(allItems, "glm-5.2", allLookup);
+		expect(values(result)).toContain("p/glm-5.2");
+	});
+
+	it("digit query matching a rank returns that ranked item first", () => {
+		// glm-5.2 has rank 3 — query "3" should put it first.
+		const result = filterModelItems(allItems, "3", allLookup);
+		expect(values(result)[0]).toBe("p/glm-5.2");
+	});
+
+	it("dedupe: item matching both rank and substring appears once", () => {
+		// claude-opus-4-8 has rank 2; query "2" matches by rank AND
+		// normalized substring ("2" ⊂ "claudeopus48"). Should appear once.
+		const result = filterModelItems(allItems, "2", allLookup);
+		const occurrences = values(result).filter((v) => v === "p/claude-opus-4-8");
+		expect(occurrences.length).toBe(1);
+	});
+
+	it("digit query '8' (rank 8) returns minimax-m3 as rank match first", () => {
+		const result = filterModelItems(allItems, "8", allLookup);
+		expect(values(result)[0]).toBe("p/minimax-m3");
+	});
+
+	it("whitespace query is treated as empty", () => {
+		const result = filterModelItems(allItems, "   ", allLookup);
+		expect(values(result)).toEqual(allItems.map((it) => it.value));
 	});
 });

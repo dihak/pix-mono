@@ -6,10 +6,7 @@
  */
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import {
-	type OverlayResult,
-	showOverlay,
-} from "@xynogen/pix-pretty/gate-overlay";
+import { type OverlayResult, showOverlay } from "@xynogen/pix-pretty/gate-overlay";
 import type { PathRule, Rule } from "./lib.ts";
 
 export interface GateDecision {
@@ -106,27 +103,28 @@ export async function promptPathDecision(
 					},
 				];
 
-	const result: OverlayResult = await showOverlay(
-		ui as Parameters<typeof showOverlay>[0],
-		{
-			mode: "confirm",
-			title: `${icon} ${label} — ${hit.reason}`,
-			body: [`${op.toUpperCase()} ${path}`],
-			accent,
-			timeoutMs: PATH_TIMEOUT_MS[hit.severity],
-			choices,
-		},
-	);
+	const result: OverlayResult = await showOverlay(ui as Parameters<typeof showOverlay>[0], {
+		mode: "confirm",
+		title: `${icon} ${label} — ${hit.reason}`,
+		body: [`${op.toUpperCase()} ${path}`],
+		accent,
+		timeoutMs: PATH_TIMEOUT_MS[hit.severity],
+		choices,
+	});
 
-	if (result.action === "approved")
-		return { approved: true, reason: "Approved" };
-	if (result.action === "timeout")
-		return { approved: false, reason: "Timed out" };
+	if (result.action === "approved") return { approved: true, reason: "Approved" };
+	if (result.action === "timeout") return { approved: false, reason: "Timed out" };
 	return { approved: false, reason: "Blocked by user" };
 }
 
 /** Tier for dialog behavior — higher = more restrictive (deny-first, shorter timeout). */
-const SEVERITY_TIER: Record<string, number> = {
+const SEVERITY_TIER: {
+	critical: number;
+	block: number;
+	dangerous: number;
+	warn: number;
+	risky: number;
+} = {
 	critical: 5,
 	block: 4,
 	dangerous: 3,
@@ -146,6 +144,7 @@ export async function promptMergedGateDecision(
 	// Sort by tier desc so the highest-severity concern drives dialog behavior.
 	const sorted = [...concerns].sort((a, b) => b.tier - a.tier);
 	const highest = sorted[0];
+	if (!highest) throw new Error("promptMergedGateDecision requires at least one concern");
 	const isRestrictive = highest.tier >= SEVERITY_TIER.block; // block or critical
 
 	// Title: unique severity types, joined with " + "
@@ -158,16 +157,11 @@ export async function promptMergedGateDecision(
 			uniqueLabels.push(key);
 		}
 	}
-	const titleSuffix =
-		command.length > 55 ? `${command.slice(0, 52)}…` : command;
+	const titleSuffix = command.length > 55 ? `${command.slice(0, 52)}…` : command;
 	const title = `${uniqueLabels.join(" + ")} — ${titleSuffix}`;
 
 	// Body: command + concern list
-	const body = [
-		command,
-		"",
-		...sorted.map((c) => `${c.icon} ${c.label} — ${c.detail}`),
-	];
+	const body = [command, "", ...sorted.map((c) => `${c.icon} ${c.label} — ${c.detail}`)];
 
 	const accent =
 		highest.tier >= SEVERITY_TIER.critical
@@ -207,15 +201,17 @@ export async function promptMergedGateDecision(
 				},
 			];
 
-	const result: OverlayResult = await showOverlay(
-		ui as Parameters<typeof showOverlay>[0],
-		{ mode: "confirm", title, body, accent, timeoutMs, choices },
-	);
+	const result: OverlayResult = await showOverlay(ui as Parameters<typeof showOverlay>[0], {
+		mode: "confirm",
+		title,
+		body,
+		accent,
+		timeoutMs,
+		choices,
+	});
 
-	if (result.action === "approved")
-		return { approved: true, reason: "Approved" };
-	if (result.action === "timeout")
-		return { approved: false, reason: "Timed out" };
+	if (result.action === "approved") return { approved: true, reason: "Approved" };
+	if (result.action === "timeout") return { approved: false, reason: "Timed out" };
 	return { approved: false, reason: "Blocked by user" };
 }
 
@@ -262,21 +258,16 @@ export async function promptGateDecision(
 					},
 				];
 
-	const result: OverlayResult = await showOverlay(
-		ui as Parameters<typeof showOverlay>[0],
-		{
-			mode: "confirm",
-			title: `${icon} ${label} — ${hit.reason}`,
-			body: [command],
-			accent,
-			timeoutMs: TIMEOUT_MS[hit.severity],
-			choices,
-		},
-	);
+	const result: OverlayResult = await showOverlay(ui as Parameters<typeof showOverlay>[0], {
+		mode: "confirm",
+		title: `${icon} ${label} — ${hit.reason}`,
+		body: [command],
+		accent,
+		timeoutMs: TIMEOUT_MS[hit.severity],
+		choices,
+	});
 
-	if (result.action === "approved")
-		return { approved: true, reason: "Approved" };
-	if (result.action === "timeout")
-		return { approved: false, reason: "Timed out" };
+	if (result.action === "approved") return { approved: true, reason: "Approved" };
+	if (result.action === "timeout") return { approved: false, reason: "Timed out" };
 	return { approved: false, reason: "Blocked by user" };
 }

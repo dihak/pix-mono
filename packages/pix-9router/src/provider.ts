@@ -11,12 +11,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ModelsDevModel, RouterModel } from "./data.js";
-import {
-	fetchModelsDevIndex,
-	lookupInIndex,
-	routerBaseUrl,
-	routerModels,
-} from "./data.js";
+import { fetchModelsDevIndex, lookupInIndex, routerBaseUrl, routerModels } from "./data.js";
 
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 16_384;
@@ -29,18 +24,9 @@ const ZERO_COST = {
 };
 
 // Fallback pattern-based detection if models.dev lookup fails
-const IMAGE_CAPABLE_PATTERNS = [
-	/claude/i,
-	/gpt-5/i,
-	/gpt-4/i,
-	/kimi-k2/i,
-	/hy3/i,
-];
+const IMAGE_CAPABLE_PATTERNS = [/claude/i, /gpt-5/i, /gpt-4/i, /kimi-k2/i, /hy3/i];
 
-function getInputTypes(
-	model: RouterModel,
-	devModel?: ModelsDevModel,
-): ("text" | "image")[] {
+function getInputTypes(model: RouterModel, devModel?: ModelsDevModel): ("text" | "image")[] {
 	if (devModel?.modalities?.input) {
 		const inputs = devModel.modalities.input.filter(
 			(i): i is "text" | "image" => i === "text" || i === "image",
@@ -56,10 +42,7 @@ function getModelName(model: RouterModel, devModel?: ModelsDevModel): string {
 	return model.name || devModel?.name || model.id || "unknown";
 }
 
-function getContextWindow(
-	model: RouterModel,
-	devModel?: ModelsDevModel,
-): number {
+function getContextWindow(model: RouterModel, devModel?: ModelsDevModel): number {
 	return (
 		model.context_window ||
 		model.contextWindow ||
@@ -69,24 +52,15 @@ function getContextWindow(
 }
 
 function getMaxTokens(model: RouterModel, devModel?: ModelsDevModel): number {
-	return (
-		model.max_tokens ||
-		model.maxTokens ||
-		devModel?.limit?.output ||
-		DEFAULT_MAX_TOKENS
-	);
+	return model.max_tokens || model.maxTokens || devModel?.limit?.output || DEFAULT_MAX_TOKENS;
 }
 
 function getReasoning(model: RouterModel, devModel?: ModelsDevModel): boolean {
 	if (typeof devModel?.reasoning === "boolean") return devModel.reasoning;
-	return /reasoner|thinking|xhigh|high|max|pro|codex|opus|sonnet/i.test(
-		model.id ?? "",
-	);
+	return /reasoner|thinking|xhigh|high|max|pro|codex|opus|sonnet/i.test(model.id ?? "");
 }
 
-export default async function registerProvider(
-	pi: ExtensionAPI,
-): Promise<void> {
+export default async function registerProvider(pi: ExtensionAPI): Promise<void> {
 	const apiKey = process.env.ROUTER_API_KEY;
 
 	if (!apiKey) {
@@ -122,9 +96,10 @@ export default async function registerProvider(
 		api: "openai-completions",
 		headers: { "User-Agent": "pi-coding-agent" },
 		models: models.map((model) => {
-			const devModel = lookupInIndex(model.id!, devIndex);
+			const id = model.id ?? "";
+			const devModel = lookupInIndex(id, devIndex);
 			return {
-				id: model.id!,
+				id,
 				name: getModelName(model, devModel),
 				reasoning: getReasoning(model, devModel),
 				input: getInputTypes(model, devModel),

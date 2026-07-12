@@ -2,6 +2,7 @@
  * Model resolution: exact match ("provider/modelId") with fuzzy fallback.
  */
 
+import type { Api, Model } from "@earendil-works/pi-ai";
 import { lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
 
 export interface ModelEntry {
@@ -11,9 +12,9 @@ export interface ModelEntry {
 }
 
 export interface ModelRegistry {
-	find(provider: string, modelId: string): any;
-	getAll(): any[];
-	getAvailable?(): any[];
+	find(provider: string, modelId: string): Model<Api> | undefined;
+	getAll(): Model<Api>[];
+	getAvailable?(): Model<Api>[];
 }
 
 /**
@@ -21,15 +22,10 @@ export interface ModelRegistry {
  * Tries exact match first ("provider/modelId"), then fuzzy match against all available models.
  * Returns the Model on success, or an error message string on failure.
  */
-export function resolveModel(
-	input: string,
-	registry: ModelRegistry,
-): any | string {
+export function resolveModel(input: string, registry: ModelRegistry): Model<Api> | string {
 	// Available models (those with auth configured)
 	const all = (registry.getAvailable?.() ?? registry.getAll()) as ModelEntry[];
-	const availableSet = new Set(
-		all.map((m) => `${m.provider}/${m.id}`.toLowerCase()),
-	);
+	const availableSet = new Set(all.map((m) => `${m.provider}/${m.id}`.toLowerCase()));
 
 	// 1. Exact match: "provider/modelId" — only if available (has auth)
 	const slashIdx = input.indexOf("/");
@@ -66,9 +62,7 @@ export function resolveModel(
 				.split(/[\s\-/]+/)
 				.every(
 					(part) =>
-						id.includes(part) ||
-						name.includes(part) ||
-						m.provider.toLowerCase().includes(part),
+						id.includes(part) || name.includes(part) || m.provider.toLowerCase().includes(part),
 				)
 		) {
 			score = 20; // all parts present somewhere

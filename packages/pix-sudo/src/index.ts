@@ -27,11 +27,7 @@ import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
 import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
 import { showOverlay } from "@xynogen/pix-pretty/gate-overlay";
 import { renderBashOutput } from "@xynogen/pix-pretty/renderers";
-import type {
-	RenderContextLike,
-	ThemeLike,
-	ToolResultLike,
-} from "@xynogen/pix-pretty/types";
+import type { RenderContextLike, ThemeLike, ToolResultLike } from "@xynogen/pix-pretty/types";
 import {
 	fillToolBackground,
 	getTextContent,
@@ -48,11 +44,13 @@ import {
 	MAX_OUTPUT_LINES,
 	runWithSudo,
 	truncate,
+	validateSudoPassword,
 } from "./lib.ts";
 
 // Auto-deny the root prompt after this idle window (dead-man's switch). The
 // first keypress cancels it, so it only fires when the user is truly away.
 const ROOT_PROMPT_TIMEOUT_MS = 60_000;
+const MAX_PASSWORD_ATTEMPTS = 3;
 
 // ── Extension entry point ─────────────────────────────────────────────────────
 
@@ -67,8 +65,7 @@ export default function (pi: ExtensionAPI): void {
 			"Use only when the task genuinely requires elevated permissions " +
 			"(e.g. writing to /etc, managing system services, installing packages system-wide). " +
 			"You MUST provide a clear `reason` explaining why root is needed.",
-		promptSnippet:
-			"Execute a shell command as root after user sees intent + password prompt",
+		promptSnippet: "Execute a shell command as root after user sees intent + password prompt",
 		promptGuidelines: [
 			"Use sudo_run only when root privileges are strictly required — prefer plain bash for everything else. " +
 				"Always set `reason` to a short plain-English sentence explaining why root is needed " +
@@ -112,13 +109,14 @@ export default function (pi: ExtensionAPI): void {
 			const cached = await hasValidTicket();
 
 			const body = [
-				reason?.trim()
-					? `Intent: ${reason.trim()}`
-					: "No reason provided by AI",
+				reason?.trim() ? `Intent: ${reason.trim()}` : "No reason provided by AI",
 				`Command: ${command}`,
 			];
 
-			// ── Confirm (+ password unless a ticket is already cached) ─────────
+			let result: { stdout: string; stderr: string; code: number } | undefined;
+			let executionError: unknown;
+
+			// ── Confirm (+ validate password inside the same open overlay) ───────
 			const overlayResult = cached
 				? await showOverlay(ctx.ui, {
 						mode: "confirm",
@@ -137,6 +135,22 @@ export default function (pi: ExtensionAPI): void {
 						body,
 						accent: "error",
 						timeoutMs: ROOT_PROMPT_TIMEOUT_MS,
+						maxPasswordAttempts: MAX_PASSWORD_ATTEMPTS,
+						validatePassword: async (password) => {
+							try {
+								const validation = await validateSudoPassword(password, signal);
+								if (detectAuthFailure(validation.code, validation.stderr)) return false;
+								if (validation.code !== 0) {
+									executionError = new Error(
+										validation.stderr || "sudo password validation failed",
+									);
+								}
+								return true;
+							} catch (err) {
+								executionError = err;
+								return true;
+							}
+						},
 						choices: [
 							{
 								value: "yes",
@@ -167,29 +181,36 @@ export default function (pi: ExtensionAPI): void {
 				};
 			}
 
-			// Empty string when relying on the cached ticket (sudo -S reads nothing).
-			const password = overlayResult.password ?? "";
+			if (executionError) {
+				const msg =
+					executionError instanceof Error ? executionError.message : String(executionError);
+				throw new Error(`sudo_run failed: ${msg}`);
+			}
 
-			// ── Step 3: Execute via sudo -S ────────────────────────────────────
-			let result: { stdout: string; stderr: string; code: number };
+			// Password validation refreshes sudo's PAM ticket with `sudo -v`; the
+			// requested command always runs afterward, outside the checking overlay.
 			try {
-				result = await runWithSudo(command, password, signal);
+				result = await runWithSudo(command, "", signal);
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				throw new Error(`sudo_run failed: ${msg}`);
 			}
 
-			// ── Step 4: Auth-failure check ─────────────────────────────────────
-			if (detectAuthFailure(result.code, result.stderr)) {
+			if (!result) throw new Error("sudo_run failed: command produced no result");
+
+			if (
+				overlayResult.passwordAttemptsExhausted ||
+				detectAuthFailure(result.code, result.stderr)
+			) {
 				ctx.ui.notify(
-					"🔐 sudo authentication failed — wrong password",
+					`🔐 sudo authentication failed after ${MAX_PASSWORD_ATTEMPTS} attempts`,
 					"error",
 				);
 				return {
 					content: [
 						{
 							type: "text",
-							text: "sudo authentication failed — wrong password.",
+							text: `sudo authentication failed after ${MAX_PASSWORD_ATTEMPTS} attempts — wrong password.`,
 						},
 					],
 					details: { code: result.code, stdout: "", stderr: result.stderr },
@@ -205,17 +226,14 @@ export default function (pi: ExtensionAPI): void {
 				.filter(Boolean)
 				.join("\n");
 
-			const { text: truncatedText, truncated } = truncate(
-				combined || "(no output)",
-			);
+			const { text: truncatedText, truncated } = truncate(combined || "(no output)");
 
 			const suffix = truncated
 				? `\n\n[Output truncated to ${MAX_OUTPUT_LINES} lines / ${MAX_OUTPUT_BYTES / 1024}KB]`
 				: "";
 
 			const combinedOut =
-				[result.stdout, result.stderr].filter(Boolean).join("\n") ||
-				"(no output)";
+				[result.stdout, result.stderr].filter(Boolean).join("\n") || "(no output)";
 
 			return {
 				content: [
@@ -257,8 +275,7 @@ export default function (pi: ExtensionAPI): void {
 
 			const lines = rendered ? rendered.split("\n") : [];
 			const lineCount = lines.length;
-			const lineInfo =
-				lineCount > 1 ? `  ${FG_DIM}(${lineCount} lines)${RST}` : "";
+			const lineInfo = lineCount > 1 ? `  ${FG_DIM}(${lineCount} lines)${RST}` : "";
 			const header = `  ${summary}${lineInfo}`;
 
 			if (!rendered) {

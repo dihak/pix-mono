@@ -56,12 +56,9 @@ describe("paste-chips restyleMarkers", () => {
 	describe("multiple markers in one line", () => {
 		it("restyles all markers in a single line", () => {
 			const imageIds = new Set([1]);
-			const line =
-				"before [paste #1 58 chars] middle [paste #2 +10 lines] after";
+			const line = "before [paste #1 58 chars] middle [paste #2 +10 lines] after";
 			const result = restyleMarkers(line, imageIds);
-			expect(stripAnsi(result)).toBe(
-				"before 󰋩 image #1 middle 󰉿 text 10 lines after",
-			);
+			expect(stripAnsi(result)).toBe("before 󰋩 image #1 middle 󰉿 text 10 lines after");
 		});
 	});
 
@@ -178,13 +175,8 @@ describe("paste-chips expandPasteMarkers", () => {
 			[1, "curl one"],
 			[2, "curl two"],
 		]);
-		const result = expandPasteMarkers(
-			"ini [paste #1 8 chars] ini juga [paste #2 8 chars]",
-			pastes,
-		);
-		expect(result).toBe(
-			"ini <paste>curl one</paste> ini juga <paste>curl two</paste>",
-		);
+		const result = expandPasteMarkers("ini [paste #1 8 chars] ini juga [paste #2 8 chars]", pastes);
+		expect(result).toBe("ini <paste>curl one</paste> ini juga <paste>curl two</paste>");
 	});
 
 	it("wraps line-counted markers too", () => {
@@ -199,9 +191,7 @@ describe("paste-chips expandPasteMarkers", () => {
 	});
 
 	it("is a no-op when there are no pastes", () => {
-		expect(expandPasteMarkers("[paste #1 5 chars]", new Map())).toBe(
-			"[paste #1 5 chars]",
-		);
+		expect(expandPasteMarkers("[paste #1 5 chars]", new Map())).toBe("[paste #1 5 chars]");
 	});
 });
 
@@ -249,9 +239,7 @@ describe("paste-chips image paste round-trip", () => {
 		const second = replaceImagePaths("/tmp/two.jpg", internals, imageIds);
 		const expanded = expandPasteMarkers(`${first} ${second}`, internals.pastes);
 
-		expect(expanded).toBe(
-			"<paste>/tmp/one.png</paste> <paste>/tmp/two.jpg</paste>",
-		);
+		expect(expanded).toBe("<paste>/tmp/one.png</paste> <paste>/tmp/two.jpg</paste>");
 		expect(imageIds.has(1)).toBe(true);
 		expect(imageIds.has(2)).toBe(true);
 	});

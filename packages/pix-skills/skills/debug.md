@@ -1,6 +1,7 @@
 ---
 name: debug
 description: Root-Cause Analysis and self-annealing procedure for error resolution
+disable-model-invocation: true
 ---
 # Debug & Anneal Directive
 

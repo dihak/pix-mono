@@ -1,6 +1,7 @@
 ---
 name: runner
 description: Generate, convert, or update a task runner file (justfile, Makefile, mise tasks, Taskfile.yml, package.json scripts, or run.sh) for any project
+disable-model-invocation: true
 ---
 # Task Runner Generation Directive
 

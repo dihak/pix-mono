@@ -1,6 +1,7 @@
 ---
 name: subagent
 description: Plan a task, break it into small independent units, and fan them out in parallel to cheaper/less-capable subagent models for faster, cheaper, more efficient execution. Use when a task is large enough to split into parts that do not depend on each other and a strong model is overkill for each part.
+disable-model-invocation: true
 ---
 
 # Parallel Delegate

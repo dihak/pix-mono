@@ -6,11 +6,10 @@ const RADIO_SELECTED = "◉";
 const RADIO_UNSELECTED = "○";
 
 /** Glyph + theme color token for a selection row. Caller applies theme.fg(color, glyph). */
-export function selectionGlyph(opts: {
-	multi: boolean;
-	selected: boolean;
-	checked: boolean;
-}): { glyph: string; color: string } {
+export function selectionGlyph(opts: { multi: boolean; selected: boolean; checked: boolean }): {
+	glyph: string;
+	color: string;
+} {
 	if (opts.multi) {
 		return opts.checked
 			? { glyph: CHECKBOX_CHECKED, color: "success" }
@@ -28,8 +27,7 @@ export function selectionGlyph(opts: {
  */
 export function checkboxGlyphs(): { checked: string; unchecked: string } {
 	const unicodeSafe =
-		visibleWidth(CHECKBOX_CHECKED) === 1 &&
-		visibleWidth(CHECKBOX_UNCHECKED) === 1;
+		visibleWidth(CHECKBOX_CHECKED) === 1 && visibleWidth(CHECKBOX_UNCHECKED) === 1;
 	return unicodeSafe
 		? { checked: CHECKBOX_CHECKED, unchecked: CHECKBOX_UNCHECKED }
 		: { checked: "[x]", unchecked: "[ ]" };

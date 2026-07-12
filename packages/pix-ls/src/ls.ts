@@ -3,6 +3,7 @@ import type {
 	ExtensionContext,
 	LsToolInput,
 } from "@earendil-works/pi-coding-agent";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
 import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { renderTree } from "@xynogen/pix-pretty/renderers";
@@ -41,18 +42,10 @@ export function registerLsTool(
 			upd: AgentToolUpdateCallback<unknown> | undefined,
 			toolCtx: ExtensionContext,
 		) {
-			const result = (await origLs.execute(
-				tid,
-				params,
-				sig,
-				upd,
-				toolCtx,
-			)) as ToolResultLike;
+			const result = (await origLs.execute(tid, params, sig, upd, toolCtx)) as ToolResultLike;
 			const textContent = getTextContent(result);
 			const fp = params.path ?? cwd;
-			const entryCount = textContent
-				? textContent.trim().split("\n").filter(Boolean).length
-				: 0;
+			const entryCount = textContent ? textContent.trim().split("\n").filter(Boolean).length : 0;
 
 			setResultDetails(result, {
 				_type: "lsResult",
@@ -88,6 +81,15 @@ export function registerLsTool(
 				return text;
 			}
 
+			// Auto-collapse: show summary line after delay
+			const cs = renderCtx.state as CollapseState;
+			if (tickCollapse("ls", cs, renderCtx.invalidate)) {
+				const d2 = result.details as Record<string, unknown> | undefined;
+				const summary = d2?._type === "lsResult" ? `${d2.entryCount} entries` : "listed";
+				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				return text;
+			}
+
 			const d = result.details as Record<string, unknown> | undefined;
 			if (d?._type === "lsResult" && d.text) {
 				const tree = renderTree(d.text as string, d.path as string);
@@ -97,9 +99,7 @@ export function registerLsTool(
 			}
 
 			const output = getTextContent(result) || "listed";
-			text.setText(
-				fillToolBackground(`  ${theme.fg("dim", output.slice(0, 120))}`),
-			);
+			text.setText(fillToolBackground(`  ${theme.fg("dim", output.slice(0, 120))}`));
 			return text;
 		},
 	});

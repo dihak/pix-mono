@@ -1,6 +1,7 @@
 ---
 name: diff
 description: Review the current git changes using pre-populated status, staged, and unstaged diffs.
+disable-model-invocation: true
 ---
 
 # Diff Review Skill

@@ -8,10 +8,7 @@
  * Ported from tintinweb/pi-subagents (MIT). Trimmed: dropped memory tool helpers.
  */
 
-import {
-	createCodingTools,
-	createReadOnlyTools,
-} from "@earendil-works/pi-coding-agent";
+import { createCodingTools, createReadOnlyTools } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_AGENTS } from "./default-agents.ts";
 import type { AgentConfig } from "./types.ts";
 
@@ -21,9 +18,7 @@ import type { AgentConfig } from "./types.ts";
  * operations we never invoke — we read each tool's `.name` and discard it.
  */
 export const BUILTIN_TOOL_NAMES: string[] = [
-	...new Set(
-		[...createCodingTools("."), ...createReadOnlyTools(".")].map((t) => t.name),
-	),
+	...new Set([...createCodingTools("."), ...createReadOnlyTools(".")].map((t) => t.name)),
 ];
 
 /** Unified runtime registry of all agents (defaults + user-defined). */

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
+import type { CursorStore, FffState } from "@xynogen/pix-pretty/fff";
+import type {
+	PiPrettyApi,
+	RenderContextLike,
+	TextComponentCtor,
+	ThemeLike,
+} from "@xynogen/pix-pretty/types";
 import { registerBashTool } from "./bash";
 
 class MockTextComponent {
@@ -20,20 +27,25 @@ class MockTextComponent {
 
 describe("registerBashTool", () => {
 	it("clamps renderCall to small terminal widths", () => {
-		const registered: { renderCall?: (...args: any[]) => MockTextComponent } =
-			{};
+		const registered: {
+			renderCall?: (...args: unknown[]) => MockTextComponent;
+		} = {};
 		const origColumns = process.env.COLUMNS;
 		process.env.COLUMNS = "24";
 		process.stdout.emit("resize");
 		process.stdin.emit("resize");
 
 		try {
+			const mockPi: PiPrettyApi = {
+				registerTool(tool: unknown) {
+					Object.assign(registered, tool);
+				},
+				registerCommand() {},
+				on() {},
+			};
+
 			registerBashTool(
-				{
-					registerTool(tool: unknown) {
-						Object.assign(registered, tool);
-					},
-				} as any,
+				mockPi,
 				() => ({
 					execute: async () => ({
 						content: [{ type: "text", text: "ok" }],
@@ -43,27 +55,38 @@ describe("registerBashTool", () => {
 				{
 					cwd: process.cwd(),
 					sp: (p: string) => p,
-					TextComponent: MockTextComponent as any,
-					fffState: {} as any,
-					cursorStore: {} as any,
+					TextComponent: MockTextComponent as unknown as TextComponentCtor,
+					fffState: {
+						module: null,
+						finder: null,
+						partialIndex: false,
+						dbDir: null,
+					} satisfies FffState,
+					cursorStore: {
+						store: () => "",
+						get: () => undefined,
+					} as unknown as CursorStore,
 				},
 			);
+
+			const theme: ThemeLike = {
+				fg: (_key: string, value: string) => value,
+				bold: (value: string) => value,
+			};
+			const ctx: RenderContextLike = {
+				expanded: false,
+				isError: false,
+				invalidate: () => {},
+				state: {},
+			};
 
 			const text = registered.renderCall?.(
 				{
 					command: 'printf "very very very long line"\necho second\necho third',
 					timeout: 30,
 				},
-				{
-					fg: (_key: string, value: string) => value,
-					bold: (value: string) => value,
-				} as any,
-				{
-					expanded: false,
-					isError: false,
-					invalidate: () => {},
-					state: {},
-				} as any,
+				theme,
+				ctx,
 			);
 
 			expect(text).toBeDefined();

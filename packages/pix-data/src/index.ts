@@ -10,6 +10,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { benchlm, modelgrep } from "./data.ts";
+import { registerPixCommand } from "./pix-command.ts";
 
 export type {
 	BenchmarkEntry,
@@ -33,7 +34,8 @@ export {
 	modelgrep,
 } from "./data.ts";
 
-export default function (_pi: ExtensionAPI): void {
+export default function (pi: ExtensionAPI): void {
 	void modelgrep.get();
 	void benchlm.get();
+	registerPixCommand(pi);
 }

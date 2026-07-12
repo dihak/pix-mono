@@ -6,6 +6,8 @@
 		"baseUrl": ".",
 		"paths": {
 			"@xynogen/pix-data": ["packages/pix-data/src/index.ts"],
+			"@xynogen/pix-data/collapse": ["packages/pix-data/src/collapse.ts"],
+			"@xynogen/pix-data/pix-config": ["packages/pix-data/src/pix-config.ts"],
 			"@xynogen/pix-skills": ["packages/pix-skills/src/index.ts"],
 			"@xynogen/pix-gate/lib": ["packages/pix-gate/src/lib.ts"]
 		},
@@ -17,6 +19,7 @@
 		"resolveJsonModule": true,
 		"allowImportingTsExtensions": true,
 		"noEmit": true,
+		"noUncheckedIndexedAccess": true,
 		"types": ["bun"]
 	},
 	"include": ["packages/*/src/**/*.ts"],

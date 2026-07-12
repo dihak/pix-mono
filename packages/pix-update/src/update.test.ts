@@ -33,7 +33,7 @@ function makePathPi(paths: Partial<Record<string, string>>) {
 		// `command -v <name> || true` → single shell arg in args[1]
 		const match = (argv[1] ?? "").match(/command -v (\S+)/);
 		if (match) {
-			const found = paths[match[1]];
+			const found = paths[match[1] ?? ""];
 			return { stdout: found ?? "", stderr: "", code: 0 };
 		}
 		// realpath call
@@ -102,26 +102,30 @@ describe("commandFor", () => {
 	});
 
 	it("vp: command=vp, includes package@latest", () => {
-		const spec = commandFor("vp")!;
+		const spec = commandFor("vp");
+		if (!spec) throw new Error("commandFor returned undefined");
 		expect(spec.command).toBe("vp");
 		expect(spec.args).toContain(`${PACKAGE_NAME}@latest`);
 	});
 
 	it("bun: command=bun, includes package@latest", () => {
-		const spec = commandFor("bun")!;
+		const spec = commandFor("bun");
+		if (!spec) throw new Error("commandFor returned undefined");
 		expect(spec.command).toBe("bun");
 		expect(spec.args).toContain(`${PACKAGE_NAME}@latest`);
 	});
 
 	it("npm: command=npm, -g flag, includes package@latest", () => {
-		const spec = commandFor("npm")!;
+		const spec = commandFor("npm");
+		if (!spec) throw new Error("commandFor returned undefined");
 		expect(spec.command).toBe("npm");
 		expect(spec.args).toContain("-g");
 		expect(spec.args).toContain(`${PACKAGE_NAME}@latest`);
 	});
 
 	it("brew: delegates to sh -lc with brew upgrade", () => {
-		const spec = commandFor("brew")!;
+		const spec = commandFor("brew");
+		if (!spec) throw new Error("commandFor returned undefined");
 		expect(spec.command).toBe("/bin/sh");
 		expect(spec.label).toContain("brew upgrade");
 	});
@@ -171,8 +175,9 @@ describe("formatUpdateSummary", () => {
 // ─── constants ───────────────────────────────────────────────────────────────
 
 describe("withSpinner", () => {
+	type StatusCall = [string, string | undefined];
 	it("sets a spinner line then clears it, even when work throws", async () => {
-		const calls: Array<[string, string | undefined]> = [];
+		const calls: Array<StatusCall> = [];
 		const ui = {
 			setStatus: (k: string, t: string | undefined) => calls.push([k, t]),
 		};
@@ -182,9 +187,10 @@ describe("withSpinner", () => {
 			}),
 		).rejects.toThrow("boom");
 		// first call sets a spinner frame, last call clears the line.
-		expect(calls[0][0]).toBe("k");
-		expect(calls[0][1]).toContain("Working");
-		expect(calls[0][1]?.[0]).toBe(SPINNER[0]);
+		const c0 = calls[0] as StatusCall;
+		expect(c0[0]).toBe("k");
+		expect(c0[1]).toContain("Working");
+		expect(c0[1]?.[0]).toBe(SPINNER[0] ?? "");
 		expect(calls.at(-1)).toEqual(["k", undefined]);
 	});
 });

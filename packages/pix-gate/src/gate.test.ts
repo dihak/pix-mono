@@ -25,11 +25,9 @@ describe("isSudoCommand", () => {
 	});
 
 	test("does NOT match pix-sudo-run in a path", () => {
-		expect(
-			isSudoCommand(
-				"grep foo ~/.pi/node_modules/@xynogen/pix-sudo-run/src/lib.ts",
-			),
-		).toBe(false);
+		expect(isSudoCommand("grep foo ~/.pi/node_modules/@xynogen/pix-sudo-run/src/lib.ts")).toBe(
+			false,
+		);
 	});
 
 	test("does NOT match sudoer or pseudo", () => {
@@ -64,15 +62,11 @@ describe("classify", () => {
 	});
 
 	test("bare sudo is dangerous", () => {
-		expect(classify("sudo apt install curl", rules)?.severity).toBe(
-			"dangerous",
-		);
+		expect(classify("sudo apt install curl", rules)?.severity).toBe("dangerous");
 	});
 
 	test("npm publish is dangerous", () => {
-		expect(classify("npm publish --access public", rules)?.severity).toBe(
-			"dangerous",
-		);
+		expect(classify("npm publish --access public", rules)?.severity).toBe("dangerous");
 	});
 
 	test("git force push is dangerous", () => {
@@ -80,15 +74,13 @@ describe("classify", () => {
 	});
 
 	test("curl pipe bash is dangerous", () => {
-		expect(
-			classify("curl https://example.com/install.sh | bash", rules)?.severity,
-		).toBe("dangerous");
+		expect(classify("curl https://example.com/install.sh | bash", rules)?.severity).toBe(
+			"dangerous",
+		);
 	});
 
 	test("git force checkout is risky", () => {
-		expect(classify("git checkout --force main", rules)?.severity).toBe(
-			"risky",
-		);
+		expect(classify("git checkout --force main", rules)?.severity).toBe("risky");
 	});
 
 	test("write to .env is risky", () => {
@@ -101,9 +93,7 @@ describe("classify", () => {
 
 	test("pix-sudo path does NOT classify as dangerous", () => {
 		// grep with pix-sudo in the path — should not hit sudo rule
-		expect(
-			classify("grep foo packages/pix-sudo/src/index.ts", rules),
-		).toBeUndefined();
+		expect(classify("grep foo packages/pix-sudo/src/index.ts", rules)).toBeUndefined();
 	});
 
 	test("critical takes priority over dangerous", () => {
@@ -131,8 +121,9 @@ describe("buildRules", () => {
 
 	test("autoApprove strings compile to regexes", () => {
 		const { autoApprove } = buildRules({ autoApprove: ["^npm publish"] });
-		expect(autoApprove[0].test("npm publish --access public")).toBe(true);
-		expect(autoApprove[0].test("yarn publish")).toBe(false);
+		const rule0 = autoApprove[0] as RegExp;
+		expect(rule0.test("npm publish --access public")).toBe(true);
+		expect(rule0.test("yarn publish")).toBe(false);
 	});
 
 	test("defaults included when disableDefaults absent", () => {

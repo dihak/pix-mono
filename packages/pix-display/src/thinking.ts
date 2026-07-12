@@ -71,7 +71,7 @@ const PARTIAL_TAIL_RE = /<\/?([a-zA-Z]*)$/;
 function stripPartialTailTag(text: string): string {
 	const match = text.match(PARTIAL_TAIL_RE);
 	if (!match) return text;
-	const fragment = match[1].toLowerCase();
+	const fragment = (match[1] ?? "").toLowerCase();
 	if (TAG_NAMES.some((tag) => tag.startsWith(fragment))) {
 		return text.slice(0, match.index);
 	}
@@ -120,7 +120,7 @@ function splitThinking(text: string): Block[] {
 	let match = CLOSED_BLOCK_RE.exec(rest);
 	while (match) {
 		pushText(blocks, rest.slice(0, match.index));
-		pushThinking(blocks, match[2]);
+		pushThinking(blocks, match[2] ?? "");
 		rest = rest.slice(match.index + match[0].length);
 		CLOSED_BLOCK_RE.lastIndex = 0;
 		match = CLOSED_BLOCK_RE.exec(rest);
@@ -131,11 +131,8 @@ function splitThinking(text: string): Block[] {
 	const openMatch = OPEN_TAIL_RE.exec(rest);
 	if (openMatch) {
 		// Leading text may still carry orphan tags (e.g. a stray `</think>`).
-		pushText(
-			blocks,
-			openMatch.input.slice(0, openMatch.index).replace(ORPHAN_TAG_RE, ""),
-		);
-		pushThinking(blocks, openMatch[2].replace(ORPHAN_TAG_RE, ""));
+		pushText(blocks, openMatch.input.slice(0, openMatch.index).replace(ORPHAN_TAG_RE, ""));
+		pushThinking(blocks, (openMatch[2] ?? "").replace(ORPHAN_TAG_RE, ""));
 	} else {
 		// Strip any orphan tags from the trailing text.
 		pushText(blocks, rest.replace(ORPHAN_TAG_RE, ""));

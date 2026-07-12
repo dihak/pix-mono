@@ -4,6 +4,12 @@
 
 import * as Diff from "diff";
 
+/** Type-safe index into an array that noUncheckedIndexedAccess marks as T|undefined.
+ *  Only call when the index is provably in-bounds (loop condition, length check, etc.). */
+function at<T>(arr: T[], i: number): T {
+	return arr[i] as T;
+}
+
 export interface DiffLine {
 	type: "add" | "del" | "ctx" | "sep";
 	oldNum: number | null;
@@ -35,8 +41,8 @@ export function parseDiff(
 
 	for (let hi = 0; hi < patch.hunks.length; hi++) {
 		if (hi > 0) {
-			const prev = patch.hunks[hi - 1];
-			const gap = patch.hunks[hi].oldStart - (prev.oldStart + prev.oldLines);
+			const prev = at(patch.hunks, hi - 1);
+			const gap = at(patch.hunks, hi).oldStart - (prev.oldStart + prev.oldLines);
 			lines.push({
 				type: "sep",
 				oldNum: null,
@@ -44,7 +50,7 @@ export function parseDiff(
 				content: "",
 			});
 		}
-		const h = patch.hunks[hi];
+		const h = at(patch.hunks, hi);
 		const shift = baseLine > 0 ? baseLine - 1 : 0;
 		let oL = h.oldStart + shift;
 		let nL = h.newStart + shift;

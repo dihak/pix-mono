@@ -5,9 +5,7 @@ import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import registerPrompts from "./prompts.ts";
 
-type Handler = (event: {
-	systemPrompt?: string;
-}) => Promise<{ systemPrompt?: string } | undefined>;
+type Handler = (event: { systemPrompt?: string }) => Promise<{ systemPrompt?: string } | undefined>;
 
 /** Minimal fake pi that captures the before_agent_start handler. */
 function fakePi(): { pi: ExtensionAPI; getHandler: () => Handler } {
@@ -93,8 +91,22 @@ describe("pix-prompts host-aware injection", () => {
 
 		// Second pass finds its own tag already present → nothing new.
 		expect(second).toBeUndefined();
-		const occurrences =
-			(first?.systemPrompt ?? "").split("<pix-prompts-gemini-md>").length - 1;
+		const occurrences = (first?.systemPrompt ?? "").split("<pix-prompts-gemini-md>").length - 1;
 		expect(occurrences).toBe(1);
+	});
+
+	it("replaces pi's default identity line with generic version", async () => {
+		const { pi, getHandler } = fakePi();
+		registerPrompts(pi);
+
+		const piDefault =
+			"You are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files.";
+		const result = await getHandler()({ systemPrompt: piDefault });
+
+		// Should replace the restrictive identity line
+		expect(result?.systemPrompt).not.toContain(
+			"You are an expert coding assistant operating inside pi",
+		);
+		expect(result?.systemPrompt).toContain("You are Pix Coding Agent");
 	});
 });

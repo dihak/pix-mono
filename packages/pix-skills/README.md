@@ -7,12 +7,22 @@ Pi coding agent extension — skill loader tool + skills bundle.
 | Resource | Type | Description |
 |---|---|---|
 | `read_skills` | tool | Browse and load bundled skills. No args → list all. `name` only → description. `name + full=true` → full instructions. |
-| `skills/` | skills | 29 bundled skills (auto-loaded by pi at startup — names + descriptions in system prompt) |
+| `skills/` | skills | 27 bundled skills (off-context by default — discovered on demand via `read_skills`) |
 
 ## How it works
 
-Pi loads skill *descriptions* into the system prompt at startup (progressive disclosure). Full content
-only enters context when the agent calls `read_skills(name=<skill>, full=true)` — or reads the file via the `read` tool.
+Bundled skills are **off-context by default**: every skill carries `disable-model-invocation: true` in
+its frontmatter, so pi does **not** inject its description into the system prompt at startup. This keeps
+the baseline context small regardless of how many skills ship.
+
+Discovery and loading go through the `read_skills` tool instead:
+
+- `read_skills()` — lists every skill name + description on demand (independent dir scan, not the prompt registry)
+- `read_skills(name=<skill>, full=true)` — loads the full procedure into context
+
+A skill can opt back into passive prompt injection by **removing** the `disable-model-invocation: true`
+line (or setting it to `false`) — then pi auto-loads its description on description match. The bundled
+set deliberately leaves it on to favour a lean context.
 
 Skills are also discovered from `~/.pi/agent/skills/` (user-level). Bundled skills take precedence on name collision.
 
@@ -24,7 +34,9 @@ Skills are also discovered from `~/.pi/agent/skills/` (user-level). Bundled skil
 
 ## Skills
 
-All skills are model-invocable — pi auto-loads each one on description match. The agent can also load any skill on demand via `read_skills(name=<skill>, full=true)`.
+All bundled skills ship with `disable-model-invocation: true`, so they stay out of the system prompt
+until the agent loads one explicitly via `read_skills(name=<skill>, full=true)`. They remain invokable
+as `/skill:<name>` slash commands.
 
 | Skill | Description |
 |---|---|
@@ -42,13 +54,11 @@ All skills are model-invocable — pi auto-loads each one on description match. 
 | `finish` | Structured branch completion — verify, decide, clean up |
 | `graphify` | Codebase questions via a persistent knowledge graph |
 | `handoff` | Toggle session handoff — write or read+delete `HANDOFF.md` |
-| `notion` | Efficient Notion workspace retrieval — pages, databases, lists |
 | `plan` | Write detailed, bite-sized implementation plans before coding |
 | `readme` | Create or update a deployment-focused README in a fixed style |
 | `review` | Architectural review and quality assurance |
 | `runner` | Generate or convert a task runner (just/make/mise/task/npm/sh) |
 | `search` | Deep logic discovery and project context mapping |
-| `standup` | Prepare a daily standup update from Notion context |
 | `suggest` | Multi-dimensional optimization and improvement recommendations |
 | `task` | Task orchestration and ambiguity resolution |
 | `test` | Test execution, analysis, and failure resolution via TDD |

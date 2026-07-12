@@ -1,6 +1,7 @@
 ---
 name: review
 description: Architectural Review and Quality Assurance
+disable-model-invocation: true
 ---
 # Review Directive
 

@@ -6,20 +6,22 @@ import type { QuestionAnswer, QuestionnaireResult } from "./types.js";
 // Used when ctx.hasUI is false (headless / JSON / print mode).
 
 export async function rpcFallback(
-	ui: { select: Function; input: Function },
+	ui: {
+		select(title: string, options: string[]): Promise<string | undefined>;
+		input(title: string, placeholder?: string): Promise<string | undefined>;
+	},
 	params: Params,
 ): Promise<QuestionnaireResult> {
 	const answers: QuestionAnswer[] = [];
 	let cancelled = false;
 
 	for (let i = 0; i < params.questions.length; i++) {
-		const q = params.questions[i]!;
+		const q = params.questions[i];
+		if (!q) break;
 		const header = q.header;
 
 		if (q.multiSelect) {
-			const lines = q.options.map(
-				(o, idx) => `${idx + 1}. ${o.label} — ${o.description}`,
-			);
+			const lines = q.options.map((o, idx) => `${idx + 1}. ${o.label} — ${o.description}`);
 			const raw = await ui.input(
 				`${header}: ${q.question}\n\n${lines.join("\n")}\n\nEnter numbers separated by commas:`,
 				"e.g. 1,3",
@@ -32,7 +34,7 @@ export async function rpcFallback(
 				.split(",")
 				.map((s) => Number(s.trim()))
 				.filter((n) => n >= 1 && n <= q.options.length);
-			const selected = indices.map((n) => q.options[n - 1]?.label);
+			const selected = indices.map((n) => q.options[n - 1]?.label ?? "");
 			if (selected.length > 0) {
 				answers.push({
 					questionIndex: i,
@@ -67,9 +69,8 @@ export async function rpcFallback(
 				});
 			} else {
 				const opt = q.options.find(
-					(o) =>
-						chosen === o.label || `${o.label} — ${o.description}` === chosen,
-				)!;
+					(o) => chosen === o.label || `${o.label} — ${o.description}` === chosen,
+				);
 				answers.push({
 					questionIndex: i,
 					question: q.question,

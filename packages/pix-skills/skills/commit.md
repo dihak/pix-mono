@@ -1,6 +1,7 @@
 ---
 name: commit
 description: Split, write, and maintain Conventional-Commit-style commits. Use only on explicit request — "commit this", "make a commit", "split these changes", "amend/squash the history".
+disable-model-invocation: true
 ---
 # Conventional Commit Management Directive
 

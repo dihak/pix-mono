@@ -1,6 +1,7 @@
 ---
 name: task
 description: Task Orchestration and Ambiguity Resolution
+disable-model-invocation: true
 ---
 # Task Orchestration Directive
 

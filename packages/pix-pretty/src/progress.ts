@@ -55,11 +55,7 @@ const SPINNER_INTERVAL_MS = 120;
  * Open a modal progress overlay. Returns a handle to update the label and
  * close it. The overlay swallows all keystrokes until closed.
  */
-export function openProgress(
-	ui: ProgressUI,
-	title: string,
-	accent = "accent",
-): ProgressHandle {
+export function openProgress(ui: ProgressUI, title: string, accent = "accent"): ProgressHandle {
 	let setLabelImpl: (label: string) => void = () => {};
 	let closeImpl: () => void = () => {};
 
@@ -89,7 +85,7 @@ export function openProgress(
 						width: mw,
 						lines: [
 							theme.fg(accent, theme.bold(title)),
-							`${theme.fg(accent, SPINNER[frame])} ${theme.fg("muted", labelValue)}`,
+							`${theme.fg(accent, SPINNER[frame] ?? "")} ${theme.fg("muted", labelValue)}`,
 						],
 						color: (s) => theme.fg(accent, s),
 						bg: (s) => theme.bg("customMessageBg", s),

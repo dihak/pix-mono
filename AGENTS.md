@@ -1,7 +1,7 @@
 # pix-mono — Agent Operating Guide
 
 Monorepo of Pi Coding Agent extensions (`@xynogen/pix-*`).
-Runtime: **Bun**. Linter/formatter: **Biome**. Type checker: **tsc**. Test runner: **bun test**.
+**Bun** runtime · **Biome** lint/format · **tsc** types · **bun test** tests · all ESM (`"type": "module"`, ES2022).
 
 ---
 
@@ -9,47 +9,42 @@ Runtime: **Bun**. Linter/formatter: **Biome**. Type checker: **tsc**. Test runne
 
 ```
 packages/
-  # ── Aggregator ──────────────────────────────────────────────────────────
-  pix-core/        # Meta-package — bundles + activates the core distro (depends on the packages below)
-  # ── Shared layers ───────────────────────────────────────────────────────
-  pix-data/        # Shared model data layer (modelgrep catalog + BenchLM scores), cached at ~/.cache/pi
-  pix-pretty/      # Shared rendering lib (highlight, diff, icons, fff) + FFF slash commands
+  # ── Aggregator ─────────────────────────────────────────────────────
+  pix-core/        # Meta-package — bundles + activates the core distro
+  # ── Shared layers ──────────────────────────────────────────────────
+  pix-data/        # Model data (modelgrep + BenchLM, cached at ~/.cache/pi), pix.json config loader, collapse helper
+  pix-pretty/      # Rendering lib (highlight, diff, icons, fff) + FFF slash commands
   pix-themes/      # Theme pack — 7 dark themes
-  # ── UI / UX extensions (bundled by pix-core) ────────────────────────────
-  pix-welcome/     # ASCII π banner + startup health checks (version, auth, models, tools, skills, gitignore)
-  pix-footer/      # Status bar — mode, git branch, model, tokens, cost, live TPS
-  pix-models/      # /models — enhanced model picker (coding score/rank, context, cost)
-  pix-update/      # /update — self-update Pi + extensions (detects install method)
+  # ── UI / UX (bundled by pix-core) ─────────────────────────────────
+  pix-welcome/     # ASCII π banner + startup health checks
+  pix-footer/      # Status bar — mode, git, model, tokens, cost, TPS
+  pix-models/      # /models — model picker (score, context, cost)
+  pix-update/      # /update — self-update Pi + extensions
   pix-commands/    # /clear — flush ~/.cache/pi
-  pix-nudge/       # Tools nudge + capability nudge (steer model toward correct tools)
-  pix-diagnostics/ # Compact session-files widget (overrides pi-lens widget id)
-  pix-display/     # Paste chip rendering + leaked <think> tag → native thinking blocks
-  pix-prompts/     # System-prompt injection — bundled AGENT.md baseline + repo directive scan
-  pix-skills/      # Agent skill loader (read_skills tool + bundled skills)
-  # ── Behaviour (bundled by pix-core) ─────────────────────────────────────
-  pix-optimizer/   # Caveman + RTK + jq/TOON + ponytail modes (/optimizer overlay)
-  pix-gate/        # Permission gate for dangerous bash + path commands (confirm/block TUI dialog)
-  pix-subagent/    # Sub-agent spawning — agent / agent_result / agent_steer tools + model widget
-  # ── Tool suite (bundled by pix-core — drop-in replacements for Pi built-ins) ──
-  pix-bash/        # Tool — bash shell execution with pretty output
-  pix-read/        # Tool — file read with syntax highlight
-  pix-write/       # Tool — file write with diff rendering
-  pix-edit/        # Tool — precise text replacement edit with diff rendering
-  pix-find/        # Tool — glob file search (FFF-accelerated)
-  pix-grep/        # Tool — pattern search in files (FFF-accelerated)
-  pix-ls/          # Tool — directory listing with tree view
-  pix-todo/        # Tool — durable execution checklist (survives context compaction)
-  pix-ask/         # Tool — structured questionnaire UI (ask_user)
-  # ── Standalone extensions (opt-in, NOT bundled by pix-core) ─────────────
-  pix-9router/     # 9Router LLM provider + fetch/search/transcribe tools (needs API key)
-  pix-sudo/        # Tool — sudo_run with interactive PAM password prompt
-  pix-toolbox/     # Tool — gated tool toggle UI (/toolbox)
+  pix-nudge/       # Tools + capability nudge
+  pix-diagnostics/ # Compact session-files widget
+  pix-display/     # Paste chip rendering + leaked <think> cleanup
+  pix-prompts/     # System-prompt injection (AGENT.md + repo directive scan)
+  pix-skills/      # Skill loader (read_skills tool + bundled skills)
+  # ── Behaviour (bundled by pix-core) ────────────────────────────────
+  pix-optimizer/   # Caveman + RTK + TOON + ponytail (/optimizer)
+  pix-gate/        # Permission gate for dangerous commands
+  pix-subagent/    # Sub-agent spawning (agent / agent_result / agent_steer)
+  # ── Tool suite (bundled by pix-core — Pi built-in replacements) ───
+  pix-bash/  pix-read/  pix-write/  pix-edit/
+  pix-find/  pix-grep/  pix-ls/    pix-ask/
+  pix-todo/        # Durable execution checklist (survives context compaction)
+  # ── Standalone (opt-in, NOT bundled) ───────────────────────────────
+  pix-9router/     # 9Router LLM provider + fetch/search/transcribe (needs API key)
+  pix-sudo/        # sudo_run with PAM password prompt
+  pix-toolbox/     # Gated tool toggle UI (/toolbox)
 scripts/
-  dev-link.sh      # Symlink local packages into Pi for instant dev iteration
-  publish-all.sh   # Publish changed packages to npm (idempotent — skips already-published versions)
+  dev-link.sh      # Symlink packages into Pi for dev
+  publish-all.ts   # Publish changed packages to npm (idempotent)
   install.sh       # Install all packages into Pi
+  deps.test.ts     # CI dep-hygiene checks (workspace:*, bare *, caret ranges)
 .github/workflows/
-  ci.yml           # Lint + typecheck + test on push/PR to main
+  ci.yml           # Lint + typecheck + test on push/PR
   publish.yml      # Publish to npm on release tag
 ```
 
@@ -57,160 +52,109 @@ scripts/
 
 ## Development
 
-### Install deps
-
 ```bash
-bun install
-```
-
-### Local dev (symlink into Pi — no publish round-trip)
-
-```bash
-bun run dev:link     # symlink packages/pix-* → ~/.pi/agent/npm/node_modules/@xynogen/
-bun run dev:unlink   # restore npm-installed copies
-```
-
-Restart Pi session after linking.
-
-### Quality checks (run before every commit)
-
-```bash
-bun run check        # biome lint + format check
-bun run typecheck    # tsc --noEmit
-bun test             # unit tests
-```
-
-Auto-fix lint/format:
-
-```bash
-bun run check:fix
+bun install                # install deps
+bun run dev:link           # symlink into Pi (restart Pi after)
+bun run dev:unlink         # restore npm copies
+bun run check              # biome lint + format
+bun run check:fix          # auto-fix
+bun run typecheck          # tsc --noEmit
+bun test                   # unit tests
 ```
 
 ---
 
-## Commit Convention
+## Commits
 
-`type(scope): short description`
+Format: `type(scope): short description` — scope = package name, e.g. `fix(pix-core): ...`
 
-| type | when |
-|------|------|
-| `feat` | new capability |
-| `fix` | bug fix |
-| `refactor` | restructure, no behavior change |
-| `chore` | deps, config, tooling |
-| `docs` | documentation only |
-
-Scope = package name without prefix, e.g. `pix-core` → `fix(pix-core): ...`
-
-Example:
-
-```
-fix(pix-core): remove /toolbox from nudge, fire reminder every 10 turns
-```
+Types: **feat** (new capability) · **fix** (bug fix) · **refactor** (no behavior change) · **chore** (deps/config/tooling) · **docs** (documentation)
 
 ---
 
-## CI — Push to `main`
+## CI / CD
 
-Triggered automatically on every push to `main` and on PRs.
-Runs: **biome ci** → **tsc** → **bun test**.
+**CI** runs on every push to `main` and PRs: biome ci → tsc → bun test.
 
-No manual trigger needed — just push.
-
----
-
-## CD — Publish to npm
-
-Publishing is triggered by a **release tag**, never by direct push.
-
-### Tag format
-
-```
-release-YYYYMMDD-HHMM
-```
-
-### How to publish
+**CD** is triggered by a release tag (`release-YYYYMMDD-HHMM`), never by direct push.
 
 ```bash
-# 1. Bump version(s) in the relevant package.json(s)
-# 2. Commit + push to main
-git add packages/<name>/package.json
-git commit -m "chore(<name>): bump version to x.y.z"
-git push
-
-# 3. Tag and push — this triggers the Publish workflow
+# Bump version(s), commit, push, then:
 TAG="release-$(date +%Y%m%d-%H%M)" && git tag "$TAG" && git push origin "$TAG"
 ```
 
-### What the publish workflow does
+The publish workflow re-runs CI, checks each `name@version` against npm, publishes only new versions (idempotent, OIDC trusted publishing — no NPM_TOKEN needed). Dry-run locally: `bun run publish:dry`.
 
-1. Re-runs the full CI gate (lint + typecheck + test).
-2. For each package: checks if `name@version` already exists on npm — skips if so.
-3. Publishes only packages whose version is new (idempotent).
-4. Uses npm OIDC trusted publishing — no `NPM_TOKEN` needed in CI.
-
-### Dry run (local check before tagging)
-
-```bash
-bun run publish:dry
-```
-
-### Agent runbook — when the user says "publish"
+### Agent runbook — "publish"
 
 "publish" (alone) means: run this exact sequence, no re-asking which packages.
 
-1. **Verify clean gate** — `bun run check && bun run typecheck && bun test`. Red → STOP, do not publish.
-2. **Confirm bumps landed** — every changed package's `package.json` version is ahead of npm. Unbumped → no publish for that package (the tag ships nothing). Match type → semver: `feat`→minor, `fix`/`perf`→patch, breaking→major.
-3. **Commit + push to `main`** — `rtk git add … && rtk git commit -m "…" && rtk git push`. Push to `main` is shared-state: confirm via `ask_user` first.
-4. **Dry-run** — `bun run publish:dry`. Read the "Publishing N package(s)" list; that is exactly what the tag will ship.
-5. **Confirm the publish (irreversible §1 gate)** — state the precise list (`name@version`) the dry-run reported, then `ask_user` Confirm/Cancel. A prior approval never carries forward.
-6. **Tag + push** — `TAG="release-$(date +%Y%m%d-%H%M)" && git tag "$TAG" && git push origin "$TAG"`. This triggers the Publish workflow (re-runs CI, skips already-published versions).
-
-The tag, not the commit, triggers publishing. Only packages with a new version ship — everything else is skipped idempotently.
+1. **Gate** — `bun run check && bun run typecheck && bun test`. Red → STOP.
+2. **Confirm bumps** — changed packages must have version ahead of npm. Unbumped → that package silently ships nothing (no error). Semver: `feat`→minor, `fix`/`perf`→patch, breaking→major.
+3. **Commit + push** — confirm via `ask_user` first (shared-state push).
+4. **Dry-run** — `bun run publish:dry` — note the exact `name@version` list.
+5. **Confirm publish** — `ask_user` with the exact list. Prior approval never carries forward.
+6. **Tag + push** — creates the release tag, triggers the Publish workflow.
+7. **Verify GitHub Actions** — use `gh run list` to find the CI run for the tagged SHA, then `gh run watch <run-id> --exit-status`. After CI succeeds, find and watch the resulting Publish run. Confirm its log reports every expected `name@version` as published and ends with `0 failed`; report the Publish workflow URL and exact published versions. Red → STOP and report the failing step/log — never claim the release succeeded from the tag push alone.
 
 ---
 
 ## Package Independence
 
-Each package is intended to be **independently installable and usable**.
-
-- **No cross-package imports unless unavoidable.** Three packages are sanctioned shared layers, each a different kind: `pix-data` (shared **data** — models.dev + BenchLM cache), `pix-pretty` (shared **render code** — highlight/diff/icons/fff; most tool packages depend on it), and `pix-core` (the **aggregator** that bundles the rest). Depending on these is intentional. Beyond them, keep packages self-contained.
-- **Prefer duplicating small utilities over adding a cross-package dep.** A shared dep creates a hard install coupling.
-- **Each package has its own `package.json` version.** Bump only the package(s) actually changed — unrelated packages keep their version and are skipped at publish time.
-- **Pi host is always a `peerDependency`**, never a direct dep. Users already have Pi installed.
-- **Third-party deps go in the package that needs them**, not hoisted to the root.
-- When adding a new package: keep it zero-dep on other `pix-*` packages if at all possible.
+- **Three sanctioned shared layers:** `pix-data` (data + config), `pix-pretty` (rendering), `pix-core` (aggregator). Beyond these, keep packages self-contained.
+- Prefer duplicating small utilities over adding a cross-package dep.
+- Each package owns its own version — bump only what changed.
+- Pi host is always a `peerDependency`, never a direct dep.
+- Third-party deps go in the package that needs them, not hoisted to root.
 
 ---
 
-## Icon Catalog (l10n-style)
+## Dependency Versioning
 
-Packages must **never hardcode Nerd Font glyph codepoints** (PUA: U+E000–U+F8FF, U+F0000+). Terminals without a Nerd Font render them as missing-glyph “tofu” boxes. Instead, use the **semantic icon catalog** in `pix-pretty`:
+**All `@xynogen/` deps must use caret ranges (`^x.y.z`).** Never `workspace:*` or bare `"*"` — these break npm publish and end-user installs.
+
+- Set range to `^<current version>` of the target package.
+- After a **minor bump** of a shared 0.x package, update the caret range in **all consumers** (e.g. `pix-data` 0.3→0.4 means `"^0.3.0"` → `"^0.4.0"` everywhere). Patch bumps within the same minor need no consumer edits (`^0.3.0` already matches `0.3.1`). Consumers whose dep range changed also need a patch bump + republish.
+- `publish-all.ts` aborts if `workspace:` ranges survive.
+- CI enforces via `scripts/deps.test.ts`: no `workspace:`, no bare `*`, all `@xynogen/` deps use `^`.
+
+---
+
+## Icon Catalog
+
+**Never hardcode Nerd Font glyph codepoints** (terminals without Nerd Fonts render them as tofu). Use the semantic catalog in `pix-pretty`:
 
 ```ts
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
-icon("cwd")        // returns the glyph for the active mode (PUA / BMP / ASCII)
-icon("paste.image") // → glyph for paste image chip
+icon("cwd")           // resolves glyph for active mode (nerd/unicode/ascii)
 ```
 
-**Catalog:** `packages/pix-pretty/src/icon-catalog.ts`
+- Keys are semantic roles (`"model"`, `"cwd"`, `"paste.image"`), never glyph names.
+- `PRETTY_ICONS` env seeds default; `/pix` settings command switches live (persisted to `~/.pi/agent/pix.json`).
+- New icons → add to `CATALOG` in `packages/pix-pretty/src/icon-catalog.ts` with all three variants.
 
-- `icon(key)` resolves a semantic key against the active icon mode (`nerd`/`unicode`/`ascii`).
-- `iconFor(key, mode)` resolves against an explicit mode (for previews).
-- Keys are **semantic roles** (`"model"`, `"cwd"`, `"paste.image"`, `"opt.caveman"`), never glyph names.
-- `PRETTY_ICONS` env seeds the default; `/pretty` command switches it live, persisted to `~/.pi/agent/pretty.json`.
-- `onIconModeChange(cb)` — observer for pushed-status consumers (e.g. `OptimizerStatus`) that only repaint on explicit calls, not continuous re-render.
+---
 
-**When adding a new icon:** add a key to the `CATALOG` in `icon-catalog.ts` with `nerd`/`unicode`/`ascii` variants. Never add raw codepoints to consumer packages.
+## Unified Config — `~/.pi/agent/pix.json`
+
+Auto-created with defaults on first session. Sections:
+
+| Section | Consumers |
+|---|---|
+| `collapse` | pix-bash, pix-read, pix-grep, pix-edit, pix-write, pix-find, pix-ls, pix-todo |
+| `pretty` | pix-pretty (theme, icons, preview, diff colors) |
+| `optimizer` | pix-optimizer (caveman/rtk/toon/ponytail state) |
+| `gate` | pix-gate (rules, auto-approve patterns) |
+
+Loader: `@xynogen/pix-data/pix-config` · Collapse: `@xynogen/pix-data/collapse`. Full schema in `packages/pix-data/README.md`.
 
 ---
 
 ## Key Rules
 
-- **Never commit directly without running `bun run check` + `bun run typecheck`** — CI will fail.
-- **Never push a tag without bumping the version** in the package(s) you changed — publish skips already-published versions.
-- **Default version bumps to PATCH only.** Agents may bump the patch field (`x.y.Z`) freely. **Minor (`x.Y.0`) and major (`X.0.0`) bumps require explicit user approval** before applying — never bump minor/major on your own initiative.
-- **Do not add `/toolbox` references in agent-facing text** — `/toolbox` is a user slash command, not model-callable.
-- **Scripts are idempotent** — safe to re-run `dev-link.sh`, `publish-all.sh`.
-- All packages are ESM (`"type": "module"`), target ES2022.
-- Shared tsconfig at root: `tsconfig.base.json`. Each package extends it.
+- **Always run `bun run check` + `bun run typecheck` before committing** — CI will fail otherwise.
+- **Never tag without bumping versions** — publish skips already-published versions.
+- **Patch bumps only by default.** Minor/major require explicit user approval.
+- **No `/toolbox` in agent-facing text** — it's a user slash command, not model-callable.
+- Scripts are idempotent. Shared tsconfig: `tsconfig.base.json` — each package extends it.
+- New packages: keep zero-dep on other `pix-*` packages if at all possible.

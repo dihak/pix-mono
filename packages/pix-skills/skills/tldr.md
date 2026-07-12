@@ -1,6 +1,7 @@
 ---
 name: tldr
 description: Maximum-density technical summary of workflows and purposes. Use when user asks "tldr", "summarize this", "give me the short version", "what's the gist", or needs the essence fast with zero filler.
+disable-model-invocation: true
 ---
 # TLDR Directive
 

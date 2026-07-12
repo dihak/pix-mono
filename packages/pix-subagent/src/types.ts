@@ -15,15 +15,13 @@ export type { LifetimeUsage, ThinkingLevel };
 export type SubagentType = string;
 
 /** Names of the three embedded default agents. */
-export const DEFAULT_AGENT_NAMES = [
-	"general-purpose",
-	"Explore",
-	"Plan",
-] as const;
+export const DEFAULT_AGENT_NAMES = ["general-purpose", "Explore", "Plan", "Mentor"] as const;
 
 /** Unified agent configuration — used for both default and user-defined agents. */
 export interface AgentConfig {
 	name: string;
+	/** Populated at load time for invalid frontmatter values (e.g. unknown thinking level). */
+	warnings?: string[];
 	displayName?: string;
 	description: string;
 	builtinToolNames?: string[];
@@ -44,8 +42,7 @@ export interface AgentConfig {
 	promptMode: "replace" | "append";
 	/** Default for spawn: fork parent conversation. undefined = caller decides. */
 	inheritContext?: boolean;
-	/** Default for spawn: run in background. undefined = caller decides. */
-	runInBackground?: boolean;
+
 	/** Default for spawn: no extension tools. undefined = caller decides. */
 	isolated?: boolean;
 	/** true = this is an embedded default agent (informational) */
@@ -60,14 +57,7 @@ export interface AgentRecord {
 	id: string;
 	type: SubagentType;
 	description: string;
-	status:
-		| "queued"
-		| "running"
-		| "completed"
-		| "steered"
-		| "aborted"
-		| "stopped"
-		| "error";
+	status: "queued" | "running" | "completed" | "steered" | "aborted" | "stopped" | "error";
 	result?: string;
 	error?: string;
 	toolUses: number;
@@ -94,8 +84,12 @@ export interface AgentRecord {
 	turnCount: number;
 	/** Turn cap, if any — for the ↻N≤M display. */
 	maxTurns?: number;
+	/** Cumulative milliseconds spent streaming output (for accurate t/s). */
+	streamingMs: number;
 	/** Resolved spawn params, captured for UI display. */
 	invocation?: AgentInvocation;
+	/** True when this agent was launched in background mode. */
+	isBackground?: boolean;
 }
 
 export interface AgentInvocation {
@@ -105,7 +99,6 @@ export interface AgentInvocation {
 	maxTurns?: number;
 	isolated?: boolean;
 	inheritContext?: boolean;
-	runInBackground?: boolean;
 }
 
 /** Details attached to custom notification messages for visual rendering. */
@@ -118,7 +111,16 @@ export interface NotificationDetails {
 	toolUses: number;
 	turnCount: number;
 	maxTurns?: number;
-	totalTokens: number;
+	/** Context usage snapshot, or null when unavailable. */
+	contextUsage: {
+		tokens: number | null;
+		contextWindow: number | null;
+		percent: number | null;
+	} | null;
+	/** Raw output tokens (for t/s). */
+	outputTokens?: number;
+	/** Cumulative streaming-only milliseconds (for accurate t/s). */
+	streamingMs?: number;
 	durationMs: number;
 	error?: string;
 	resultPreview: string;

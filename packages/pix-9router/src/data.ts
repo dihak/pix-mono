@@ -52,10 +52,7 @@ interface RouterModelsResponse {
 const ROUTER_DEFAULT_BASE = "https://9router.example.com/v1";
 
 export function routerBaseUrl(): string {
-	return (process.env.ROUTER_API_BASE || ROUTER_DEFAULT_BASE).replace(
-		/\/$/,
-		"",
-	);
+	return (process.env.ROUTER_API_BASE || ROUTER_DEFAULT_BASE).replace(/\/$/, "");
 }
 
 // ── Router models ──────────────────────────────────────────────────────────────
@@ -70,12 +67,9 @@ export const routerModels = new DataSource<RouterModel[]>({
 	skip: () => !process.env.ROUTER_API_KEY,
 	cachePath: join(CACHE_DIR, "9router.json"),
 	ttlMs: 30 * 60 * 1000, // 30 minutes
-	parse: (raw) =>
-		((raw as RouterModelsResponse).data ?? []).filter((m) => Boolean(m.id)),
+	parse: (raw) => ((raw as RouterModelsResponse).data ?? []).filter((m) => Boolean(m.id)),
 	parseCache: (data) =>
-		((data as RouterModelsResponse | undefined)?.data ?? []).filter((m) =>
-			Boolean(m.id),
-		),
+		((data as RouterModelsResponse | undefined)?.data ?? []).filter((m) => Boolean(m.id)),
 	empty: [],
 });
 

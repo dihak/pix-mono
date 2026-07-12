@@ -3,6 +3,7 @@ name: ask-user
 description: "MUST use before high-stakes/irreversible decisions or when requirements are ambiguous. Gather context, present 2-5 options via ask_user, get explicit choice, then proceed."
 metadata:
   short-description: Decision gate for ambiguity and high-stakes choices
+disable-model-invocation: true
 ---
 
 # ask_user decision gate

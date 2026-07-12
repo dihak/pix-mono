@@ -1,5 +1,5 @@
 import { normalizeShikiContrast } from "./ansi.js";
-import { CACHE_LIMIT, MAX_HL_CHARS, THEME } from "./config.js";
+import { CACHE_LIMIT, MAX_HL_CHARS } from "./config.js";
 import type { BundledLanguage } from "./types.js";
 
 // Engine: cli-highlight (highlight.js-backed, synchronous ANSI output).
@@ -10,10 +10,7 @@ import type { BundledLanguage } from "./types.js";
 // is not the process stdout chalk inspects) we default FORCE_COLOR before chalk
 // initializes, and lazy-load cli-highlight so this runs first. Respect an
 // explicit FORCE_COLOR/NO_COLOR if the user set one.
-if (
-	process.env.FORCE_COLOR === undefined &&
-	process.env.NO_COLOR === undefined
-) {
+if (process.env.FORCE_COLOR === undefined && process.env.NO_COLOR === undefined) {
 	process.env.FORCE_COLOR = "3";
 }
 
@@ -91,7 +88,7 @@ export async function hlBlock(
 	const hljsLang = toHljsLang(language);
 	if (!hljsLang) return code.split("\n");
 
-	const k = `${THEME}\0${hljsLang}\0${code}`;
+	const k = `${hljsLang}\0${code}`;
 	const hit = _cache.get(k);
 	if (hit) return _touch(k, hit);
 

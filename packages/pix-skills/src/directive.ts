@@ -30,19 +30,14 @@ export function findCommandDirectives(content: string): CommandDirective[] {
 		hits.push({
 			start,
 			end: start + m[0].length - lead.length,
-			command: m[2]!.trim(),
+			command: m[2]?.trim() ?? "",
 		});
 	}
 	return hits;
 }
 
 /** Replace the [start, end) slice of `s` with `text`. */
-export function replaceSpan(
-	s: string,
-	start: number,
-	end: number,
-	text: string,
-): string {
+export function replaceSpan(s: string, start: number, end: number, text: string): string {
 	return s.slice(0, start) + text + s.slice(end);
 }
 

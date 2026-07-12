@@ -1,6 +1,7 @@
 ---
 name: suggest
 description: Multi-dimensional optimization and improvement recommendations. Use when user asks "how can I improve this", "what would you change", "any suggestions", "make this better", or wants prioritized options rather than a single fix.
+disable-model-invocation: true
 ---
 # Suggest Directive
 

@@ -9,14 +9,65 @@
  * checklist is seeded by the model via the tool's `set` action.
  */
 
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
 import { once } from "./once.ts";
 
-/** Seconds before a todo card collapses to a one-line dim summary. */
-const COLLAPSE_AFTER_SEC = 10;
+// ── Collapse config from ~/.pi/agent/pix.json ────────────────────────────────
+
+interface CollapseConf {
+	enabled: boolean;
+	delaySec: number;
+	tools: Record<string, boolean | undefined>;
+}
+
+const DEFAULT_COLLAPSE: CollapseConf = {
+	enabled: true,
+	delaySec: 10,
+	tools: {},
+};
+
+function readCollapseConfig(): CollapseConf {
+	try {
+		const home = process.env.HOME ?? "";
+		if (!home) return DEFAULT_COLLAPSE;
+		const p = join(home, ".pi/agent", "pix.json");
+		if (!existsSync(p)) return DEFAULT_COLLAPSE;
+		const raw = JSON.parse(readFileSync(p, "utf-8")) as Record<string, unknown>;
+		const c = raw?.collapse as Record<string, unknown> | undefined;
+		if (!c || typeof c !== "object") return DEFAULT_COLLAPSE;
+		return {
+			enabled: typeof c.enabled === "boolean" ? c.enabled : true,
+			delaySec: typeof c.delaySec === "number" && c.delaySec > 0 ? c.delaySec : 10,
+			tools:
+				c.tools && typeof c.tools === "object"
+					? (c.tools as Record<string, boolean | undefined>)
+					: {},
+		};
+	} catch {
+		return DEFAULT_COLLAPSE;
+	}
+}
+
+let collapseConf: CollapseConf | null = null;
+function getCollapseConfig(): CollapseConf {
+	if (!collapseConf) collapseConf = readCollapseConfig();
+	return collapseConf;
+}
+
+function shouldCollapseTodo(): boolean {
+	const c = getCollapseConfig();
+	const perTool = c.tools.todo;
+	return typeof perTool === "boolean" ? perTool : c.enabled;
+}
+
+function collapseDelayMs(): number {
+	return getCollapseConfig().delaySec * 1000;
+}
 
 export type TodoStatus = "pending" | "in_progress" | "done" | "blocked";
 
@@ -47,10 +98,7 @@ export type TodoTheme = {
 };
 
 /** One-line dim summary used once a card has collapsed. */
-export function renderTodoSummaryLine(
-	items: TodoItem[],
-	theme: TodoTheme,
-): string {
+export function renderTodoSummaryLine(items: TodoItem[], theme: TodoTheme): string {
 	if (!items.length) return theme.fg("muted", "(no todos)");
 	const done = items.filter((t) => t.status === "done").length;
 	return theme.fg("muted", `Todos ${done}/${items.length} done ✓`);
@@ -75,6 +123,22 @@ export function renderTodoLines(items: TodoItem[], theme: TodoTheme): string {
 	return `${head}\n${lines.join("\n")}`;
 }
 
+/**
+ * Skip-guard: when marking an item done, check for earlier items still
+ * pending or in_progress. Returns a warning string or "" if none skipped.
+ */
+function buildSkipWarning(items: TodoItem[], targetId: number): string {
+	const skipped = items.filter(
+		(o) => o.id < targetId && (o.status === "pending" || o.status === "in_progress"),
+	);
+	if (skipped.length === 0) return "";
+	const ids = skipped.map((s) => `#${s.id} (${s.text})`).join(", ");
+	return (
+		`\n\n\u26a0 Earlier items still incomplete: ${ids}. ` +
+		"Mark each done or blocked before proceeding."
+	);
+}
+
 const parseItems = (raw: string): string[] =>
 	raw
 		.split("\n")
@@ -93,9 +157,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 		function todoSummary(): string {
 			if (!todos.length) return "(no todos)";
 			const done = todos.filter((t) => t.status === "done").length;
-			const lines = todos.map(
-				(t) => `${TODO_GLYPH[t.status]} ${t.id}. ${t.text}`,
-			);
+			const lines = todos.map((t) => `${TODO_GLYPH[t.status]} ${t.id}. ${t.text}`);
 			return `Todos ${done}/${todos.length} done:\n${lines.join("\n")}`;
 		}
 
@@ -112,6 +174,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 			promptGuidelines: [
 				"When you start executing a multi-step plan in BUILD mode, seed the todo list with `todo(action:'set', items: <plan Implementation Phases>)`.",
 				"Mark each item in_progress before working it via `todo(action:'update', id, status)`; opening one auto-closes every earlier item, so just open the next and skipped steps mark done themselves.",
+				"When marking an item done, the tool checks for earlier incomplete items and warns you — resolve each skipped item (mark done or blocked) before moving on.",
 				"Call `todo(action:'list')` to recover your place after long runs or context compaction.",
 			],
 			parameters: Type.Object({
@@ -127,13 +190,10 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				),
 				items: Type.Optional(
 					Type.String({
-						description:
-							"For set/add: newline-separated or numbered list of todo texts.",
+						description: "For set/add: newline-separated or numbered list of todo texts.",
 					}),
 				),
-				id: Type.Optional(
-					Type.Number({ description: "For update: target todo id." }),
-				),
+				id: Type.Optional(Type.Number({ description: "For update: target todo id." })),
 				status: Type.Optional(
 					Type.Union(
 						[
@@ -161,15 +221,14 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				};
 				if (!state.snapshot) state.snapshot = todos.map((t) => ({ ...t }));
 				// Start the collapse timer once per row; invalidate() triggers rerender.
-				if (!state.collapsed && !state.timer) {
+				// Config-driven: reads from ~/.pi/agent/pix.json collapse section.
+				if (shouldCollapseTodo() && !state.collapsed && !state.timer) {
 					state.timer = setTimeout(() => {
 						state.collapsed = true;
 						context.invalidate();
-					}, COLLAPSE_AFTER_SEC * 1000);
+					}, collapseDelayMs());
 				}
-				const render = state.collapsed
-					? renderTodoSummaryLine
-					: renderTodoLines;
+				const render = state.collapsed ? renderTodoSummaryLine : renderTodoLines;
 				return new Text(render(state.snapshot, theme as TodoTheme), 0, 0);
 			},
 
@@ -205,8 +264,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 					case "add": {
 						const texts = parseItems(params.items ?? "");
 						if (!texts.length) return fail("add requires non-empty `items`.");
-						for (const text of texts)
-							todos.push({ id: nextTodoId++, text, status: "pending" });
+						for (const text of texts) todos.push({ id: nextTodoId++, text, status: "pending" });
 						persistTodos();
 						return ok(todoSummary());
 					}
@@ -214,6 +272,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 					case "update": {
 						const t = todos.find((x) => x.id === params.id);
 						if (!t) return fail(`No todo with id ${params.id}.`);
+						let skipWarning = "";
 						if (params.status) {
 							// Sequential-progress invariant: opening a task means everything
 							// before it is finished. Cascade-close every earlier pending or
@@ -223,15 +282,17 @@ export default function registerTodo(pi: ExtensionAPI): void {
 								for (const other of todos)
 									if (
 										other.id < t.id &&
-										(other.status === "pending" ||
-											other.status === "in_progress")
+										(other.status === "pending" || other.status === "in_progress")
 									)
 										other.status = "done";
+
+							if (params.status === "done") skipWarning = buildSkipWarning(todos, t.id);
+
 							t.status = params.status;
 						}
 						if (params.text) t.text = params.text;
 						persistTodos();
-						return ok(todoSummary());
+						return ok(todoSummary() + skipWarning);
 					}
 
 					case "clear":
@@ -246,6 +307,32 @@ export default function registerTodo(pi: ExtensionAPI): void {
 			},
 		});
 
+		// ── Turn-based reminder ─────────────────────────────────────────────
+		// Every TODO_REMINDER_INTERVAL turns, inject the current todo summary
+		// into the system prompt so the model stays aware of pending work and
+		// can't hand-wave or ignore incomplete items.
+		const TODO_REMINDER_INTERVAL = 10;
+		let todoTurnCount = 0;
+
+		pi.on("before_agent_start", async (event) => {
+			todoTurnCount++;
+			// Only inject when there are active (non-empty) todos
+			if (todos.length === 0) return;
+			// Check if any items are still incomplete
+			const hasIncomplete = todos.some((t) => t.status === "pending" || t.status === "in_progress");
+			if (!hasIncomplete) return;
+			// Fire on every Nth turn
+			if (todoTurnCount % TODO_REMINDER_INTERVAL !== 0) return;
+
+			const reminder =
+				"Todo reminder — incomplete items remain:\n" +
+				todoSummary() +
+				"\nCall `todo(action:'list')` to review, then continue working through pending items.";
+
+			const existing = event.systemPrompt ?? "";
+			return { systemPrompt: existing ? `${existing}\n\n${reminder}` : reminder };
+		});
+
 		// Restore the checklist from session entries so it survives restart.
 		pi.on("session_start", async (_event, ctx) => {
 			const entries = ctx.sessionManager.getEntries() as Array<{
@@ -258,9 +345,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				.pop();
 			if (Array.isArray(lastTodo?.data?.todos)) {
 				todos = lastTodo.data.todos;
-				nextTodoId =
-					lastTodo.data.nextTodoId ??
-					todos.reduce((m, t) => Math.max(m, t.id + 1), 1);
+				nextTodoId = lastTodo.data.nextTodoId ?? todos.reduce((m, t) => Math.max(m, t.id + 1), 1);
 			}
 		});
 	});

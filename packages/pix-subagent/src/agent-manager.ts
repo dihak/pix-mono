@@ -1,35 +1,48 @@
 /**
  * agent-manager.ts — Tracks agents, background execution, resume support.
  *
- * Background agents are subject to a configurable concurrency limit (default: 4).
- * Excess agents are queued and auto-started as running agents complete.
- * Foreground agents bypass the queue (they block the parent anyway).
+ * All agents run in background and are subject to a configurable concurrency
+ * limit (default: 4). Excess agents are queued and auto-started as running
+ * agents complete.
  */
 
 import { randomUUID } from "node:crypto";
 import { statSync } from "node:fs";
 import { isAbsolute } from "node:path";
-import type { Model } from "@earendil-works/pi-ai";
-import type {
-	AgentSession,
-	ExtensionAPI,
-	ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
-import { resumeAgent, runAgent, type ToolActivity } from "./agent-runner.ts";
-import type {
-	AgentInvocation,
-	AgentRecord,
-	SubagentType,
-	ThinkingLevel,
-} from "./types.ts";
+import type { Api, Model } from "@earendil-works/pi-ai";
+import type { AgentSession, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import {
+	resumeAgent as _resumeAgentReal,
+	runAgent as _runAgentReal,
+	type ToolActivity,
+} from "./agent-runner.ts";
+
+// ── Test-only injection point ────────────────────────────────────────────────
+// Allows tests to replace runAgent/resumeAgent with controllable fakes without
+// requiring flaky module-level mocking. Production code never calls the setter.
+let _runAgentImpl: typeof _runAgentReal = _runAgentReal;
+let _resumeAgentImpl: typeof _resumeAgentReal = _resumeAgentReal;
+
+/** @internal Test-only: replace the runAgent implementation. */
+export function __setRunAgentForTests(fn: typeof _runAgentReal): void {
+	_runAgentImpl = fn;
+}
+/** @internal Test-only: replace the resumeAgent implementation. */
+export function __setResumeAgentForTests(fn: typeof _resumeAgentReal): void {
+	_resumeAgentImpl = fn;
+}
+/** @internal Test-only: restore the real implementations. */
+export function __resetAgentRunnersForTests(): void {
+	_runAgentImpl = _runAgentReal;
+	_resumeAgentImpl = _resumeAgentReal;
+}
+
+import type { AgentInvocation, AgentRecord, SubagentType, ThinkingLevel } from "./types.ts";
 import { addUsage } from "./usage.ts";
 
 export type OnAgentComplete = (record: AgentRecord) => void;
 export type OnAgentStart = (record: AgentRecord) => void;
-export type OnAgentCompact = (
-	record: AgentRecord,
-	info: CompactionInfo,
-) => void;
+export type OnAgentCompact = (record: AgentRecord, info: CompactionInfo) => void;
 export type CompactionInfo = {
 	reason: "manual" | "threshold" | "overflow";
 	tokensBefore: number;
@@ -44,14 +57,10 @@ const DEFAULT_MAX_CONCURRENT = 4;
  * directory — curated errors instead of TypeErrors from path/fs internals
  * (RPC callers send arbitrary JSON: null, numbers, file paths).
  */
-function assertValidSpawnCwd(
-	cwd: unknown,
-): asserts cwd is string | undefined | null {
+function assertValidSpawnCwd(cwd: unknown): asserts cwd is string | undefined | null {
 	if (cwd == null) return;
 	if (typeof cwd !== "string" || !isAbsolute(cwd)) {
-		throw new Error(
-			`SpawnOptions.cwd must be an absolute path: "${String(cwd)}"`,
-		);
+		throw new Error(`SpawnOptions.cwd must be an absolute path: "${String(cwd)}"`);
 	}
 	let isDirectory = false;
 	try {
@@ -74,7 +83,7 @@ interface SpawnArgs {
 
 interface SpawnOptions {
 	description: string;
-	model?: Model<any>;
+	model?: Model<Api>;
 	maxTurns?: number;
 	isolated?: boolean;
 	inheritContext?: boolean;
@@ -101,15 +110,13 @@ interface SpawnOptions {
 	/** Called at the end of each agentic turn with the cumulative count. */
 	onTurnEnd?: (turnCount: number) => void;
 	/** Called once per assistant message_end with that message's usage delta. */
-	onAssistantUsage?: (usage: {
-		input: number;
-		output: number;
-		cacheWrite: number;
-	}) => void;
+	onAssistantUsage?: (usage: { input: number; output: number; cacheWrite: number }) => void;
 	/** Called when the session successfully compacts. */
 	onCompaction?: (info: CompactionInfo) => void;
 	/** Caller-supplied tool-name subset — intersected (never widens). Omit → type default. */
 	allowedToolNames?: string[];
+	/** Called for config warnings (unknown tool names, extension misconfig). */
+	onWarning?: (message: string) => void;
 }
 
 export class AgentManager {
@@ -119,8 +126,8 @@ export class AgentManager {
 	private onStart?: OnAgentStart;
 	private onCompact?: OnAgentCompact;
 	private maxConcurrent: number;
-	/** Base repos worktrees were created from — so dispose() can prune them all,
-	 *  not just the parent repo (caller-supplied cwd can target other repos). */
+	/** Completed-record retention: records older than this are cleaned up. */
+	private retentionMs = 10 * 60_000;
 	/** Queue of background agents waiting to start. */
 	private queue: { id: string; args: SpawnArgs }[] = [];
 	/** Number of currently running background agents. */
@@ -136,7 +143,7 @@ export class AgentManager {
 		this.onStart = onStart;
 		this.onCompact = onCompact;
 		this.maxConcurrent = maxConcurrent;
-		// Cleanup completed agents after 10 minutes (but keep sessions for resume)
+		// Periodically clean up completed agents older than retentionMs
 		this.cleanupInterval = setInterval(() => this.cleanup(), 60_000);
 		this.cleanupInterval.unref();
 	}
@@ -150,6 +157,15 @@ export class AgentManager {
 
 	getMaxConcurrent(): number {
 		return this.maxConcurrent;
+	}
+
+	/** Set completed-record retention in ms (minimum 1 minute). */
+	setRetentionMs(n: number) {
+		this.retentionMs = Math.max(60_000, n);
+	}
+
+	getRetentionMs(): number {
+		return this.retentionMs;
 	}
 
 	/**
@@ -181,8 +197,12 @@ export class AgentManager {
 			lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
 			compactionCount: 0,
 			turnCount: 0,
+			streamingMs: 0,
 			maxTurns: options.maxTurns,
 			invocation: options.invocation,
+			// Persist the invocation mode for UI/notification routing. Use an
+			// explicit false for foreground records rather than leaving it unknown.
+			isBackground: options.isBackground === true,
 		};
 		this.agents.set(id, record);
 
@@ -231,15 +251,14 @@ export class AgentManager {
 		if (options.signal) {
 			const onParentAbort = () => this.abort(id);
 			options.signal.addEventListener("abort", onParentAbort, { once: true });
-			detachParentSignal = () =>
-				options.signal!.removeEventListener("abort", onParentAbort);
+			detachParentSignal = () => options.signal?.removeEventListener("abort", onParentAbort);
 		}
 		const detach = () => {
 			detachParentSignal?.();
 			detachParentSignal = undefined;
 		};
 
-		const promise = runAgent(ctx, type, prompt, {
+		const promise = _runAgentImpl(ctx, type, prompt, {
 			pi,
 			agentId: id,
 			model: options.model,
@@ -255,7 +274,8 @@ export class AgentManager {
 			cwd: customCwd,
 			configCwd: customCwd !== undefined ? ctx.cwd : undefined,
 			allowedToolNames: options.allowedToolNames,
-			signal: record.abortController!.signal,
+			onWarning: options.onWarning,
+			signal: record.abortController?.signal,
 			onToolActivity: (activity) => {
 				if (activity.type === "end") record.toolUses++;
 				options.onToolActivity?.(activity);
@@ -289,11 +309,7 @@ export class AgentManager {
 			.then(({ responseText, session, aborted, steered }) => {
 				// Don't overwrite status if externally stopped via abort()
 				if (record.status !== "stopped") {
-					record.status = aborted
-						? "aborted"
-						: steered
-							? "steered"
-							: "completed";
+					record.status = aborted ? "aborted" : steered ? "steered" : "completed";
 				}
 				record.result = responseText;
 				record.session = session;
@@ -335,11 +351,9 @@ export class AgentManager {
 
 	/** Start queued agents up to the concurrency limit. */
 	private drainQueue() {
-		while (
-			this.queue.length > 0 &&
-			this.runningBackground < this.maxConcurrent
-		) {
-			const next = this.queue.shift()!;
+		while (this.queue.length > 0 && this.runningBackground < this.maxConcurrent) {
+			const next = this.queue.shift();
+			if (!next) break;
 			const record = this.agents.get(next.id);
 			if (record?.status !== "queued") continue;
 			try {
@@ -356,33 +370,9 @@ export class AgentManager {
 	}
 
 	/**
-	 * Spawn an agent and wait for completion (foreground use).
-	 * Foreground agents bypass the concurrency queue.
-	 */
-	async spawnAndWait(
-		pi: ExtensionAPI,
-		ctx: ExtensionContext,
-		type: SubagentType,
-		prompt: string,
-		options: Omit<SpawnOptions, "isBackground">,
-	): Promise<AgentRecord> {
-		const id = this.spawn(pi, ctx, type, prompt, {
-			...options,
-			isBackground: false,
-		});
-		const record = this.agents.get(id)!;
-		await record.promise;
-		return record;
-	}
-
-	/**
 	 * Resume an existing agent session with a new prompt.
 	 */
-	async resume(
-		id: string,
-		prompt: string,
-		signal?: AbortSignal,
-	): Promise<AgentRecord | undefined> {
+	async resume(id: string, prompt: string, signal?: AbortSignal): Promise<AgentRecord | undefined> {
 		const record = this.agents.get(id);
 		if (!record?.session) return undefined;
 
@@ -393,7 +383,12 @@ export class AgentManager {
 		record.error = undefined;
 
 		try {
-			const responseText = await resumeAgent(record.session, prompt, {
+			const { responseText, aborted, steered } = await _resumeAgentImpl(record.session, prompt, {
+				// Re-apply the original spawn's turn cap for this resume window.
+				maxTurns: record.maxTurns,
+				onTurnEnd: (turnCount) => {
+					record.turnCount = turnCount;
+				},
 				onToolActivity: (activity) => {
 					if (activity.type === "end") record.toolUses++;
 				},
@@ -406,7 +401,7 @@ export class AgentManager {
 				},
 				signal,
 			});
-			record.status = "completed";
+			record.status = aborted ? "aborted" : steered ? "steered" : "completed";
 			record.result = responseText;
 			record.completedAt = Date.now();
 		} catch (err) {
@@ -453,7 +448,7 @@ export class AgentManager {
 	}
 
 	private cleanup() {
-		const cutoff = Date.now() - 10 * 60_000;
+		const cutoff = Date.now() - this.retentionMs;
 		for (const [id, record] of this.agents) {
 			if (record.status === "running" || record.status === "queued") continue;
 			if ((record.completedAt ?? 0) >= cutoff) continue;
@@ -474,9 +469,7 @@ export class AgentManager {
 
 	/** Whether any agents are still running or queued. */
 	hasRunning(): boolean {
-		return [...this.agents.values()].some(
-			(r) => r.status === "running" || r.status === "queued",
-		);
+		return [...this.agents.values()].some((r) => r.status === "running" || r.status === "queued");
 	}
 
 	/** Abort all running and queued agents immediately. */

@@ -11,25 +11,43 @@
 	},
 	"formatter": {
 		"enabled": true,
-		"indentStyle": "tab"
+		"indentStyle": "tab",
+		"lineWidth": 100
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"recommended": true,
-			"style": {
-				"noNonNullAssertion": "off"
-			},
 			"suspicious": {
-				"noExplicitAny": "off",
 				"noControlCharactersInRegex": "off",
-				"noAssignInExpressions": "off"
-			},
-			"complexity": {
-				"noBannedTypes": "off"
+				"noExplicitAny": "off",
+				"noFallthroughSwitchClause": "error",
+				"noDoubleEquals": "error",
+				"noVar": "error"
 			},
 			"correctness": {
-				"noUnusedPrivateClassMembers": "off"
+				"noUnusedImports": "error",
+				"noUnusedVariables": "warn",
+				"noUnusedPrivateClassMembers": "warn",
+				"noInvalidUseBeforeDeclaration": "error"
+			},
+			"complexity": {
+				"noExcessiveCognitiveComplexity": {
+					"level": "warn",
+					"options": { "maxAllowedComplexity": 100 }
+				},
+				"noForEach": "off",
+				"noUselessTernary": "warn",
+				"noUselessConstructor": "warn"
+			},
+			"style": {
+				"noNonNullAssertion": "off",
+				"useConst": "warn",
+				"noParameterAssign": "off"
+			},
+			"performance": {
+				"noAccumulatingSpread": "error",
+				"noDelete": "off"
 			}
 		}
 	},

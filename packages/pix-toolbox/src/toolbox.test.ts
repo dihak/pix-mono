@@ -41,7 +41,7 @@ describe("buildRows", () => {
 
 	test("flags MCP tools", () => {
 		const rows = buildRows([mcpToolInfo("ctx_search")]);
-		expect(rows[0].mcp).toBe(true);
+		expect((rows[0] as ToolRow).mcp).toBe(true);
 	});
 
 	test("empty input returns empty", () => {
@@ -53,12 +53,7 @@ describe("buildRows", () => {
 
 describe("parseTargets", () => {
 	test("splits on commas, spaces, newlines", () => {
-		expect(parseTargets("ls, find  grep\nfetch")).toEqual([
-			"ls",
-			"find",
-			"grep",
-			"fetch",
-		]);
+		expect(parseTargets("ls, find  grep\nfetch")).toEqual(["ls", "find", "grep", "fetch"]);
 	});
 
 	test("dedupes", () => {
@@ -191,14 +186,18 @@ afterAll(() => {
 function makeHost(toolNames: string[]) {
 	const handlers: Record<string, Array<(p: unknown) => unknown>> = {};
 	let active: string[] = [...toolNames];
-	const commands: Array<{ name: string; handler: Function }> = [];
+	const commands: Array<{
+		name: string;
+		handler: (...args: unknown[]) => unknown;
+	}> = [];
 	const pi = {
 		on(ev: string, fn: (p: unknown) => unknown) {
-			(handlers[ev] ??= []).push(fn);
+			if (!handlers[ev]) handlers[ev] = [];
+			handlers[ev].push(fn);
 		},
 		emit(ev: string, payload: unknown, ctx?: unknown) {
 			return Promise.all(
-				(handlers[ev] ?? []).map((f) => (f as Function)(payload, ctx)),
+				(handlers[ev] ?? []).map((f) => (f as (...args: unknown[]) => unknown)(payload, ctx)),
 			);
 		},
 		getAllTools() {
@@ -220,12 +219,14 @@ function makeHost(toolNames: string[]) {
 		},
 		appendEntry() {},
 		registerTool() {},
-		registerCommand(name: string, def: { handler: Function }) {
+		registerCommand(name: string, def: { handler: (...args: unknown[]) => unknown }) {
 			commands.push({ name, handler: def.handler });
 		},
 	} as never;
 	const emit = (ev: string, payload: unknown, ctx?: unknown) =>
-		Promise.all((handlers[ev] ?? []).map((f) => (f as Function)(payload, ctx)));
+		Promise.all(
+			(handlers[ev] ?? []).map((f) => (f as (...args: unknown[]) => unknown)(payload, ctx)),
+		);
 	return {
 		pi,
 		emit,
@@ -247,6 +248,7 @@ function makeCtx() {
 }
 
 describe("/toolbox command", () => {
+	type Note = { text: string; level?: string };
 	const ALL = ["read", "write", "bash", "grep", "find"];
 
 	async function boot() {
@@ -268,28 +270,31 @@ describe("/toolbox command", () => {
 		await host.command("toolbox")?.handler("", ctx);
 		expect(notes.length).toBe(1);
 		// only non-core tools shown, all start active
-		expect(notes[0].text).toContain("✓ active  grep");
-		expect(notes[0].text).toContain("✓ active  find");
+		const n0 = notes[0] as Note;
+		expect(n0.text).toContain("✓ active  grep");
+		expect(n0.text).toContain("✓ active  find");
 		// core tools excluded from toolbox
-		expect(notes[0].text).not.toContain("  read");
-		expect(notes[0].text).not.toContain("  bash");
+		expect(n0.text).not.toContain("  read");
+		expect(n0.text).not.toContain("  bash");
 	});
 
 	test("/toolbox list shows non-core tools with status", async () => {
 		const host = await boot();
 		const { ctx, notes } = makeCtx();
 		await host.command("toolbox")?.handler("list", ctx);
-		expect(notes[0].text).toContain("grep");
-		expect(notes[0].text).toContain("find");
-		expect(notes[0].text).not.toContain("  bash");
+		const ln0 = notes[0] as Note;
+		expect(ln0.text).toContain("grep");
+		expect(ln0.text).toContain("find");
+		expect(ln0.text).not.toContain("  bash");
 	});
 
 	test("/toolbox list <query> filters", async () => {
 		const host = await boot();
 		const { ctx, notes } = makeCtx();
 		await host.command("toolbox")?.handler("list fin", ctx);
-		expect(notes[0].text).toContain("find");
-		expect(notes[0].text).not.toContain("✓ active  read");
+		const fn0 = notes[0] as Note;
+		expect(fn0.text).toContain("find");
+		expect(fn0.text).not.toContain("✓ active  read");
 	});
 
 	test("opens interactive picker when ctx.ui.custom exists", async () => {

@@ -71,9 +71,7 @@ describe("isUniformObjectArray", () => {
 	});
 
 	it("false for differing keys", () => {
-		expect(isUniformObjectArray([{ id: 1 }, { id: 2, extra: true }])).toBe(
-			false,
-		);
+		expect(isUniformObjectArray([{ id: 1 }, { id: 2, extra: true }])).toBe(false);
 	});
 
 	it("false when a value is itself an object", () => {

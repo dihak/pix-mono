@@ -13,10 +13,7 @@
  * The display rewrite is purely visual (render layer); buffer is untouched.
  */
 
-import type {
-	ExtensionAPI,
-	KeybindingsManager,
-} from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import type { EditorTheme, TUI } from "@earendil-works/pi-tui";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
@@ -97,10 +94,7 @@ type ExpandPasteHandler = { expandPasteMarkers(text: string): string };
 
 // Mirror of the base Editor's paste-marker grammar, per-id at expand time.
 function markerReFor(pasteId: number): RegExp {
-	return new RegExp(
-		`\\[paste #${pasteId}( (\\+\\d+ lines|\\d+ chars))?\\]`,
-		"g",
-	);
+	return new RegExp(`\\[paste #${pasteId}( (\\+\\d+ lines|\\d+ chars))?\\]`, "g");
 }
 
 /**
@@ -109,10 +103,7 @@ function markerReFor(pasteId: number): RegExp {
  * boundary per blob (text and image alike) so adjacent pastes can't merge
  * into one indistinguishable wall in the model-facing text.
  */
-export function expandPasteMarkers(
-	text: string,
-	pastes: Map<number, string>,
-): string {
+export function expandPasteMarkers(text: string, pastes: Map<number, string>): string {
 	let result = text;
 	for (const [pasteId, pasteContent] of pastes) {
 		result = result.replace(
@@ -162,35 +153,22 @@ export function restyleMarkers(line: string, imageIds: Set<number>): string {
 	// Strip cursor inversion codes the TUI embeds when the cursor
 	// intersects a marker — plain MARKER_RE handles the rest.
 	const clean = line.includes("\x1b") ? line.replace(CURSOR_RE, "") : line;
-	return clean.replace(
-		MARKER_RE,
-		(_full, idStr, _g2, _g3, linesStr, charsStr) => {
-			const id = Number.parseInt(idStr, 10);
-			if (imageIds.has(id)) {
-				return chip(FG_BLUE, icon("paste.image"), "image", `#${id}`);
-			}
-			if (linesStr) {
-				return chip(FG_GREEN, icon("paste.text"), "text", `${linesStr} lines`);
-			}
-			if (charsStr) {
-				return chip(
-					FG_GREEN,
-					icon("paste.text"),
-					"text",
-					`${compactNumber(charsStr)} chars`,
-				);
-			}
-			return chip(FG_GREEN, icon("paste.text"), "text", `#${id}`);
-		},
-	);
+	return clean.replace(MARKER_RE, (_full, idStr, _g2, _g3, linesStr, charsStr) => {
+		const id = Number.parseInt(idStr, 10);
+		if (imageIds.has(id)) {
+			return chip(FG_BLUE, icon("paste.image"), "image", `#${id}`);
+		}
+		if (linesStr) {
+			return chip(FG_GREEN, icon("paste.text"), "text", `${linesStr} lines`);
+		}
+		if (charsStr) {
+			return chip(FG_GREEN, icon("paste.text"), "text", `${compactNumber(charsStr)} chars`);
+		}
+		return chip(FG_GREEN, icon("paste.text"), "text", `#${id}`);
+	});
 }
 
-function chip(
-	color: string,
-	icon: string,
-	label: string,
-	meta: string,
-): string {
+function chip(color: string, icon: string, label: string, meta: string): string {
 	return `${color}${BOLD}${icon} ${label}${RST}${FG_DIM} ${meta}${RST}`;
 }
 
@@ -228,9 +206,7 @@ class ChipEditor extends CustomEditor {
 		const replaced = replaceImagePaths(text, internals, this.imageIds);
 		// Append a trailing space when the insertion ends with a paste marker so
 		// the cursor lands after the chip rather than inside it.
-		super.insertTextAtCursor(
-			endsWithMarker(replaced) ? `${replaced} ` : replaced,
-		);
+		super.insertTextAtCursor(endsWithMarker(replaced) ? `${replaced} ` : replaced);
 	}
 
 	/**
@@ -243,8 +219,7 @@ class ChipEditor extends CustomEditor {
 	private patchExpandPasteMarkers(): void {
 		const internals = this as unknown as ExpandInternals;
 		const self = this as unknown as ExpandPasteHandler;
-		self.expandPasteMarkers = (text: string): string =>
-			expandPasteMarkers(text, internals.pastes);
+		self.expandPasteMarkers = (text: string): string => expandPasteMarkers(text, internals.pastes);
 	}
 
 	private patchHandlePaste(): void {

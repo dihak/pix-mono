@@ -16,11 +16,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { frameLines } from "@xynogen/pix-pretty/modal-frame";
-import type {
-	OptimizerHandle,
-	OptimizerStatus,
-	OptimizerTool,
-} from "./status.ts";
+import type { OptimizerHandle, OptimizerStatus, OptimizerTool } from "./status.ts";
 import { toolIcon } from "./status.ts";
 
 /** Min/max content width for the overlay box (excludes 4 cols of chrome). */
@@ -28,12 +24,7 @@ const MIN_CONTENT = 28;
 const MAX_CONTENT = 60;
 
 /** Fixed render order — matches the status-bar cell. */
-const TOOL_ORDER: readonly OptimizerTool[] = [
-	"caveman",
-	"rtk",
-	"toon",
-	"ponytail",
-];
+const TOOL_ORDER: readonly OptimizerTool[] = ["caveman", "rtk", "toon", "ponytail"];
 
 /** Strip the leading "name [args] — " prefix from a handle's help string. */
 function helpSummary(help: string): string {
@@ -64,9 +55,7 @@ export function levelBar(current: string, values: readonly string[]): string {
 }
 
 /** Plain-text status fallback when there's no custom-UI host (headless/tests). */
-export function buildOptHelp(
-	handles: Record<OptimizerTool, OptimizerHandle>,
-): string {
+export function buildOptHelp(handles: Record<OptimizerTool, OptimizerHandle>): string {
 	const lines = TOOL_ORDER.map(
 		(n) => `  ${n}: ${handles[n].current()}  — ${helpSummary(handles[n].help)}`,
 	);
@@ -132,16 +121,15 @@ export function registerOptCommand(
 					let selected = 0;
 
 					const cycle = (direction: -1 | 1) => {
-						const tool = TOOL_ORDER[selected]!;
+						const tool = TOOL_ORDER[selected] as OptimizerTool;
 						const values = handles[tool].values;
 						const cur = values.indexOf(handles[tool].current());
 						const next = (cur + direction + values.length) % values.length;
-						handles[tool].run(values[next]!, ctx);
+						handles[tool].run(values[next] ?? "", ctx);
 					};
 
 					const move = (direction: -1 | 1) => {
-						selected =
-							(selected + direction + TOOL_ORDER.length) % TOOL_ORDER.length;
+						selected = (selected + direction + TOOL_ORDER.length) % TOOL_ORDER.length;
 					};
 
 					return {
@@ -156,14 +144,8 @@ export function registerOptCommand(
 									tool.padEnd(nameWidth),
 								);
 								const cur = handles[tool].current();
-								const value = theme.fg(
-									on ? "success" : "dim",
-									cur.padEnd(valueWidth),
-								);
-								const bar = theme.fg(
-									on ? "accent" : "dim",
-									levelBar(cur, handles[tool].values),
-								);
+								const value = theme.fg(on ? "success" : "dim", cur.padEnd(valueWidth));
+								const bar = theme.fg(on ? "accent" : "dim", levelBar(cur, handles[tool].values));
 								return `${cursor} ${glyph}  ${name}  ${value}  ${bar}`;
 							});
 							const lines = [
@@ -171,10 +153,7 @@ export function registerOptCommand(
 								"",
 								...rows,
 								"",
-								theme.fg(
-									"dim",
-									helpSummary(handles[TOOL_ORDER[selected]!].help),
-								),
+								theme.fg("dim", helpSummary(handles[TOOL_ORDER[selected] as OptimizerTool].help)),
 								"",
 								theme.fg("dim", "←→ change · ↑↓ move · esc close"),
 							];
@@ -190,12 +169,7 @@ export function registerOptCommand(
 							if (data === "k" || data === "\u001b[A") move(-1);
 							else if (data === "j" || data === "\u001b[B") move(1);
 							else if (data === "h" || data === "\u001b[D") cycle(-1);
-							else if (
-								data === "l" ||
-								data === "\u001b[C" ||
-								data === " " ||
-								data === "\r"
-							)
+							else if (data === "l" || data === "\u001b[C" || data === " " || data === "\r")
 								cycle(1);
 							else if (data === "\u001b" || data === "q") {
 								done(null);

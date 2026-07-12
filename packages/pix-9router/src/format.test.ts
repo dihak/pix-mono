@@ -36,9 +36,7 @@ describe("formatSearchResults", () => {
 	});
 
 	it("handles empty results", () => {
-		expect(formatSearchResults(JSON.stringify({ results: [] }))).toBe(
-			"No results.",
-		);
+		expect(formatSearchResults(JSON.stringify({ results: [] }))).toBe("No results.");
 	});
 
 	it("falls back to pretty JSON for unexpected shapes", () => {
@@ -52,14 +50,10 @@ describe("formatSearchResults", () => {
 
 	it("truncates long snippets to 300 chars", () => {
 		const raw = JSON.stringify({
-			results: [
-				{ title: "T", url: "https://x.dev", snippet: "y".repeat(1000) },
-			],
+			results: [{ title: "T", url: "https://x.dev", snippet: "y".repeat(1000) }],
 		});
 		const out = formatSearchResults(raw);
-		const snippetLine = out
-			.split("\n")
-			.find((l) => l.trimStart().startsWith("yyy"));
+		const snippetLine = out.split("\n").find((l) => l.trimStart().startsWith("yyy"));
 		expect(snippetLine?.trim().length).toBe(300);
 	});
 });
@@ -74,9 +68,7 @@ describe("formatFetchResult", () => {
 		});
 
 		const out = formatFetchResult(raw);
-		expect(out).toBe(
-			"# Example Page\nURL: https://example.com\n\n# Hello\n\nBody text.",
-		);
+		expect(out).toBe("# Example Page\nURL: https://example.com\n\n# Hello\n\nBody text.");
 	});
 
 	it("supports content as a plain string", () => {

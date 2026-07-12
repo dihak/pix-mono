@@ -65,10 +65,7 @@ export default function (pi: ExtensionAPI): void {
 		if (!hit) return undefined;
 
 		if (hit.severity === "info") {
-			ctx.ui.notify(
-				`${PATH_SEVERITY_ICON.info} ${hit.reason}: ${path}`,
-				"info",
-			);
+			ctx.ui.notify(`${PATH_SEVERITY_ICON.info} ${hit.reason}: ${path}`, "info");
 			return undefined;
 		}
 
@@ -88,7 +85,13 @@ export default function (pi: ExtensionAPI): void {
 	});
 
 	// ── Unified bash gate (path + command concerns in ONE dialog) ───────────
-	const SEVERITY_TIER: Record<string, number> = {
+	const SEVERITY_TIER: {
+		critical: number;
+		block: number;
+		dangerous: number;
+		warn: number;
+		risky: number;
+	} = {
 		critical: 5,
 		block: 4,
 		dangerous: 3,
@@ -181,10 +184,7 @@ export default function (pi: ExtensionAPI): void {
 		}
 
 		if (!decision.approved) {
-			ctx.ui.notify(
-				`${highest.icon} ${decision.reason}: ${highest.detail}`,
-				"warning",
-			);
+			ctx.ui.notify(`${highest.icon} ${decision.reason}: ${highest.detail}`, "warning");
 			return { block: true, reason: `[${highest.label}] ${decision.reason}` };
 		}
 
@@ -196,10 +196,7 @@ export default function (pi: ExtensionAPI): void {
 					: "accent";
 		ctx.ui.notify(
 			`${highest.icon} ` +
-				ctx.ui.theme.fg(
-					severityColor,
-					`Approved ${highest.label.toLowerCase()} command`,
-				),
+				ctx.ui.theme.fg(severityColor, `Approved ${highest.label.toLowerCase()} command`),
 			"info",
 		);
 		return undefined;

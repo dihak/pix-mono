@@ -71,8 +71,7 @@ export function frameLines(opts: FrameOptions): string[] {
 
 	const row = (content: string): string => {
 		const pad = inner - visibleWidth(content);
-		const padded =
-			pad > 0 ? content + " ".repeat(pad) : truncateToWidth(content, inner);
+		const padded = pad > 0 ? content + " ".repeat(pad) : truncateToWidth(content, inner);
 		return bg(`${color("│")} ${reassert(padded)} ${color("│")}`);
 	};
 
@@ -101,10 +100,7 @@ interface FgTheme {
  * Canonical SelectList theme for interactive overlays.
  * accent = active/selected, muted = descriptions, dim = scroll/hints, warning = no-match.
  */
-export function selectListTheme(
-	theme: FgTheme,
-	accent = "accent",
-): SelectListThemeConfig {
+export function selectListTheme(theme: FgTheme, accent = "accent"): SelectListThemeConfig {
 	return {
 		selectedPrefix: (t) => theme.fg(accent, t),
 		selectedText: (t) => theme.fg(accent, t),

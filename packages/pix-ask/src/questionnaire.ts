@@ -17,17 +17,8 @@ import { frameLines, modalWidth } from "./frame.js";
 import { checkboxGlyphs, selectionGlyph } from "./glyphs.js";
 import { safeMarkdownTheme, sentinelsFor } from "./helpers.js";
 import type { OptionData, Params, QuestionData } from "./schema.js";
-import {
-	SENTINEL_FREEFORM,
-	SENTINEL_NEXT,
-	SEPARATOR,
-	SPLIT_PANE_MIN_WIDTH,
-} from "./schema.js";
-import type {
-	AnswerKind,
-	QuestionAnswer,
-	QuestionnaireResult,
-} from "./types.js";
+import { SENTINEL_FREEFORM, SENTINEL_NEXT, SEPARATOR, SPLIT_PANE_MIN_WIDTH } from "./schema.js";
+import type { AnswerKind, QuestionAnswer, QuestionnaireResult } from "./types.js";
 
 // ── AskQuestionnaire ───────────────────────────────────────────────────
 
@@ -65,7 +56,9 @@ export class AskQuestionnaire extends Container {
 	// ── Accessors ──────────────────────────────────────────────────────
 
 	private get currentQ(): QuestionData {
-		return this.params.questions[this.currentIndex]!;
+		const q = this.params.questions[this.currentIndex];
+		if (!q) throw new Error("currentIndex out of bounds");
+		return q;
 	}
 
 	private get filteredOptions(): OptionData[] {
@@ -82,8 +75,7 @@ export class AskQuestionnaire extends Container {
 		label?: string;
 		option?: OptionData;
 	}> {
-		const items: Array<{ kind: string; label?: string; option?: OptionData }> =
-			[];
+		const items: Array<{ kind: string; label?: string; option?: OptionData }> = [];
 		for (const o of this.filteredOptions) {
 			items.push({ kind: "option", option: o });
 		}
@@ -135,9 +127,7 @@ export class AskQuestionnaire extends Container {
 		selected?: string[],
 		preview?: string,
 	): void {
-		this.answers = this.answers.filter(
-			(a) => a.questionIndex !== this.currentIndex,
-		);
+		this.answers = this.answers.filter((a) => a.questionIndex !== this.currentIndex);
 		this.answers.push({
 			questionIndex: this.currentIndex,
 			question: this.currentQ.question,
@@ -156,12 +146,7 @@ export class AskQuestionnaire extends Container {
 		}
 
 		if (item.kind === "option" && item.option) {
-			this.recordAnswer(
-				"option",
-				item.option.label,
-				undefined,
-				item.option.preview,
-			);
+			this.recordAnswer("option", item.option.label, undefined, item.option.preview);
 			this.nextQuestion();
 		} else if (item.kind === "other") {
 			this.inputMode = true;
@@ -170,7 +155,7 @@ export class AskQuestionnaire extends Container {
 		} else if (item.kind === "next") {
 			const selected = Array.from(this.multiChecked)
 				.sort((a, b) => a - b)
-				.map((i) => this.currentQ.options[i]?.label);
+				.map((i) => this.currentQ.options[i]?.label ?? "");
 			if (selected.length === 0) {
 				this.cancel();
 				return;
@@ -202,14 +187,12 @@ export class AskQuestionnaire extends Container {
 	}
 
 	private restoreAnswerState(): void {
-		const prev = this.answers.find(
-			(a) => a.questionIndex === this.currentIndex,
-		);
+		const prev = this.answers.find((a) => a.questionIndex === this.currentIndex);
 		if (!prev) return;
 		const q = this.currentQ;
 		if (prev.kind === "multi") {
 			for (let i = 0; i < q.options.length; i++) {
-				if (prev.selected?.includes(q.options[i]!.label)) {
+				if (prev.selected?.includes(q.options[i]?.label ?? "")) {
 					this.multiChecked.add(i);
 				}
 			}
@@ -285,8 +268,7 @@ export class AskQuestionnaire extends Container {
 			matchesKey(data, Key.ctrl("k"))
 		) {
 			if (total > 0) {
-				this.selectedOptionIndex =
-					(this.selectedOptionIndex - 1 + total) % total;
+				this.selectedOptionIndex = (this.selectedOptionIndex - 1 + total) % total;
 				this.refresh();
 			}
 			return;
@@ -354,7 +336,8 @@ export class AskQuestionnaire extends Container {
 					this.selectedOptionIndex = Math.min(idx, this.totalItems - 1);
 					this.refresh();
 				} else {
-					const opt = this.filteredOptions[idx]!;
+					const opt = this.filteredOptions[idx];
+					if (!opt) return;
 					this.recordAnswer("option", opt.label, undefined, opt.preview);
 					this.nextQuestion();
 				}
@@ -420,10 +403,7 @@ export class AskQuestionnaire extends Container {
 		const maxVisible = Math.min(total, 12);
 		const start = Math.max(
 			0,
-			Math.min(
-				this.selectedOptionIndex - Math.floor(maxVisible / 2),
-				total - maxVisible,
-			),
+			Math.min(this.selectedOptionIndex - Math.floor(maxVisible / 2), total - maxVisible),
 		);
 		const end = Math.min(start + maxVisible, total);
 
@@ -434,7 +414,8 @@ export class AskQuestionnaire extends Container {
 		const pad = " ".repeat(LABEL_COL);
 
 		for (let i = start; i < end; i++) {
-			const item = items[i]!;
+			const item = items[i];
+			if (!item) continue;
 			const sel = i === this.selectedOptionIndex;
 			const ptr = sel ? t.fg("accent", "→") : " ";
 
@@ -458,24 +439,18 @@ export class AskQuestionnaire extends Container {
 				const label = sel
 					? t.fg("accent", t.bold(SENTINEL_FREEFORM))
 					: t.fg("text", t.bold(SENTINEL_FREEFORM));
-				lines.push(
-					truncateToWidth(`${ptr} ${t.fg("dim", "✎")} ${label}`, inner, ""),
-				);
+				lines.push(truncateToWidth(`${ptr} ${t.fg("dim", "✎")} ${label}`, inner, ""));
 			} else if (item.kind === "next") {
 				const label = sel
 					? t.fg("accent", t.bold(SENTINEL_NEXT))
 					: t.fg("text", t.bold(SENTINEL_NEXT));
-				lines.push(
-					truncateToWidth(`${ptr} ${t.fg("dim", "→")} ${label}`, inner, ""),
-				);
+				lines.push(truncateToWidth(`${ptr} ${t.fg("dim", "→")} ${label}`, inner, ""));
 			}
 		}
 
 		if (start > 0 || end < total) {
 			const count =
-				this.filteredOptions.length > 0
-					? `${this.selectedOptionIndex + 1}/${total}`
-					: `${total}`;
+				this.filteredOptions.length > 0 ? `${this.selectedOptionIndex + 1}/${total}` : `${total}`;
 			lines.push(t.fg("dim", truncateToWidth(`  ${count}`, inner, "")));
 		}
 
@@ -492,19 +467,12 @@ export class AskQuestionnaire extends Container {
 		const mdWidth = Math.max(10, width);
 
 		if (this.mdTheme) {
-			const md = new Markdown(
-				`## ${item.option.label}\n\n${mdText}`,
-				0,
-				0,
-				this.mdTheme,
-			);
+			const md = new Markdown(`## ${item.option.label}\n\n${mdText}`, 0, 0, this.mdTheme);
 			return md.render(mdWidth);
 		}
 
 		const lines = wrapTextWithAnsi(mdText, mdWidth);
-		return lines.map((l) =>
-			truncateToWidth(this.theme.fg("muted", l), mdWidth, ""),
-		);
+		return lines.map((l) => truncateToWidth(this.theme.fg("muted", l), mdWidth, ""));
 	}
 
 	override render(termWidth: number): string[] {
@@ -516,9 +484,7 @@ export class AskQuestionnaire extends Container {
 		const t = this.theme;
 		const isMulti = !!this.currentQ.multiSelect;
 		const hasPreview =
-			!isMulti &&
-			this.selectedItem?.kind === "option" &&
-			!!this.selectedItem?.option?.preview;
+			!isMulti && this.selectedItem?.kind === "option" && !!this.selectedItem?.option?.preview;
 
 		const useSplit = hasPreview && width >= SPLIT_PANE_MIN_WIDTH;
 		const leftWidth = useSplit ? Math.floor((width - 2) * 0.45) : inner;
@@ -526,8 +492,7 @@ export class AskQuestionnaire extends Container {
 
 		const lines: string[] = [];
 
-		const row = (content: string): string =>
-			truncateToWidth(content, width, "");
+		const row = (content: string): string => truncateToWidth(content, width, "");
 
 		// Tab bar — rendered as the framed top edge (frameLines `top`).
 		let top: string | undefined;
@@ -550,10 +515,7 @@ export class AskQuestionnaire extends Container {
 		lines.push(row(`${chip}${prog}`));
 
 		// Question text
-		for (const w of wrapTextWithAnsi(
-			this.currentQ.question,
-			Math.max(10, inner),
-		)) {
+		for (const w of wrapTextWithAnsi(this.currentQ.question, Math.max(10, inner))) {
 			lines.push(row(t.fg("text", t.bold(w))));
 		}
 
@@ -597,28 +559,17 @@ export class AskQuestionnaire extends Container {
 		}
 
 		// Footer hints
-		const navHint =
-			this.params.questions.length > 1 ? "↑↓ nav • ←→ question" : "↑↓ nav";
+		const navHint = this.params.questions.length > 1 ? "↑↓ nav • ←→ question" : "↑↓ nav";
 		const hintParts = isMulti
-			? [
-					`${navHint} • space toggle • enter commit • esc clear`,
-					"ctrl+c cancel",
-				]
-			: [
-					`${navHint} • type filter • enter select • esc clear`,
-					"ctrl+c cancel",
-				];
+			? [`${navHint} • space toggle • enter commit • esc clear`, "ctrl+c cancel"]
+			: [`${navHint} • type filter • enter select • esc clear`, "ctrl+c cancel"];
 		lines.push(row(dim(t)(hintParts.join(" • "))));
 
 		return this.frame(mw, lines, top);
 	}
 
 	/** Wrap body lines in the rounded modal border at the given outer width. */
-	private frame(
-		outerWidth: number,
-		lines: string[],
-		top: string | undefined,
-	): string[] {
+	private frame(outerWidth: number, lines: string[], top: string | undefined): string[] {
 		const t = this.theme;
 		return frameLines({
 			width: outerWidth,

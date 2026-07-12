@@ -16,32 +16,24 @@ function texts(blocks: Block[]): string[] {
 	return blocks.filter((b) => b.type === "text").map((b) => b.text ?? "");
 }
 function thinkings(blocks: Block[]): string[] {
-	return blocks
-		.filter((b) => b.type === "thinking")
-		.map((b) => b.thinking ?? "");
+	return blocks.filter((b) => b.type === "thinking").map((b) => b.thinking ?? "");
 }
 
 describe("splitThinking", () => {
 	describe("closed thinking blocks", () => {
 		it("turns a <thinking> span into a thinking block", () => {
 			const out = splitThinking("<thinking>This is reasoning</thinking>");
-			expect(out).toEqual([
-				{ type: "thinking", thinking: "This is reasoning" },
-			]);
+			expect(out).toEqual([{ type: "thinking", thinking: "This is reasoning" }]);
 		});
 
 		it("turns a <think> span into a thinking block", () => {
 			const out = splitThinking("<think>This is reasoning</think>");
-			expect(out).toEqual([
-				{ type: "thinking", thinking: "This is reasoning" },
-			]);
+			expect(out).toEqual([{ type: "thinking", thinking: "This is reasoning" }]);
 		});
 
 		it("preserves multi-line reasoning inside one thinking block", () => {
 			const out = splitThinking("<thinking>Line 1\nLine 2\nLine 3</thinking>");
-			expect(out).toEqual([
-				{ type: "thinking", thinking: "Line 1\nLine 2\nLine 3" },
-			]);
+			expect(out).toEqual([{ type: "thinking", thinking: "Line 1\nLine 2\nLine 3" }]);
 		});
 
 		it("emits one thinking block per closed span in order", () => {
@@ -65,18 +57,12 @@ describe("splitThinking", () => {
 		});
 
 		it("trims whitespace from thinking content", () => {
-			const out = splitThinking(
-				"<thinking>\n  This is reasoning  \n</thinking>",
-			);
-			expect(out).toEqual([
-				{ type: "thinking", thinking: "This is reasoning" },
-			]);
+			const out = splitThinking("<thinking>\n  This is reasoning  \n</thinking>");
+			expect(out).toEqual([{ type: "thinking", thinking: "This is reasoning" }]);
 		});
 
 		it("handles mixed case tag names", () => {
-			const out = splitThinking(
-				"<THINKING>uppercase</THINKING> <ThInKiNg>mixedcase</ThInKiNg>",
-			);
+			const out = splitThinking("<THINKING>uppercase</THINKING> <ThInKiNg>mixedcase</ThInKiNg>");
 			expect(thinkings(out)).toEqual(["uppercase", "mixedcase"]);
 		});
 	});
@@ -118,9 +104,7 @@ describe("splitThinking", () => {
 		});
 
 		it("handles multiple orphan tags", () => {
-			const out = splitThinking(
-				"</thinking> text </think> more <thinking> stuff </think>",
-			);
+			const out = splitThinking("</thinking> text </think> more <thinking> stuff </think>");
 			const joined = texts(out).join(" ");
 			expect(joined).not.toContain("<thinking>");
 			expect(joined).not.toContain("</thinking>");
@@ -144,9 +128,7 @@ describe("splitThinking", () => {
 
 	describe("mixed content order", () => {
 		it("keeps text before a thinking block", () => {
-			const out = splitThinking(
-				"Response text here\n\n<thinking>reasoning</thinking>",
-			);
+			const out = splitThinking("Response text here\n\n<thinking>reasoning</thinking>");
 			expect(out).toEqual([
 				{ type: "text", text: "Response text here" },
 				{ type: "thinking", thinking: "reasoning" },
@@ -154,9 +136,7 @@ describe("splitThinking", () => {
 		});
 
 		it("keeps text after a thinking block", () => {
-			const out = splitThinking(
-				"<thinking>reasoning</thinking>\n\nMore response text",
-			);
+			const out = splitThinking("<thinking>reasoning</thinking>\n\nMore response text");
 			expect(out).toEqual([
 				{ type: "thinking", thinking: "reasoning" },
 				{ type: "text", text: "More response text" },
@@ -199,23 +179,15 @@ describe("splitThinking", () => {
 		it("emits a thinking block for an open span before the close arrives", () => {
 			const midStream = "<thinking>I am reasoning about";
 			const out = splitThinking(stripPartialTailTag(midStream));
-			expect(out).toEqual([
-				{ type: "thinking", thinking: "I am reasoning about" },
-			]);
+			expect(out).toEqual([{ type: "thinking", thinking: "I am reasoning about" }]);
 		});
 
 		it("renders progressively without flashing a partial close tag", () => {
 			const step1 = splitThinking(stripPartialTailTag("<think>step one"));
-			const step2 = splitThinking(
-				stripPartialTailTag("<think>step one and two</thi"),
-			);
-			const step3 = splitThinking(
-				stripPartialTailTag("<think>step one and two</think>\n\nAnswer"),
-			);
+			const step2 = splitThinking(stripPartialTailTag("<think>step one and two</thi"));
+			const step3 = splitThinking(stripPartialTailTag("<think>step one and two</think>\n\nAnswer"));
 			expect(step1).toEqual([{ type: "thinking", thinking: "step one" }]);
-			expect(step2).toEqual([
-				{ type: "thinking", thinking: "step one and two" },
-			]);
+			expect(step2).toEqual([{ type: "thinking", thinking: "step one and two" }]);
 			expect(step3).toEqual([
 				{ type: "thinking", thinking: "step one and two" },
 				{ type: "text", text: "Answer" },
@@ -229,22 +201,16 @@ describe("splitThinking", () => {
 		});
 
 		it("collapses an all-empty reasoning message to one empty text block", () => {
-			expect(splitThinking("<thinking></thinking>")).toEqual([
-				{ type: "text", text: "" },
-			]);
+			expect(splitThinking("<thinking></thinking>")).toEqual([{ type: "text", text: "" }]);
 		});
 
 		it("handles thinking content with special characters", () => {
-			const out = splitThinking(
-				"<thinking>Special chars: $@#%^&*()</thinking>",
-			);
+			const out = splitThinking("<thinking>Special chars: $@#%^&*()</thinking>");
 			expect(thinkings(out)).toEqual(["Special chars: $@#%^&*()"]);
 		});
 
 		it("handles thinking content with code-like syntax", () => {
-			const out = splitThinking(
-				"<thinking>const x = 5;\nreturn x + 1;</thinking>",
-			);
+			const out = splitThinking("<thinking>const x = 5;\nreturn x + 1;</thinking>");
 			expect(thinkings(out)).toEqual(["const x = 5;\nreturn x + 1;"]);
 		});
 	});

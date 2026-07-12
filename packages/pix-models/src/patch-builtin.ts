@@ -19,8 +19,12 @@ import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-const MODEL_COMMAND_LINE =
-	'{ name: "model", description: "Select model (opens selector UI)" },';
+// Pi has added fields to this object over time (for example, `argumentHint` in
+// v0.80). Match the command entry by its stable `name`, rather than an exact
+// serialized line, while limiting the match to a single non-nested object.
+const BUILTIN_COMMANDS_ARRAY = /export\s+const\s+BUILTIN_SLASH_COMMANDS[^=]*=\s*\[/;
+const BUILTIN_MODEL_COMMAND =
+	/^[ \t]*\{(?=[^{}]*\bname\s*:\s*["']model["'])[^{}]*\},?[ \t]*(?:\r?\n|$)/gm;
 
 /** Candidate slash-commands.js paths, most-specific first. */
 function candidatePaths(): string[] {
@@ -51,14 +55,7 @@ function candidatePaths(): string[] {
 	];
 	for (const root of globalRoots) {
 		paths.push(
-			join(
-				root,
-				"@earendil-works",
-				"pi-coding-agent",
-				"dist",
-				"core",
-				"slash-commands.js",
-			),
+			join(root, "@earendil-works", "pi-coding-agent", "dist", "core", "slash-commands.js"),
 		);
 	}
 
@@ -97,13 +94,8 @@ export function patchOutBuiltinModelCommand(): void {
 		return;
 	}
 
-	if (!source.includes(MODEL_COMMAND_LINE)) return; // already patched
-
-	const patched = source.replace(
-		new RegExp(`[ \\t]*${escapeRegExp(MODEL_COMMAND_LINE)}\\n?`),
-		"",
-	);
-	if (patched === source) return;
+	const patched = stripBuiltinModelCommand(source);
+	if (patched === source) return; // already patched, or host format is unknown
 
 	try {
 		writeFileSync(file, patched, "utf8");
@@ -112,8 +104,25 @@ export function patchOutBuiltinModelCommand(): void {
 	}
 }
 
-function escapeRegExp(text: string): string {
-	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/**
+ * Remove Pi's built-in `/model` entry from compiled slash-command source.
+ *
+ * The command objects are static, flat literals. Matching the entry's `name`
+ * tolerates added properties and line wrapping without touching `/models`.
+ */
+export function stripBuiltinModelCommand(source: string): string {
+	const array = BUILTIN_COMMANDS_ARRAY.exec(source);
+	if (!array || array.index === undefined) return source;
+
+	const open = array.index + array[0].lastIndexOf("[");
+	const close = source.indexOf("];", open);
+	if (close < 0) return source;
+
+	const entries = source.slice(open + 1, close);
+	const patchedEntries = entries.replace(BUILTIN_MODEL_COMMAND, "");
+	if (patchedEntries === entries) return source;
+
+	return `${source.slice(0, open + 1)}${patchedEntries}${source.slice(close)}`;
 }
 
 // Export for tests

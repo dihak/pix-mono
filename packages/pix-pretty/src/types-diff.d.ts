@@ -32,9 +32,5 @@ declare module "diff" {
 		count?: number;
 	}
 
-	export function diffWords(
-		oldStr: string,
-		newStr: string,
-		options?: unknown,
-	): Change[];
+	export function diffWords(oldStr: string, newStr: string, options?: unknown): Change[];
 }

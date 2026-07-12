@@ -43,7 +43,7 @@ Pi activates extensions per installed package via each package's `pi.extensions`
 
 | Package | Description |
 |---|---|
-| `pix-data` | Shared model data layer (models.dev + BenchLM) cached at `~/.cache/pi` |
+| `pix-data` | Shared model data layer (models.dev + BenchLM) cached at `~/.cache/pi`; hosts the unified `~/.pi/agent/pix.json` config loader and auto-collapse helper |
 | `pix-optimizer` | Caveman mode + RTK tool rewriting + jq/TOON JSON compression (`/opt`) |
 | `pix-gate` | Permission gate for dangerous bash commands |
 | `pix-subagent` | `agent` / `agent_result` / `agent_steer` — planner-driven sub-agents with live widget |

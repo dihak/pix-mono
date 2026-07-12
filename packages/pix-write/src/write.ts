@@ -6,6 +6,7 @@ import type {
 	WriteToolInput,
 } from "@earendil-works/pi-coding-agent";
 
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { MAX_RENDER_LINES } from "@xynogen/pix-pretty/config";
 import type { ToolContext } from "@xynogen/pix-pretty/context";
 import { parseDiff } from "@xynogen/pix-pretty/diff";
@@ -147,24 +148,30 @@ export function registerWriteTool(
 			}
 			const d = result.details as Record<string, unknown> | undefined;
 
+			// Auto-collapse: show summary line after delay
+			const cs = renderCtx.state as CollapseState;
+			if (tickCollapse("write", cs, renderCtx.invalidate)) {
+				const summary =
+					d?._type === "diff"
+						? (d.summary as string)
+						: d?._type === "noChange"
+							? "✓ no changes"
+							: d?._type === "new"
+								? `✓ new file (${d.lines} lines)`
+								: "written";
+				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				return text;
+			}
+
 			if (d?._type === "diff") {
 				const key = `wd:${diffThemeCacheKey(theme)}:${termW()}:${d.summary}:${(d.newContent as string).length}:${d.language ?? ""}`;
-				if (renderCtx.toolCallId)
-					trackInvalidator(renderCtx.toolCallId, renderCtx.invalidate);
+				if (renderCtx.toolCallId) trackInvalidator(renderCtx.toolCallId, renderCtx.invalidate);
 				if (renderCtx.state._wdk !== key) {
 					renderCtx.state._wdk = key;
 					renderCtx.state._wdt = `  ${d.summary}\n${theme.fg("muted", "  rendering diff…")}`;
 					const dc = resolveDiffColors(theme);
-					const diff = parseDiff(
-						d.oldContent as string,
-						d.newContent as string,
-					);
-					renderSplit(
-						diff,
-						d.language as string | undefined,
-						MAX_RENDER_LINES,
-						dc,
-					)
+					const diff = parseDiff(d.oldContent as string, d.newContent as string);
+					renderSplit(diff, d.language as string | undefined, MAX_RENDER_LINES, dc)
 						.then((rendered) => {
 							if (renderCtx.state._wdk !== key) return;
 							renderCtx.state._wdt = `  ${d.summary}\n${rendered}`;
@@ -181,9 +188,7 @@ export function registerWriteTool(
 			}
 
 			if (d?._type === "noChange") {
-				text.setText(
-					fillToolBackground(`  ${theme.fg("muted", "✓ no changes")}`),
-				);
+				text.setText(fillToolBackground(`  ${theme.fg("muted", "✓ no changes")}`));
 				return text;
 			}
 
@@ -206,8 +211,7 @@ export function registerWriteTool(
 								const preview = hlLines.slice(0, maxShow).join("\n");
 								const rem = hlLines.length - maxShow;
 								let out = `${base}\n${preview}`;
-								if (rem > 0)
-									out += `\n${theme.fg("muted", `  … ${rem} more lines`)}`;
+								if (rem > 0) out += `\n${theme.fg("muted", `  … ${rem} more lines`)}`;
 								renderCtx.state._nft = out;
 								renderCtx.invalidate();
 							})
@@ -219,13 +223,8 @@ export function registerWriteTool(
 			}
 
 			const fallback = result.content?.[0];
-			const fallbackText =
-				fallback && isTextContent(fallback) ? fallback.text : "written";
-			text.setText(
-				fillToolBackground(
-					`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`,
-				),
-			);
+			const fallbackText = fallback && isTextContent(fallback) ? fallback.text : "written";
+			text.setText(fillToolBackground(`  ${theme.fg("dim", String(fallbackText).slice(0, 120))}`));
 			return text;
 		},
 	});

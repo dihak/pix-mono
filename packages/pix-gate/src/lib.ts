@@ -2,9 +2,7 @@
  * Pure helpers for pix-gate — no Pi API deps, fully unit-testable.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { type GateRuleConfig, pixConfig } from "@xynogen/pix-data/pix-config";
 
 export type Severity = "critical" | "dangerous" | "risky";
 
@@ -34,8 +32,7 @@ export const DEFAULT_RULES: Rule[] = [
 		reason: "rm -rf on /",
 	},
 	{
-		pattern:
-			/\brm\s+(-[a-z]*r[a-z]*f|-[a-z]*f[a-z]*r)\s+(~|\$HOME)(\s|$|\/\s*$)/i,
+		pattern: /\brm\s+(-[a-z]*r[a-z]*f|-[a-z]*f[a-z]*r)\s+(~|\$HOME)(\s|$|\/\s*$)/i,
 		severity: "critical",
 		reason: "rm -rf on $HOME",
 	},
@@ -132,13 +129,21 @@ export const DEFAULT_RULES: Rule[] = [
 ];
 
 export function loadUserConfig(): UserConfig {
-	const path = join(homedir(), ".pi", "agent", "pix-gate.json");
-	if (!existsSync(path)) return {};
-	try {
-		return JSON.parse(readFileSync(path, "utf-8")) as UserConfig;
-	} catch {
-		return {};
-	}
+	// Read from ~/.pi/agent/pix.json gate section
+	const pix = pixConfig().gate;
+	return {
+		disableDefaults: pix.disableDefaults || undefined,
+		autoApprove: pix.autoApprove.length > 0 ? pix.autoApprove : undefined,
+		extraRules:
+			pix.extraRules.length > 0
+				? pix.extraRules.map((r: GateRuleConfig) => ({
+						pattern: r.pattern,
+						flags: r.flags,
+						severity: r.severity as Severity | undefined,
+						reason: r.reason,
+					}))
+				: undefined,
+	};
 }
 
 export function buildRules(cfg: UserConfig): {
@@ -165,9 +170,7 @@ export function buildRules(cfg: UserConfig): {
 export function classify(command: string, rules: Rule[]): Rule | undefined {
 	const order: Severity[] = ["critical", "dangerous", "risky"];
 	for (const sev of order) {
-		const hit = rules.find(
-			(r) => r.severity === sev && r.pattern.test(command),
-		);
+		const hit = rules.find((r) => r.severity === sev && r.pattern.test(command));
 		if (hit) return hit;
 	}
 	return undefined;
@@ -276,8 +279,7 @@ export function extractPathsFromBash(cmd: string): string[] {
 	const out: string[] = [];
 	const re =
 		/(?:^|[\s=><|;&"'`(])((?:\.\.\/|\/|~\/|\.)[^\s"'`<>|;&)]+|\.env(?:\.[A-Za-z0-9_-]+)?|[A-Za-z0-9_./-]+\.(?:pem|key|p12|pfx|crt|cer|env|envrc|netrc))/g;
-	let m: RegExpExecArray | null;
-	while ((m = re.exec(cmd)) !== null) out.push(m[1]);
+	for (const m of cmd.matchAll(re)) out.push(m[1] ?? "");
 	return out;
 }
 

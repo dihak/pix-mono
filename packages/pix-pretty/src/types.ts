@@ -41,28 +41,19 @@ export type ToolImageContent = ImageContent;
 
 export type ToolContent = TextContent | ImageContent;
 
-export type ToolResultLike<TDetails = unknown> = AgentToolResult<
-	TDetails | undefined
->;
+export type ToolResultLike<TDetails = unknown> = AgentToolResult<TDetails | undefined>;
 
 type TextComponentLike = {
 	setText(value: string): void;
 	getText?: () => string;
 };
 
-export type TextComponentCtor = new (
-	text?: string,
-	x?: number,
-	y?: number,
-) => TextComponentLike;
+export type TextComponentCtor = new (text?: string, x?: number, y?: number) => TextComponentLike;
 
 export type ThemeLike = BgTheme & FgTheme & { bold: (text: string) => string };
 
 export type RenderContextLike<
-	TState extends Record<string, string | undefined> = Record<
-		string,
-		string | undefined
-	>,
+	TState extends Record<string, string | undefined> = Record<string, string | undefined>,
 > = {
 	lastComponent?: TextComponentLike;
 	state: TState;

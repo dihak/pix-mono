@@ -37,15 +37,13 @@ const MAX_PREVIEW_LINES = 32;
 
 let TextComponent: TextCtor | undefined;
 try {
-	TextComponent = (require("@earendil-works/pi-tui") as { Text: TextCtor })
-		.Text;
+	TextComponent = (require("@earendil-works/pi-tui") as { Text: TextCtor }).Text;
 } catch {
 	TextComponent = undefined;
 }
 
 function getText(lastComponent: Component | undefined): TextLike {
-	if (lastComponent && "setText" in lastComponent)
-		return lastComponent as TextLike;
+	if (lastComponent && "setText" in lastComponent) return lastComponent as TextLike;
 	// TextComponent is always present in the interactive TUI (pi-tui peer); the
 	// require() guard only matters for headless/test contexts where renderers
 	// are never invoked.
@@ -71,16 +69,11 @@ function dimBody(body: string, theme: Theme, expanded: boolean): string {
 }
 
 /** Build a `renderCall` that shows `<title> <accent arg>`. */
-export function makeRenderCall<TArgs>(
-	title: string,
-	pickArg: (args: TArgs) => string,
-) {
+export function makeRenderCall<TArgs>(title: string, pickArg: (args: TArgs) => string) {
 	return (args: TArgs, theme: Theme, ctx: RenderCtx): Component => {
 		const text = getText(ctx.lastComponent);
 		const arg = pickArg(args);
-		text.setText(
-			`${theme.fg("toolTitle", theme.bold(title))} ${theme.fg("accent", arg)}`,
-		);
+		text.setText(`${theme.fg("toolTitle", theme.bold(title))} ${theme.fg("accent", arg)}`);
 		return text;
 	};
 }

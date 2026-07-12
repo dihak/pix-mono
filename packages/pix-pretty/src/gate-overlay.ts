@@ -14,12 +14,7 @@
  *   - Single source of truth for the overlay look across pix-gate and pix-sudo.
  */
 
-import {
-	Input,
-	type SelectItem,
-	SelectList,
-	wrapTextWithAnsi,
-} from "@earendil-works/pi-tui";
+import { Input, type SelectItem, SelectList, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { frameLines, modalWidth, selectListTheme } from "./modal-frame.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -30,6 +25,8 @@ export interface OverlayResult {
 	action: OverlayAction;
 	/** Only present when action === "approved" and mode === "sudo". */
 	password?: string;
+	/** True when password validation exhausted every allowed attempt. */
+	passwordAttemptsExhausted?: boolean;
 }
 
 export interface OverlayChoice {
@@ -69,6 +66,10 @@ export interface SudoConfig extends BaseConfig {
 	mode: "sudo";
 	/** Label for the password input hint. Default "Sudo password:" */
 	passwordLabel?: string;
+	/** Validate an entered password without closing the overlay. */
+	validatePassword?: (password: string) => Promise<boolean>;
+	/** Number of validation attempts before closing as exhausted. Default 3. */
+	maxPasswordAttempts?: number;
 }
 
 export type OverlayConfig = ConfirmConfig | SudoConfig;
@@ -133,6 +134,7 @@ function buildLines(opts: {
 	selectList: SelectList;
 	maskedInput: MaskedInput;
 	countdownLine: string | undefined;
+	passwordStatus: string | undefined;
 	width: number;
 }): string[] {
 	const {
@@ -143,6 +145,7 @@ function buildLines(opts: {
 		selectList,
 		maskedInput,
 		countdownLine,
+		passwordStatus,
 		width,
 	} = opts;
 	const inner = width - 4; // CHROME = 2 border + 2 padding
@@ -172,11 +175,9 @@ function buildLines(opts: {
 		lines.push("");
 		lines.push(theme.fg("dim", "↑↓ navigate • enter select • esc deny"));
 	} else {
-		const label =
-			config.mode === "sudo"
-				? (config.passwordLabel ?? "Sudo password:")
-				: "Password:";
+		const label = config.mode === "sudo" ? (config.passwordLabel ?? "Sudo password:") : "Password:";
 		lines.push(theme.fg("muted", label));
+		if (passwordStatus) lines.push(theme.fg("error", passwordStatus));
 		const inputLines = maskedInput.render(inner);
 		for (const l of inputLines) lines.push(l);
 		lines.push("");
@@ -217,10 +218,7 @@ function buildLines(opts: {
  * if (result.action === "approved") runWithSudo(cmd, result.password!);
  * ```
  */
-export function showOverlay(
-	ui: OverlayUI,
-	config: OverlayConfig,
-): Promise<OverlayResult> {
+export function showOverlay(ui: OverlayUI, config: OverlayConfig): Promise<OverlayResult> {
 	const accent = config.accent ?? "accent";
 	const choices = config.choices ?? DEFAULT_CHOICES;
 	const approveVal = config.approveValue ?? "yes";
@@ -231,6 +229,9 @@ export function showOverlay(
 				type Stage = "select" | "password";
 				let stage: Stage = "select";
 				let countdownLine: string | undefined;
+				let passwordStatus: string | undefined;
+				let passwordAttempts = 0;
+				let validatingPassword = false;
 
 				// Dead-man's-switch timer: counts down only while untouched. The
 				// first keypress cancels it (user is present → let them decide). If
@@ -291,9 +292,36 @@ export function showOverlay(
 				};
 				selectList.onCancel = () => finish({ action: "denied" });
 
-				maskedInput.onSubmit = (pw) =>
-					finish({ action: "approved", password: pw });
-				maskedInput.onEscape = () => finish({ action: "denied" });
+				maskedInput.onSubmit = async (pw) => {
+					if (config.mode !== "sudo" || !config.validatePassword) {
+						finish({ action: "approved", password: pw });
+						return;
+					}
+					if (!pw.trim() || validatingPassword) return;
+
+					validatingPassword = true;
+					passwordStatus = "Checking password…";
+					tui.requestRender();
+					const valid = await config.validatePassword(pw);
+					validatingPassword = false;
+					if (valid) {
+						finish({ action: "approved", password: pw });
+						return;
+					}
+
+					passwordAttempts += 1;
+					const maxAttempts = config.maxPasswordAttempts ?? 3;
+					if (passwordAttempts >= maxAttempts) {
+						finish({ action: "approved", password: pw, passwordAttemptsExhausted: true });
+						return;
+					}
+					maskedInput.setValue("");
+					passwordStatus = `Incorrect password — attempt ${passwordAttempts} of ${maxAttempts}`;
+					tui.requestRender();
+				};
+				maskedInput.onEscape = () => {
+					if (!validatingPassword) finish({ action: "denied" });
+				};
 
 				// ── component interface ──────────────────────────────────────────
 				return {
@@ -307,6 +335,7 @@ export function showOverlay(
 							selectList,
 							maskedInput,
 							countdownLine,
+							passwordStatus,
 							width: mw,
 						});
 						return frameLines({
@@ -319,6 +348,7 @@ export function showOverlay(
 					invalidate: () => {},
 					handleInput: (data) => {
 						cancelTimer(); // user is present — stop the auto-deny countdown
+						if (validatingPassword) return;
 						if (stage === "select") selectList.handleInput(data);
 						else maskedInput.handleInput(data);
 						tui.requestRender();

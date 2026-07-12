@@ -43,10 +43,7 @@ export class TabBar implements Component {
 			truncateToWidth(
 				t.fg("accent", "╭─") +
 					line +
-					t.fg(
-						"accent",
-						`${"─".repeat(Math.max(0, inner - line.length - 1))}╮`,
-					),
+					t.fg("accent", `${"─".repeat(Math.max(0, inner - line.length - 1))}╮`),
 				width,
 				"",
 			),
