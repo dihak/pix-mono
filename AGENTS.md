@@ -95,6 +95,7 @@ The publish workflow re-runs CI, checks each `name@version` against npm, publish
 4. **Dry-run** — `bun run publish:dry` — note the exact `name@version` list.
 5. **Confirm publish** — `ask_user` with the exact list. Prior approval never carries forward.
 6. **Tag + push** — creates the release tag, triggers the Publish workflow.
+7. **Verify GitHub Actions** — use `gh run list` to find the CI run for the tagged SHA, then `gh run watch <run-id> --exit-status`. After CI succeeds, find and watch the resulting Publish run. Confirm its log reports every expected `name@version` as published and ends with `0 failed`; report the Publish workflow URL and exact published versions. Red → STOP and report the failing step/log — never claim the release succeeded from the tag push alone.
 
 ---
 
