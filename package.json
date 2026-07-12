@@ -8,10 +8,17 @@
 		"packages/*"
 	],
 	"scripts": {
+		"install:deps": "bun install --frozen-lockfile",
+		"dev": "bun test --watch",
 		"test": "bun test",
+		"test:unit": "bun test",
+		"test:tidy": "rm -rf coverage",
 		"typecheck": "tsc --noEmit -p tsconfig.base.json",
 		"lint": "biome lint packages",
+		"lint:check": "biome lint packages",
+		"lint:fix": "biome lint --write packages",
 		"format": "biome format --write packages",
+		"format:fix": "biome format --write packages",
 		"format:check": "biome format packages",
 		"check": "biome check packages",
 		"check:fix": "biome check --write packages",
