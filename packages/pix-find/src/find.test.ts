@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { CursorStore, FffState } from "@xynogen/pix-pretty/fff";
 import type { PiPrettyApi, TextComponentCtor } from "@xynogen/pix-pretty/types";
-import { registerFindTool } from "./find";
+import { applyFindDefaults, DEFAULT_FIND_LIMIT, registerFindTool } from "./find";
 
 class MockTextComponent {
 	private text = "";
@@ -12,6 +12,19 @@ class MockTextComponent {
 		return this.text;
 	}
 }
+
+describe("applyFindDefaults", () => {
+	it("applies a conservative default without overriding an explicit limit", () => {
+		expect(applyFindDefaults({ pattern: "**/*.ts" })).toEqual({
+			pattern: "**/*.ts",
+			limit: DEFAULT_FIND_LIMIT,
+		});
+		expect(applyFindDefaults({ pattern: "**/*.ts", limit: 8 })).toEqual({
+			pattern: "**/*.ts",
+			limit: 8,
+		});
+	});
+});
 
 describe("registerFindTool", () => {
 	it("registers a tool named 'find'", () => {

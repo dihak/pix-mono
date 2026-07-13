@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { CursorStore, FffState } from "@xynogen/pix-pretty/fff";
 import type { PiPrettyApi, TextComponentCtor } from "@xynogen/pix-pretty/types";
-import { registerReadTool } from "./read";
+import { applyReadDefaults, DEFAULT_READ_LIMIT, registerReadTool } from "./read";
 
 class MockTextComponent {
 	private text = "";
@@ -12,6 +12,19 @@ class MockTextComponent {
 		return this.text;
 	}
 }
+
+describe("applyReadDefaults", () => {
+	it("applies a conservative default without overriding an explicit limit", () => {
+		expect(applyReadDefaults({ path: "large.ts" })).toEqual({
+			path: "large.ts",
+			limit: DEFAULT_READ_LIMIT,
+		});
+		expect(applyReadDefaults({ path: "large.ts", limit: 25 })).toEqual({
+			path: "large.ts",
+			limit: 25,
+		});
+	});
+});
 
 describe("registerReadTool", () => {
 	it("registers a tool named 'read'", () => {

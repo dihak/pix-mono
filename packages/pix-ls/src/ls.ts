@@ -22,6 +22,12 @@ import {
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
 
+export const DEFAULT_LS_LIMIT = 200;
+
+export function applyLsDefaults(params: LsParams): LsParams {
+	return params.limit === undefined ? { ...params, limit: DEFAULT_LS_LIMIT } : params;
+}
+
 export function registerLsTool(
 	pi: PiPrettyApi,
 	createLsTool: ToolFactory<LsToolInput>,
@@ -33,6 +39,8 @@ export function registerLsTool(
 	pi.registerTool({
 		...origLs,
 		name: "ls",
+		description:
+			"List a directory, including dotfiles. Defaults to 200 sorted entries; use limit to request more. Output remains capped by Pi's 50KB hard limit.",
 		renderShell: "self",
 
 		async execute(
@@ -42,9 +50,16 @@ export function registerLsTool(
 			upd: AgentToolUpdateCallback<unknown> | undefined,
 			toolCtx: ExtensionContext,
 		) {
-			const result = (await origLs.execute(tid, params, sig, upd, toolCtx)) as ToolResultLike;
+			const effectiveParams = applyLsDefaults(params);
+			const result = (await origLs.execute(
+				tid,
+				effectiveParams,
+				sig,
+				upd,
+				toolCtx,
+			)) as ToolResultLike;
 			const textContent = getTextContent(result);
-			const fp = params.path ?? cwd;
+			const fp = effectiveParams.path ?? cwd;
 			const entryCount = textContent ? textContent.trim().split("\n").filter(Boolean).length : 0;
 
 			setResultDetails(result, {

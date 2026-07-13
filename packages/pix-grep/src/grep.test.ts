@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { CursorStore, FffState } from "@xynogen/pix-pretty/fff";
 import type { PiPrettyApi, TextComponentCtor } from "@xynogen/pix-pretty/types";
-import { registerGrepTool } from "./grep";
+import { applyGrepDefaults, DEFAULT_GREP_LIMIT, registerGrepTool } from "./grep";
 
 class MockTextComponent {
 	private text = "";
@@ -12,6 +12,19 @@ class MockTextComponent {
 		return this.text;
 	}
 }
+
+describe("applyGrepDefaults", () => {
+	it("applies a conservative default without overriding an explicit limit", () => {
+		expect(applyGrepDefaults({ pattern: "TODO" })).toEqual({
+			pattern: "TODO",
+			limit: DEFAULT_GREP_LIMIT,
+		});
+		expect(applyGrepDefaults({ pattern: "TODO", limit: 5 })).toEqual({
+			pattern: "TODO",
+			limit: 5,
+		});
+	});
+});
 
 describe("registerGrepTool", () => {
 	it("registers a tool named 'grep'", () => {

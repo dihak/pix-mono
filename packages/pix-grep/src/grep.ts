@@ -29,6 +29,12 @@ import {
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
 
+export const DEFAULT_GREP_LIMIT = 30;
+
+export function applyGrepDefaults(params: GrepParams): GrepParams {
+	return params.limit === undefined ? { ...params, limit: DEFAULT_GREP_LIMIT } : params;
+}
+
 export function registerGrepTool(
 	pi: PiPrettyApi,
 	createGrepTool: ToolFactory<GrepToolInput>,
@@ -40,6 +46,8 @@ export function registerGrepTool(
 	pi.registerTool({
 		...origGrep,
 		name: "grep",
+		description:
+			"Search file contents for a regex or literal pattern. Defaults to 30 matches; use limit to request more. Respects .gitignore and remains capped by Pi's 50KB hard limit.",
 		renderShell: "self",
 
 		async execute(
@@ -49,19 +57,26 @@ export function registerGrepTool(
 			upd: unknown,
 			toolCtx: ExtensionContext,
 		) {
+			const effectiveParams = applyGrepDefaults(params);
+
 			// Try FFF first (SIMD-accelerated).
 			// Constrained searches (path/glob) fall through to SDK — FFF 0.5.2
 			// can abort the process on constrained searches with Unicode filenames.
-			if (fffState.finder && !fffState.finder.isDestroyed && !params.path && !params.glob) {
+			if (
+				fffState.finder &&
+				!fffState.finder.isDestroyed &&
+				!effectiveParams.path &&
+				!effectiveParams.glob
+			) {
 				try {
-					const effectiveLimit = Math.max(1, params.limit ?? 100);
-					const grepResult = fffState.finder.grep(params.pattern, {
-						mode: params.literal ? "plain" : "regex",
-						smartCase: !params.ignoreCase,
+					const effectiveLimit = Math.max(1, effectiveParams.limit ?? DEFAULT_GREP_LIMIT);
+					const grepResult = fffState.finder.grep(effectiveParams.pattern, {
+						mode: effectiveParams.literal ? "plain" : "regex",
+						smartCase: !effectiveParams.ignoreCase,
 						maxMatchesPerFile: Math.min(effectiveLimit, 50),
 						cursor: null,
-						beforeContext: params.context ?? 0,
-						afterContext: params.context ?? 0,
+						beforeContext: effectiveParams.context ?? 0,
+						afterContext: effectiveParams.context ?? 0,
 					});
 
 					if (grepResult.ok) {
@@ -84,7 +99,7 @@ export function registerGrepTool(
 						return makeTextResult<GrepResultDetails>(textContent, {
 							_type: "grepResult",
 							text: textContent,
-							pattern: params.pattern,
+							pattern: effectiveParams.pattern,
 							matchCount: Math.min(grep.items.length, effectiveLimit),
 						});
 					}
@@ -94,7 +109,7 @@ export function registerGrepTool(
 			}
 
 			// SDK fallback
-			const result = await origGrep.execute(tid, params, sig, upd as never, toolCtx);
+			const result = await origGrep.execute(tid, effectiveParams, sig, upd as never, toolCtx);
 			const textContent = normalizeLineEndings(getTextContent(result));
 			if (result.content) {
 				for (const content of result.content) {

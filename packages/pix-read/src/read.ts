@@ -28,6 +28,12 @@ import {
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
 
+export const DEFAULT_READ_LIMIT = 400;
+
+export function applyReadDefaults(params: ReadParams): ReadParams {
+	return params.limit === undefined ? { ...params, limit: DEFAULT_READ_LIMIT } : params;
+}
+
 export function registerReadTool(
 	pi: PiPrettyApi,
 	createReadTool: ToolFactory<ReadToolInput>,
@@ -39,6 +45,8 @@ export function registerReadTool(
 	pi.registerTool({
 		...origRead,
 		name: "read",
+		description:
+			"Read text files and images. Text reads default to 400 lines and remain capped by Pi's 2,000-line/50KB hard limit. Use offset/limit to continue large files.",
 		// Full-width framing baked at termW(); default Box shell pads x by 1
 		// and re-wraps at width-2, splitting every line into a padding row.
 		renderShell: "self",
@@ -50,10 +58,17 @@ export function registerReadTool(
 			upd: AgentToolUpdateCallback<unknown> | undefined,
 			toolCtx: ExtensionContext,
 		) {
-			const result = (await origRead.execute(tid, params, sig, upd, toolCtx)) as ToolResultLike;
+			const effectiveParams = applyReadDefaults(params);
+			const result = (await origRead.execute(
+				tid,
+				effectiveParams,
+				sig,
+				upd,
+				toolCtx,
+			)) as ToolResultLike;
 
-			const fp = params.path ?? "";
-			const offset = params.offset ?? 1;
+			const fp = effectiveParams.path ?? "";
+			const offset = effectiveParams.offset ?? 1;
 
 			const imageBlock = result.content?.find(isImageContent);
 			if (imageBlock) {

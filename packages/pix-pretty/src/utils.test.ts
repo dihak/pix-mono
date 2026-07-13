@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import { MAX_PREVIEW_LINES } from "./config.js";
 import type { FgTheme } from "./types.js";
-import { pluralize, renderDimPreview } from "./utils.js";
+import { pluralize, renderDimPreview, setResultDetails } from "./utils.js";
 
 // Strip ANSI escapes so assertions test content, not color codes.
 const ANSI = /\x1b\[[0-9;]*m/g;
@@ -26,6 +26,27 @@ describe("pluralize", () => {
 	it("defaults plural to noun + s", () => {
 		expect(pluralize(1, "line")).toBe("1 line");
 		expect(pluralize(3, "line")).toBe("3 lines");
+	});
+});
+
+describe("setResultDetails", () => {
+	it("preserves upstream metadata while adding renderer details", () => {
+		const result = {
+			content: [{ type: "text" as const, text: "output" }],
+			details: {
+				truncation: { truncated: true, totalLines: 500 },
+				fullOutputPath: "/tmp/full.log",
+			},
+		};
+
+		setResultDetails(result, { _type: "bashResult", exitCode: 0 });
+
+		expect(result.details as Record<string, unknown>).toEqual({
+			truncation: { truncated: true, totalLines: 500 },
+			fullOutputPath: "/tmp/full.log",
+			_type: "bashResult",
+			exitCode: 0,
+		});
 	});
 });
 
@@ -79,7 +100,9 @@ describe("renderDimPreview", () => {
 		expect(plain(raw)).toContain("foo bar foo");
 	});
 
-	it("does not throw on an invalid highlight regex", () => {
-		expect(() => renderDimPreview("text", theme, { highlight: "(" })).not.toThrow();
+	it("treats regex metacharacters as literal highlight text", () => {
+		const raw = renderDimPreview("call(foo)", theme, { highlight: "(" });
+		expect(plain(raw)).toContain("call(foo)");
+		expect(raw).toContain("\x1b[");
 	});
 });

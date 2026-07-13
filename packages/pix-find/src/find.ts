@@ -24,6 +24,12 @@ import {
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
 
+export const DEFAULT_FIND_LIMIT = 200;
+
+export function applyFindDefaults(params: FindParams): FindParams {
+	return params.limit === undefined ? { ...params, limit: DEFAULT_FIND_LIMIT } : params;
+}
+
 export function registerFindTool(
 	pi: PiPrettyApi,
 	createFindTool: ToolFactory<FindToolInput>,
@@ -35,6 +41,8 @@ export function registerFindTool(
 	pi.registerTool({
 		...origFind,
 		name: "find",
+		description:
+			"Find files by glob pattern. Defaults to 200 paths; use limit to request more. Respects .gitignore and remains capped by Pi's 50KB hard limit.",
 		renderShell: "self",
 
 		async execute(
@@ -44,12 +52,14 @@ export function registerFindTool(
 			upd: unknown,
 			toolCtx: ExtensionContext,
 		) {
+			const effectiveParams = applyFindDefaults(params);
+
 			// Try FFF first (frecency-ranked, SIMD-accelerated)
 			if (fffState.finder && !fffState.finder.isDestroyed) {
 				try {
-					const effectiveLimit = Math.max(1, params.limit ?? 200);
-					let query = params.pattern;
-					if (params.path) query = `${params.path} ${query}`;
+					const effectiveLimit = Math.max(1, effectiveParams.limit ?? DEFAULT_FIND_LIMIT);
+					let query = effectiveParams.pattern;
+					if (effectiveParams.path) query = `${effectiveParams.path} ${query}`;
 
 					const searchResult = fffState.finder.fileSearch(query, {
 						pageSize: effectiveLimit,
@@ -69,7 +79,7 @@ export function registerFindTool(
 						return makeTextResult<FindResultDetails>(textContent, {
 							_type: "findResult",
 							text: textContent,
-							pattern: params.pattern,
+							pattern: effectiveParams.pattern,
 							matchCount: trimmed.length,
 						});
 					}
@@ -79,7 +89,7 @@ export function registerFindTool(
 			}
 
 			// SDK fallback
-			const result = await origFind.execute(tid, params, sig, upd as never, toolCtx);
+			const result = await origFind.execute(tid, effectiveParams, sig, upd as never, toolCtx);
 			const textContent = getTextContent(result);
 			const matchCount = textContent ? textContent.trim().split("\n").filter(Boolean).length : 0;
 

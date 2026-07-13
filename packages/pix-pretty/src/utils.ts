@@ -59,21 +59,23 @@ export type DimPreviewOptions = {
 	highlight?: string;
 };
 
-function safeHighlightRegex(pattern: string): RegExp | null {
-	try {
-		return new RegExp(`(${pattern})`, "gi");
-	} catch {
-		return null;
-	}
-}
+function dimLineWithHighlight(line: string, theme: FgTheme, pattern?: string): string {
+	if (!pattern) return theme.fg("dim", line);
+	const foldedLine = line.toLocaleLowerCase();
+	const foldedPattern = pattern.toLocaleLowerCase();
+	if (!foldedPattern) return theme.fg("dim", line);
 
-function dimLineWithHighlight(line: string, theme: FgTheme, re: RegExp | null): string {
-	if (!re) return theme.fg("dim", line);
-	// split with capture group: odd indexes are matches
-	return line
-		.split(re)
-		.map((part, i) => (i % 2 ? `${FG_GREEN}${BOLD}${part}${RST}` : theme.fg("dim", part)))
-		.join("");
+	const parts: string[] = [];
+	let start = 0;
+	for (;;) {
+		const match = foldedLine.indexOf(foldedPattern, start);
+		if (match < 0) break;
+		if (match > start) parts.push(theme.fg("dim", line.slice(start, match)));
+		parts.push(`${FG_GREEN}${BOLD}${line.slice(match, match + pattern.length)}${RST}`);
+		start = match + pattern.length;
+	}
+	if (start < line.length) parts.push(theme.fg("dim", line.slice(start)));
+	return parts.length > 0 ? parts.join("") : theme.fg("dim", line);
 }
 
 export function renderDimPreview(
@@ -82,12 +84,12 @@ export function renderDimPreview(
 	opts: DimPreviewOptions = {},
 ): string {
 	const maxLines = opts.maxLines ?? MAX_PREVIEW_LINES;
-	const re = opts.highlight ? safeHighlightRegex(opts.highlight) : null;
+	const highlight = opts.highlight;
 	const output = normalizeLineEndings(text).trim() || "done";
 	const lines = output.split("\n");
 	const preview = lines
 		.slice(0, maxLines)
-		.map((line) => `  ${dimLineWithHighlight(line, theme, re)}`);
+		.map((line) => `  ${dimLineWithHighlight(line, theme, highlight)}`);
 	if (opts.header) preview.unshift(`  ${theme.fg("dim", opts.header)}`);
 	if (lines.length > maxLines) {
 		const more = pluralize(lines.length - maxLines, "more line");
@@ -208,8 +210,13 @@ export function getTextContent(result: ToolResultLike): string {
 	);
 }
 
+/** Add renderer metadata without discarding execution metadata from the upstream tool. */
 export function setResultDetails<T>(result: ToolResultLike, details: T): void {
-	result.details = details;
+	const upstream =
+		result.details && typeof result.details === "object"
+			? (result.details as Record<string, unknown>)
+			: undefined;
+	result.details = upstream ? { ...upstream, ...details } : details;
 }
 
 export function makeTextResult<TDetails>(
