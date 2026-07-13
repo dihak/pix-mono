@@ -22,9 +22,19 @@ import { icon } from "@xynogen/pix-pretty/icon-catalog";
 
 // ─── Pure formatting helpers ─────────────────────────────────────────
 
+type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+
 type Theme = {
 	fg(color: string, text: string): string;
+	getThinkingBorderColor(level: ThinkingLevel): (text: string) => string;
 };
+
+const THINKING_LEVELS = new Set<string>(["off", "minimal", "low", "medium", "high", "xhigh"]);
+
+export function renderThinkingLevel(theme: Theme, level: string, text: string): string {
+	if (!THINKING_LEVELS.has(level)) return theme.fg("muted", text);
+	return theme.getThinkingBorderColor(level as ThinkingLevel)(text);
+}
 
 const execFileAsync = promisify(execFile);
 const GIT_POLL_MS = 2_000;
@@ -199,7 +209,7 @@ function renderModel(
 	};
 	if (thinking) {
 		const abbr = THINK_ABBR[thinking] ?? thinking.slice(0, 3);
-		out += theme.fg("muted", " · ") + theme.fg("warning", abbr);
+		out += theme.fg("muted", " · ") + renderThinkingLevel(theme, thinking, abbr);
 	}
 	if (provider && id !== "?") {
 		const dev = lookupModelsDev(provider, id);

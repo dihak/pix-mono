@@ -1,10 +1,31 @@
 import { describe, expect, test } from "bun:test";
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
-import { compactStatus } from "./footer.ts";
+import { compactStatus, renderThinkingLevel } from "./footer.ts";
 
 const theme = {
 	fg: (_color: string, text: string) => text,
+	getThinkingBorderColor: (level: string) => (text: string) => `<${level}>${text}</${level}>`,
 };
+
+describe("renderThinkingLevel", () => {
+	test("uses the host theme's canonical thinking-level renderer", () => {
+		expect(renderThinkingLevel(theme, "high", "high")).toBe("<high>high</high>");
+		expect(renderThinkingLevel(theme, "xhigh", "xhigh")).toBe("<xhigh>xhigh</xhigh>");
+	});
+
+	test("renders unknown levels with the neutral muted color", () => {
+		const calls: string[] = [];
+		const recordingTheme = {
+			fg: (color: string, text: string) => {
+				calls.push(color);
+				return text;
+			},
+			getThinkingBorderColor: theme.getThinkingBorderColor,
+		};
+		expect(renderThinkingLevel(recordingTheme, "future", "future")).toBe("future");
+		expect(calls).toEqual(["muted"]);
+	});
+});
 
 describe("compactStatus", () => {
 	test("compacts current pi-lens active server lists to a count", () => {

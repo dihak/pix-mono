@@ -12,6 +12,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import {
 	fuzzyFilter,
 	Input,
+	Key,
 	matchesKey,
 	type SelectItem,
 	SelectList,
@@ -90,6 +91,49 @@ export function sortModels<T extends SortableModel>(models: T[]): T[] {
 /** Lowercase and strip all non-alphanumerics: "glm-5.2" → "glm52". */
 export function normalizeModelText(s: string): string {
 	return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// ─── Thinking level control ──────────────────────────────────────────────────
+
+/**
+ * Canonical thinking levels, ascending. Shift+←/→ in the picker steps through this
+ * list; pi.setThinkingLevel() clamps to what the active model actually supports,
+ * so visiting an unsupported rung is harmless (it lands on the nearest allowed).
+ */
+export const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
+
+export type ThinkingLevelName = (typeof THINKING_LEVELS)[number];
+
+/**
+ * Step the thinking level one notch. `dir` is -1 (←) or +1 (→). Clamps at the
+ * ends (no wraparound) so ← at "off" stays "off" and → at "xhigh" stays "xhigh".
+ * Unknown input falls back to "medium" as a neutral midpoint.
+ */
+export function stepThinkingLevel(current: string, dir: -1 | 1): ThinkingLevelName {
+	const idx = THINKING_LEVELS.indexOf(current as ThinkingLevelName);
+	const base = idx === -1 ? THINKING_LEVELS.indexOf("medium") : idx;
+	const next = Math.min(THINKING_LEVELS.length - 1, Math.max(0, base + dir));
+	return THINKING_LEVELS[next] as ThinkingLevelName;
+}
+
+/**
+ * Move one effective notch in a direction after the host clamps unsupported
+ * levels. Keeps trying farther rungs until the model's resolved level changes.
+ */
+export function stepEffectiveThinkingLevel(
+	current: string,
+	dir: -1 | 1,
+	apply: (level: ThinkingLevelName) => string,
+): ThinkingLevelName {
+	let candidate = stepThinkingLevel(current, dir);
+	while (candidate !== current) {
+		const effective = apply(candidate) as ThinkingLevelName;
+		if (effective !== current) return effective;
+		const farther = stepThinkingLevel(candidate, dir);
+		if (farther === candidate) break;
+		candidate = farther;
+	}
+	return current as ThinkingLevelName;
 }
 
 export type ModelSearchLookup = {
@@ -227,7 +271,7 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 	// items built inside the custom() factory so we have theme access for colors
 
 	const result = await ctx.ui.custom<string | null>(
-		(_tui, theme, _kb, done) => {
+		(tui, theme, _kb, done) => {
 			const accent = "accent";
 
 			// Find max rank width across all benchmarked rows for # padding
@@ -365,6 +409,27 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 				internal.invalidate();
 			};
 
+			// Live thinking-level readout. Shift+←/→ mutates the session immediately via
+			// pi.setThinkingLevel(); we mirror pi.getThinkingLevel() so the header
+			// reflects the clamped result (model may not support every rung).
+			//
+			// `local` shadows the level so the header updates even on builds/contexts
+			// where pi.getThinkingLevel() lags or is unavailable inside the overlay.
+			// We seed it from the getter, then advance it in lock-step with each
+			// setThinkingLevel() call and reconcile back to the getter when present.
+			let localLevel = pi.getThinkingLevel?.() ?? "";
+			const thinkLine = () => {
+				const live = pi.getThinkingLevel?.();
+				const resolved = live ?? localLevel;
+				const label = resolved || "—";
+				const coloredLabel = resolved
+					? theme.getThinkingBorderColor(resolved)(label)
+					: theme.fg("dim", label);
+				return (
+					theme.fg("muted", "Thinking: ") + coloredLabel + theme.fg("dim", "  (shift+←/→ adjust)")
+				);
+			};
+
 			return {
 				render(w: number) {
 					const mw = modalWidth(w);
@@ -372,10 +437,14 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 					const lines: string[] = [
 						theme.fg(accent, theme.bold(`${icon("picker.model")}  Select model`)),
 						theme.fg("dim", "context · pricing · coding rank & score from modelgrep.com"),
+						thinkLine(),
 						theme.fg("muted", "Search:"),
 						...search.render(inner),
 						...list.render(inner),
-						theme.fg("dim", "fuzzy search · ↑↓ navigate · enter select · esc cancel"),
+						theme.fg(
+							"dim",
+							"fuzzy search · ↑↓ navigate · shift+←/→ thinking · enter select · esc cancel",
+						),
 					];
 					return frameLines({
 						width: mw,
@@ -393,7 +462,23 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 					// SelectList uses. Arrows arrive as named keys ("up"/"down"),
 					// not raw escape sequences, so string-equality checks fail.
 					const isNav = matchesKey(data, "up") || matchesKey(data, "down");
-					if (isNav || matchesKey(data, "enter")) {
+					// Shift+←/→ tunes the ACTIVE session model's thinking level without
+					// stealing plain ←/→ cursor movement from search. setThinkingLevel clamps
+					// to model capability, so unsupported rungs land on the nearest allowed.
+					let dir: -1 | 1 | 0 = 0;
+					if (matchesKey(data, Key.shift(Key.left))) dir = -1;
+					else if (matchesKey(data, Key.shift(Key.right))) dir = 1;
+					if (dir !== 0) {
+						const cur = pi.getThinkingLevel?.() || localLevel || "medium";
+						localLevel = stepEffectiveThinkingLevel(cur, dir, (candidate) => {
+							pi.setThinkingLevel(candidate);
+							return pi.getThinkingLevel();
+						});
+						// setThinkingLevel doesn't repaint this overlay, so force a render
+						// now — otherwise the header shows a stale level until the next key.
+						tui.requestRender();
+						return;
+					} else if (isNav || matchesKey(data, "enter")) {
 						list.handleInput?.(data);
 					} else if (matchesKey(data, "escape")) {
 						done(null);

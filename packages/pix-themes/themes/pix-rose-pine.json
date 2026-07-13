@@ -70,11 +70,11 @@
 		"syntaxOperator": "operator",
 		"syntaxPunctuation": "punct",
 		"thinkingOff": "dim",
-		"thinkingMinimal": "dim",
-		"thinkingLow": "dim",
-		"thinkingMedium": "dim",
-		"thinkingHigh": "dim",
-		"thinkingXhigh": "dim",
+		"thinkingMinimal": "muted",
+		"thinkingLow": "muted",
+		"thinkingMedium": "purple",
+		"thinkingHigh": "yellow",
+		"thinkingXhigh": "red",
 		"bashMode": "yellow"
 	},
 	"export": {

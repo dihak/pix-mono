@@ -7,7 +7,55 @@ import {
 	type ModelSearchLookup,
 	normalizeModelText,
 	sortModels,
+	stepEffectiveThinkingLevel,
+	stepThinkingLevel,
+	THINKING_LEVELS,
 } from "./models.ts";
+
+describe("stepThinkingLevel", () => {
+	it("steps up one notch", () => {
+		expect(stepThinkingLevel("low", 1)).toBe("medium");
+		expect(stepThinkingLevel("off", 1)).toBe("minimal");
+	});
+	it("steps down one notch", () => {
+		expect(stepThinkingLevel("medium", -1)).toBe("low");
+		expect(stepThinkingLevel("xhigh", -1)).toBe("high");
+	});
+	it("clamps at the low end (no wrap)", () => {
+		expect(stepThinkingLevel("off", -1)).toBe("off");
+	});
+	it("clamps at the high end (no wrap)", () => {
+		expect(stepThinkingLevel("xhigh", 1)).toBe("xhigh");
+	});
+	it("falls back to a medium-anchored step for unknown input", () => {
+		expect(stepThinkingLevel("bogus", 1)).toBe("high");
+		expect(stepThinkingLevel("", -1)).toBe("low");
+	});
+	it("exposes the six canonical levels ascending", () => {
+		expect(THINKING_LEVELS).toEqual(["off", "minimal", "low", "medium", "high", "xhigh"]);
+	});
+	it("can walk the full ladder up and back down", () => {
+		let lvl: string = "off";
+		for (let i = 0; i < 10; i++) lvl = stepThinkingLevel(lvl, 1);
+		expect(lvl).toBe("xhigh");
+		for (let i = 0; i < 10; i++) lvl = stepThinkingLevel(lvl, -1);
+		expect(lvl).toBe("off");
+	});
+});
+
+describe("stepEffectiveThinkingLevel", () => {
+	it("skips levels that clamp back to the current level", () => {
+		const clamp = (requested: string) => {
+			if (requested === "minimal" || requested === "low") return "off";
+			return requested;
+		};
+		expect(stepEffectiveThinkingLevel("off", 1, clamp)).toBe("medium");
+	});
+
+	it("stays at an endpoint when every farther request clamps back", () => {
+		expect(stepEffectiveThinkingLevel("high", 1, () => "high")).toBe("high");
+	});
+});
 
 describe("fmtCtx", () => {
 	it("formats 0 as 0", () => expect(fmtCtx(0)).toBe("0"));
