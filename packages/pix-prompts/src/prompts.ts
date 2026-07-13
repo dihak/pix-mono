@@ -27,11 +27,20 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
  */
 const REPO_DIRECTIVE_FILES = ["GEMINI.md", ".cursorrules", ".windsurfrules"] as const;
 
+/**
+ * Max bytes injected per repo directive file (~4k tokens). These files enter
+ * the system prompt on EVERY turn; an oversized one silently burns context.
+ * The bundled SOP.md is exempt — we control its size.
+ */
+const MAX_DIRECTIVE_BYTES = 16 * 1024;
+
 interface PromptSource {
 	/** Unique tag name — used for idempotency check. */
 	tag: string;
 	/** Absolute path to the file. */
 	path: string;
+	/** Byte cap applied on read (repo files only). */
+	maxBytes?: number;
 }
 
 /** Resolve the absolute path to SOP.md bundled inside this package. */
@@ -46,10 +55,14 @@ function resolveOwnSopMd(): string | null {
 	}
 }
 
-/** Read a file, returning null on any error. */
-function safeRead(p: string): string | null {
+/** Read a file, returning null on any error. Optionally cap size. */
+function safeRead(p: string, maxBytes?: number): string | null {
 	try {
-		return readFileSync(p, "utf-8");
+		const content = readFileSync(p, "utf-8");
+		if (maxBytes !== undefined && Buffer.byteLength(content, "utf-8") > maxBytes) {
+			return `${content.slice(0, maxBytes)}\n[pix-prompts: truncated at ${maxBytes} bytes]`;
+		}
+		return content;
 	} catch {
 		return null;
 	}
@@ -81,7 +94,7 @@ export default function registerPrompts(pi: ExtensionAPI): void {
 			if (existsSync(p)) {
 				// tag = "pix-prompts-<filename>" with dots/leading-dot stripped
 				const tag = `pix-prompts-${filename.replace(/^\./, "").replace(/\./g, "-").toLowerCase()}`;
-				sources.push({ tag, path: p });
+				sources.push({ tag, path: p, maxBytes: MAX_DIRECTIVE_BYTES });
 			}
 		}
 
@@ -101,10 +114,10 @@ export default function registerPrompts(pi: ExtensionAPI): void {
 			"You are Pix Coding Agent. You help users accomplish any task they request.",
 		);
 
-		for (const { tag, path } of sources) {
+		for (const { tag, path, maxBytes } of sources) {
 			if (prompt.includes(`<${tag}>`)) continue;
 			if (prompt.includes(`path="${path}"`)) continue; // host already injected it
-			const content = safeRead(path);
+			const content = safeRead(path, maxBytes);
 			if (!content) continue;
 			prompt = prompt ? `${prompt}\n\n${wrap(tag, content)}` : wrap(tag, content);
 		}

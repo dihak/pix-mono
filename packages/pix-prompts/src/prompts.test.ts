@@ -95,6 +95,19 @@ describe("pix-prompts host-aware injection", () => {
 		expect(occurrences).toBe(1);
 	});
 
+	it("truncates oversized repo directive files at the byte cap", async () => {
+		writeFileSync(join(dir, "GEMINI.md"), "x".repeat(20 * 1024));
+		const { pi, getHandler } = fakePi();
+		registerPrompts(pi);
+
+		const result = await getHandler()({ systemPrompt: "BASE" });
+
+		expect(result?.systemPrompt).toContain("[pix-prompts: truncated at 16384 bytes]");
+		// Injected block must not carry the full 20KB.
+		const block = result?.systemPrompt?.split("<pix-prompts-gemini-md>")[1] ?? "";
+		expect(block.length).toBeLessThan(17 * 1024);
+	});
+
 	it("replaces pi's default identity line with generic version", async () => {
 		const { pi, getHandler } = fakePi();
 		registerPrompts(pi);
