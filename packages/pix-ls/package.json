@@ -1,6 +1,6 @@
 {
 	"name": "@xynogen/pix-ls",
-	"version": "0.1.12",
+	"version": "0.1.13",
 	"description": "Pi tool — directory listing with tree view",
 	"type": "module",
 	"main": "src/index.ts",
