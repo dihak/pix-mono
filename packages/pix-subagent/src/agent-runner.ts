@@ -596,8 +596,10 @@ export async function runAgent(
 	}
 	if (!model) model = ctx.model;
 
-	// Resolve thinking level: explicit option > agent config > undefined (inherit)
-	const thinkingLevel = options.thinkingLevel ?? agentConfig?.thinking;
+	// Resolve thinking level: explicit option > agent config > subagent default.
+	// Keep this fallback here as well as invocation-config so programmatic callers
+	// that bypass the public agent tool receive the same default.
+	const thinkingLevel = options.thinkingLevel ?? agentConfig?.thinking ?? "medium";
 
 	const disallowedSet = agentConfig?.disallowedTools
 		? new Set(agentConfig.disallowedTools)

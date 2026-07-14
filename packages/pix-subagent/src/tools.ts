@@ -384,7 +384,7 @@ export function createAgentTool(
 				Type.Enum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, {
 					type: "string",
 					description:
-						'Reasoning effort. Enter exactly one of: "off", "minimal", "low", "medium", "high", or "xhigh".',
+						'Reasoning effort (default: "medium"). Enter exactly one of: "off", "minimal", "low", "medium", "high", or "xhigh".',
 				}),
 			),
 			turns: Type.Optional(

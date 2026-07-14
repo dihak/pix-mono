@@ -53,6 +53,7 @@ test("agent exposes thinking as a guided string enum", () => {
 
 	expect(thinking?.type).toBe("string");
 	expect(thinking?.enum).toEqual(["off", "minimal", "low", "medium", "high", "xhigh"]);
+	expect(thinking?.description).toContain('default: "medium"');
 	expect(thinking?.description).toContain('exactly one of: "off"');
 	expect(thinking?.description).toContain('"xhigh"');
 });

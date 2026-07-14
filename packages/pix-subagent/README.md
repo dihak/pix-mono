@@ -46,7 +46,7 @@ description      string    3-5 words, shown in widget
 type             string    Agent type (discover with agent_info)
 model?           string    "provider/id" or fuzzy ("haiku"); omit to inherit
 allowed_tools?   string[]  Restrict child's tools (intersected, never widens)
-thinking?        string    off|minimal|low|medium|high|xhigh
+thinking?        string    off|minimal|low|medium|high|xhigh (default: medium)
 turns?           number    Omit for unlimited
 resume?          string    Agent ID to continue
 background?      boolean   Default true (non-blocking); false waits for an inline result

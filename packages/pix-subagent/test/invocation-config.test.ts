@@ -1,7 +1,7 @@
 /**
  * invocation-config.test.ts — Precedence and field-level tests for
  * resolveAgentInvocationConfig. Hardens the "no background toggle" invariant
- * and verifies caller > config > global default precedence for all fields.
+ * and verifies caller > config > subagent default precedence for all fields.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -98,9 +98,9 @@ describe("thinking precedence", () => {
 		expect(r.thinking).toBe("medium");
 	});
 
-	test("undefined when both absent", () => {
+	test("defaults to medium when both absent", () => {
 		const r = resolveAgentInvocationConfig(makeConfig(), {});
-		expect(r.thinking).toBeUndefined();
+		expect(r.thinking).toBe("medium");
 	});
 });
 
@@ -190,7 +190,7 @@ describe("all defaults", () => {
 		expect(r).toEqual({
 			modelInput: undefined,
 			modelFromParams: false,
-			thinking: undefined,
+			thinking: "medium",
 			maxTurns: undefined,
 			inheritContext: false,
 			isolated: false,

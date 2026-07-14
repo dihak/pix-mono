@@ -2,7 +2,7 @@
  * invocation-config.ts — Resolve per-call agent invocation options.
  *
  * Precedence is uniform across ALL fields:
- *   explicit call param  >  agent config default  >  global default
+ *   explicit call param  >  agent config default  >  subagent default
  *
  * Ported from tintinweb/pi-subagents (MIT). Trimmed: dropped isolation/joinMode.
  */
@@ -37,7 +37,7 @@ export function resolveAgentInvocationConfig(
 	return {
 		modelInput: params.model ?? agentConfig?.model,
 		modelFromParams: params.model != null,
-		thinking: (params.thinking ?? agentConfig?.thinking) as ThinkingLevel | undefined,
+		thinking: (params.thinking ?? agentConfig?.thinking ?? "medium") as ThinkingLevel,
 		maxTurns: params.turns ?? params.max_turns ?? agentConfig?.maxTurns,
 		inheritContext: params.inherit_context ?? agentConfig?.inheritContext ?? false,
 		isolated: params.isolated ?? agentConfig?.isolated ?? false,
