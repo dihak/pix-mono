@@ -108,6 +108,18 @@ describe("pix-prompts host-aware injection", () => {
 		expect(block.length).toBeLessThan(17 * 1024);
 	});
 
+	it("instructs the agent to offer isolated dependency installation", async () => {
+		const { pi, getHandler } = fakePi();
+		registerPrompts(pi);
+
+		const result = await getHandler()({ systemPrompt: "BASE" });
+
+		expect(result?.systemPrompt).toContain(
+			"ask whether the user wants it installed instead of stopping at installation instructions",
+		);
+		expect(result?.systemPrompt).toContain("isolated user- or project-scoped installation");
+	});
+
 	it("replaces pi's default identity line with generic version", async () => {
 		const { pi, getHandler } = fakePi();
 		registerPrompts(pi);
