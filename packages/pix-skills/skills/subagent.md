@@ -168,6 +168,17 @@ Rules for the fan-out:
   concurrently, isolate each with `worktree: true` instead of letting them
   collide.
 
+#### Supervise running workers
+
+Background workers are not fire-and-forget. Estimate a reasonable duration from
+the task size. If a worker runs materially longer than expected or available
+progress shows it is blocked or off-track, inspect once and proactively use
+`agent_steer` with concrete help: missing context, a corrected path or command,
+or a narrower goal. Do not repeatedly poll, sleep-wait, or steer merely because
+a healthy task is slow. If steering does not recover it, stop and relaunch only
+with a better prompt. Use judgment; every steer should address an observed
+problem.
+
 #### Cheap-worker prompt contract
 
 Because the worker is less capable, the spec must be **tighter**, not looser.
