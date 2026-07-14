@@ -132,6 +132,28 @@ bun test           # run all tests
 bun run typecheck  # tsc across all packages
 ```
 
+### Graph analysis
+
+The graph analyzer reads `graphify-out/graph.json`, validates inferred call edges against TypeScript bindings, removes invalid hyperedges, repairs recoverable hyperedge IDs, and extracts repeated structural and semantic patterns.
+
+```bash
+bun run graph:analyze
+```
+
+It writes the following files without replacing the original graph:
+
+| Output | Description |
+|---|---|
+| `graphify-out/graph.cleaned.json` | Graph with unreliable inferred calls removed and source paths normalized |
+| `graphify-out/patterns.json` | Machine-readable quality findings and extracted patterns |
+| `graphify-out/PATTERN_REPORT.md` | Human-readable pattern and graph-quality report |
+
+Use the cleaned graph for subsequent queries:
+
+```bash
+graphify query "your question" --graph graphify-out/graph.cleaned.json
+```
+
 ## Publishing
 
 ```bash
