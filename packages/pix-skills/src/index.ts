@@ -217,7 +217,9 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 		description:
 			"Browse and load bundled skills. No args → list all skills with descriptions. name only → description for that skill. name + full=true → full instructions.",
 		promptSnippet: "Browse and load bundled skill instructions",
-		promptGuidelines: ["Matching skill? Call read_skills() first."],
+		promptGuidelines: [
+			"Before any task, call read_skills(); load a matching skill in full before acting.",
+		],
 		executionMode: "sequential",
 		parameters: ParamsSchema,
 
