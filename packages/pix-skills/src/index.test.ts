@@ -1,12 +1,21 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
+	copySkillResource,
 	extractDescription,
 	extractName,
 	findCommandDirectives,
+	formatCollapsedSkillResult,
+	formatExpandedSkillResult,
+	formatSkillCallLabel,
+	formatSkillList,
 	formatSkillSummary,
 	hasShellMeta,
 	interpolateSkill,
+	readSkillResource,
 	replaceSpan,
 	type ThemeLike,
 	tokenizeCommand,
@@ -58,6 +67,96 @@ describe("extractDescription", () => {
 	});
 });
 
+describe("formatSkillList", () => {
+	it("lists skill names horizontally without descriptions", () => {
+		expect(formatSkillList(["commit", "debug"])).toBe("Available skills (2): commit · debug");
+	});
+});
+
+describe("formatSkillCallLabel", () => {
+	it("labels each operation distinctly", () => {
+		expect(formatSkillCallLabel({})).toBe("list");
+		expect(formatSkillCallLabel({ name: "test" })).toBe("description · test");
+		expect(formatSkillCallLabel({ name: "test", full: true })).toBe("instructions · test");
+		expect(formatSkillCallLabel({ name: "docx", resource: "references/guide.md" })).toBe(
+			"reference · docx/references/guide.md",
+		);
+		expect(
+			formatSkillCallLabel({
+				name: "docx",
+				resource: "scripts/render.ts",
+				output: ".pi/tools/render.ts",
+			}),
+		).toBe("copy · docx/scripts/render.ts → .pi/tools/render.ts");
+	});
+});
+
+describe("formatCollapsedSkillResult", () => {
+	it("summarizes each successful result distinctly", () => {
+		expect(formatCollapsedSkillResult({ mode: "list", count: 28 })).toBe("28 skills");
+		expect(formatCollapsedSkillResult({ mode: "description", name: "test" })).toBe(
+			"test · description",
+		);
+		expect(formatCollapsedSkillResult({ mode: "instructions", name: "test", lines: 42 })).toBe(
+			"test · 42 instruction lines",
+		);
+		expect(
+			formatCollapsedSkillResult({
+				mode: "reference",
+				name: "docx",
+				resource: "references/guide.md",
+				bytes: 120,
+			}),
+		).toBe("docx · reference · 120 B");
+		expect(
+			formatCollapsedSkillResult({
+				mode: "copy",
+				name: "docx",
+				resource: "scripts/render.ts",
+				output: ".pi/tools/render.ts",
+				bytes: 2048,
+			}),
+		).toBe("copied · .pi/tools/render.ts · 2.0 KiB");
+	});
+});
+
+describe("formatExpandedSkillResult", () => {
+	it("gives description, instructions, reference, and copy distinct output", () => {
+		expect(
+			formatExpandedSkillResult({ mode: "description", name: "test" }, "test: Test helper"),
+		).toBe("DESCRIPTION · test\nTest helper");
+		expect(
+			formatExpandedSkillResult(
+				{ mode: "instructions", name: "test", lines: 42 },
+				"full instructions",
+			),
+		).toBe("INSTRUCTIONS · test · 42 lines\nfull instructions");
+		expect(
+			formatExpandedSkillResult(
+				{
+					mode: "reference",
+					name: "docx",
+					resource: "references/guide.md",
+					bytes: 120,
+				},
+				"portable guidance",
+			),
+		).toBe("REFERENCE · docx\nreferences/guide.md · 120 B\nportable guidance");
+		expect(
+			formatExpandedSkillResult(
+				{
+					mode: "copy",
+					name: "docx",
+					resource: "scripts/render.ts",
+					output: ".pi/tools/render.ts",
+					bytes: 2048,
+				},
+				"",
+			),
+		).toBe("COPIED · docx\nscripts/render.ts → .pi/tools/render.ts · 2.0 KiB");
+	});
+});
+
 describe("formatSkillSummary", () => {
 	it("renders muted placeholder for empty input", () => {
 		expect(formatSkillSummary("", tagTheme)).toBe("[muted]No skills found.[/]");
@@ -85,6 +184,170 @@ describe("formatSkillSummary", () => {
 	it("passes non 'name: desc' lines through as muted", () => {
 		const out = formatSkillSummary("Available skills (3):", tagTheme);
 		expect(out).toBe("[muted]Available skills (3):[/]");
+	});
+});
+
+describe("readSkillResource", () => {
+	const roots: string[] = [];
+	const makeBundle = async () => {
+		const root = await mkdtemp(join(tmpdir(), "pix-skill-resource-"));
+		roots.push(root);
+		await mkdir(join(root, "references"));
+		await mkdir(join(root, "scripts"));
+		await mkdir(join(root, "assets"));
+		return root;
+	};
+
+	afterEach(async () => {
+		await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+	});
+
+	it("reads a file from a conventional resource directory", async () => {
+		const root = await makeBundle();
+		await writeFile(join(root, "references", "guide.md"), "portable guidance");
+
+		await expect(readSkillResource(root, "references/guide.md")).resolves.toBe("portable guidance");
+	});
+
+	it("requires output instead of returning scripts or assets to context", async () => {
+		const root = await makeBundle();
+		await writeFile(join(root, "scripts", "render.ts"), "content");
+		await writeFile(join(root, "assets", "theme.json"), "{}");
+
+		await expect(readSkillResource(root, "scripts/render.ts")).rejects.toThrow(
+			"Output is required for scripts/ and assets/ resources",
+		);
+		await expect(readSkillResource(root, "assets/theme.json")).rejects.toThrow(
+			"Output is required for scripts/ and assets/ resources",
+		);
+	});
+
+	it("rejects files outside scripts, references, and assets", async () => {
+		const root = await makeBundle();
+		await writeFile(join(root, "private.txt"), "secret");
+
+		await expect(readSkillResource(root, "private.txt")).rejects.toThrow("Invalid resource path");
+	});
+
+	it("rejects absolute paths and parent traversal", async () => {
+		const root = await makeBundle();
+
+		await expect(readSkillResource(root, "/etc/passwd")).rejects.toThrow("Invalid resource path");
+		await expect(readSkillResource(root, "references/../../secret")).rejects.toThrow(
+			"Invalid resource path",
+		);
+	});
+
+	it("rejects symlinks that escape the skill bundle", async () => {
+		const root = await makeBundle();
+		const outside = await mkdtemp(join(tmpdir(), "pix-skill-outside-"));
+		roots.push(outside);
+		await writeFile(join(outside, "secret.txt"), "secret");
+		await symlink(join(outside, "secret.txt"), join(root, "assets", "escape.txt"));
+
+		await expect(readSkillResource(root, "assets/escape.txt")).rejects.toThrow(
+			"Invalid resource path",
+		);
+	});
+});
+
+describe("copySkillResource", () => {
+	const roots: string[] = [];
+	const makeDirectories = async () => {
+		const bundle = await mkdtemp(join(tmpdir(), "pix-skill-copy-source-"));
+		const project = await mkdtemp(join(tmpdir(), "pix-skill-copy-output-"));
+		roots.push(bundle, project);
+		await mkdir(join(bundle, "scripts"));
+		await mkdir(join(bundle, "references"));
+		await mkdir(join(bundle, "assets"));
+		return { bundle, project };
+	};
+
+	afterEach(async () => {
+		await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+	});
+
+	it("copies a script as raw bytes into the project", async () => {
+		const { bundle, project } = await makeDirectories();
+		await writeFile(join(bundle, "scripts", "render.ts"), "console.log('render')\n");
+
+		const result = await copySkillResource(
+			bundle,
+			"scripts/render.ts",
+			project,
+			".pi/tools/render.ts",
+		);
+
+		expect(result.path).toBe(join(project, ".pi/tools/render.ts"));
+		expect(result.bytes).toBe(22);
+		await expect(Bun.file(result.path).text()).resolves.toBe("console.log('render')\n");
+	});
+
+	it("copies a binary asset without decoding it", async () => {
+		const { bundle, project } = await makeDirectories();
+		const bytes = Uint8Array.from([0, 255, 17, 34]);
+		await writeFile(join(bundle, "assets", "template.bin"), bytes);
+
+		const result = await copySkillResource(
+			bundle,
+			"assets/template.bin",
+			project,
+			".pi/tools/template.bin",
+		);
+
+		expect(new Uint8Array(await Bun.file(result.path).arrayBuffer())).toEqual(bytes);
+	});
+
+	it("allows references to be copied instead of returned to context", async () => {
+		const { bundle, project } = await makeDirectories();
+		await writeFile(join(bundle, "references", "long.md"), "large reference");
+
+		const result = await copySkillResource(
+			bundle,
+			"references/long.md",
+			project,
+			".pi/references/long.md",
+		);
+
+		await expect(Bun.file(result.path).text()).resolves.toBe("large reference");
+	});
+
+	it("rejects unsafe output paths", async () => {
+		const { bundle, project } = await makeDirectories();
+		await writeFile(join(bundle, "scripts", "render.ts"), "content");
+
+		await expect(
+			copySkillResource(bundle, "scripts/render.ts", project, "../outside.ts"),
+		).rejects.toThrow("Invalid output path");
+		await expect(
+			copySkillResource(bundle, "scripts/render.ts", project, "/tmp/outside.ts"),
+		).rejects.toThrow("Invalid output path");
+	});
+
+	it("rejects output parents that symlink outside the project", async () => {
+		const { bundle, project } = await makeDirectories();
+		const outside = await mkdtemp(join(tmpdir(), "pix-skill-copy-outside-"));
+		roots.push(outside);
+		await writeFile(join(bundle, "scripts", "render.ts"), "content");
+		await symlink(outside, join(project, "escape"));
+
+		await expect(
+			copySkillResource(bundle, "scripts/render.ts", project, "escape/render.ts"),
+		).rejects.toThrow("Invalid output path");
+	});
+
+	it("replaces an output symlink without writing through it", async () => {
+		const { bundle, project } = await makeDirectories();
+		const outside = await mkdtemp(join(tmpdir(), "pix-skill-copy-target-"));
+		roots.push(outside);
+		await writeFile(join(bundle, "scripts", "render.ts"), "safe content");
+		await writeFile(join(outside, "target.ts"), "outside content");
+		await symlink(join(outside, "target.ts"), join(project, "render.ts"));
+
+		await copySkillResource(bundle, "scripts/render.ts", project, "render.ts");
+
+		await expect(Bun.file(join(outside, "target.ts")).text()).resolves.toBe("outside content");
+		await expect(Bun.file(join(project, "render.ts")).text()).resolves.toBe("safe content");
 	});
 });
 

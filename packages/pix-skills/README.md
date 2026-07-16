@@ -6,7 +6,7 @@ Pi coding agent extension — skill loader tool + skills bundle.
 
 | Resource | Type | Description |
 |---|---|---|
-| `read_skills` | tool | Browse and load bundled skills. No args → list all. `name` only → description. `name + full=true` → full instructions. |
+| `read_skills` | tool | Browse skills, read references, and copy bundled resources. No args → list all. `name` only → description. `name + full=true` → instructions. `name + resource` → read reference. Add `output` → copy raw file into project. |
 | `skills/` | skills | 27 bundled skills (off-context by default — discovered on demand via `read_skills`) |
 
 ## How it works
@@ -17,14 +17,91 @@ the baseline context small regardless of how many skills ship.
 
 Discovery and loading go through the `read_skills` tool instead:
 
-- `read_skills()` — lists every skill name + description on demand (independent dir scan, not the prompt registry)
+- `read_skills()` — lists skill names only in one horizontal line (independent dir scan, not the prompt registry)
+- `read_skills(name=<skill>)` — reads one skill's description
 - `read_skills(name=<skill>, full=true)` — loads the full procedure into context
+- `read_skills(name=<skill>, resource=references/<path>)` — reads a UTF-8 reference into context
+- `read_skills(name=<skill>, resource=<path>, output=<path>)` — copies a reference, script, or asset into the current project
 
 A skill can opt back into passive prompt injection by **removing** the `disable-model-invocation: true`
 line (or setting it to `false`) — then pi auto-loads its description on description match. The bundled
 set deliberately leaves it on to favour a lean context.
 
 Skills are also discovered from `~/.pi/agent/skills/` (user-level). Bundled skills take precedence on name collision.
+
+## Skill layout and bundled resources
+
+`pix-skills` recognizes both the current flat layout and a directory bundle:
+
+```text
+skills/
+├── debug.md                 # current flat layout
+└── debug/
+    └── SKILL.md             # equivalent minimal bundle layout
+```
+
+A bundle needs only `SKILL.md`. It may add resource directories when the skill
+actually needs them:
+
+```text
+skills/docx/
+├── SKILL.md                 # required
+├── scripts/                 # optional executable source files
+├── references/              # optional text/documentation resources
+└── assets/                  # optional data, templates, images, or themes
+```
+
+The bundle relies exclusively on this conventional folder structure—there is
+no separate metadata file. `SKILL.md` frontmatter is the single source of truth
+for skill metadata, while the presence and contents of `scripts/`, `references/`,
+and `assets/` define the available resources. Empty resource directories do not
+need to be created.
+
+### Resource access
+
+References may be read directly into model context or copied into the current
+project. Scripts and assets are never returned to context; they require an
+explicit project-relative `output` and are copied as raw bytes:
+
+```text
+# Read a small reference into context (1 MiB text limit)
+read_skills(name="docx", resource="references/compatibility.md")
+
+# Copy a large reference without adding it to context
+read_skills(
+  name="docx",
+  resource="references/specification.pdf",
+  output=".pi/resources/docx/specification.pdf"
+)
+
+# Materialize scripts and binary assets before using them
+read_skills(
+  name="docx",
+  resource="scripts/render.ts",
+  output=".pi/tools/docx/render.ts"
+)
+read_skills(
+  name="docx",
+  resource="assets/template.docx",
+  output=".pi/tools/docx/template.docx"
+)
+```
+
+Copying does not execute a script. It creates missing destination directories
+and atomically replaces the destination with the bundled file. The agent can
+then use ordinary tools to inspect or run the copied resource.
+
+Resource resolution will be confined to the selected skill bundle:
+
+- only `scripts/`, `references/`, and `assets/` are addressable;
+- absolute paths and `..` traversal are rejected;
+- symlinks that resolve outside the canonical skill root are rejected;
+- flat skills such as `skills/debug.md` have no resource root and therefore
+  cannot read neighboring skills or files;
+- callers use bundle-relative names and never need an absolute `${SKILL_DIR}`;
+- `output` is relative to the current project working directory;
+- invalid source or output paths—including paths outside the permitted roots,
+  absolute paths, traversal, and escaping symlinks—are rejected.
 
 `read_skills` is the safe version of "agent prompts itself":
 
@@ -100,8 +177,11 @@ Directive commands are gated by the **same rule engine** as the `bash` tool
 - **Single source of truth.** Expanding pix-gate's rule table or a user's
   `~/.pi/agent/pix-gate.json` automatically tightens the skill path too.
 
-Interpolation only happens on the `full=true` path; listing and description
-lookups never run commands.
+Interpolation only happens on the `full=true` path; name listing and description
+lookups never run commands. Calls and results identify the operation as `list`,
+`description`, `instructions`, `reference`, or `copy`; copied-resource results show
+the destination and byte size. Tool results follow Pix's configured auto-collapse
+delay, including `read_skills`.
 
 ## Usage
 
@@ -114,6 +194,16 @@ read_skills(name="commit")
 
 # Agent loads full commit procedure
 read_skills(name="commit", full=true)
+
+# Read a UTF-8 reference into context
+read_skills(name="docx", resource="references/compatibility.md")
+
+# Copy a script or asset to the current project without loading it into context
+read_skills(
+  name="docx",
+  resource="scripts/render.ts",
+  output=".pi/tools/docx/render.ts"
+)
 ```
 
 ## Install

@@ -12,11 +12,13 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { copyFile, mkdir, readFile, realpath, rename, rm, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { Type } from "typebox";
 import {
 	directiveBlockReason,
@@ -56,6 +58,8 @@ interface SkillEntry {
 	name: string;
 	/** Absolute path to the SKILL.md or flat .md file. */
 	path: string;
+	/** Absolute bundle directory, or null for a flat skill. */
+	root: string | null;
 }
 
 /**
@@ -74,12 +78,12 @@ function scanSkillsDir(root: string): SkillEntry[] {
 			// Subdirectory layout: skills/<name>/SKILL.md
 			const skillMd = join(root, entry.name, "SKILL.md");
 			if (existsSync(skillMd)) {
-				entries.push({ name: entry.name, path: skillMd });
+				entries.push({ name: entry.name, path: skillMd, root: dirname(skillMd) });
 			}
 		} else if (entry.isFile() && entry.name.endsWith(".md")) {
 			// Flat layout: skills/<name>.md
 			const name = entry.name.replace(/\.md$/, "");
-			entries.push({ name, path: join(root, entry.name) });
+			entries.push({ name, path: join(root, entry.name), root: null });
 		}
 	}
 
@@ -115,6 +119,116 @@ export function extractName(content: string): string | null {
 	if (!m) return null;
 	const nm = m[1]?.match(/^name\s*:\s*["']?(.+?)["']?\s*$/m);
 	return nm ? (nm[1]?.trim() ?? null) : null;
+}
+
+const RESOURCE_DIRECTORIES = new Set(["scripts", "references", "assets"]);
+const MAX_TEXT_RESOURCE_BYTES = 1_048_576;
+
+function resourceSegments(resource: string): string[] {
+	const invalid = () => new Error("Invalid resource path");
+	if (
+		!resource ||
+		resource.includes("\\") ||
+		resource.includes("\0") ||
+		isAbsolute(resource) ||
+		win32.isAbsolute(resource)
+	) {
+		throw invalid();
+	}
+	const segments = resource.split("/");
+	if (
+		!RESOURCE_DIRECTORIES.has(segments[0] ?? "") ||
+		segments.length < 2 ||
+		segments.some((segment) => !segment || segment === "." || segment === "..")
+	) {
+		throw invalid();
+	}
+	return segments;
+}
+
+async function resolveSkillResource(skillRoot: string, resource: string): Promise<string> {
+	const invalid = () => new Error("Invalid resource path");
+	const segments = resourceSegments(resource);
+	let canonicalRoot: string;
+	let canonicalResource: string;
+	try {
+		canonicalRoot = await realpath(skillRoot);
+		const candidate = resolve(canonicalRoot, ...segments);
+		const lexicalRelative = relative(canonicalRoot, candidate);
+		if (lexicalRelative.startsWith("..") || isAbsolute(lexicalRelative)) throw invalid();
+		canonicalResource = await realpath(candidate);
+	} catch (error) {
+		if (error instanceof Error && error.message === "Invalid resource path") throw error;
+		throw new Error(`Resource not found: ${resource}`);
+	}
+	const canonicalRelative = relative(canonicalRoot, canonicalResource);
+	if (canonicalRelative.startsWith("..") || isAbsolute(canonicalRelative)) throw invalid();
+	const info = await stat(canonicalResource);
+	if (!info.isFile()) throw new Error(`Resource is not a file: ${resource}`);
+	return canonicalResource;
+}
+
+/** Read a references/ UTF-8 resource into model context. */
+export async function readSkillResource(skillRoot: string, resource: string): Promise<string> {
+	const segments = resourceSegments(resource);
+	const source = await resolveSkillResource(skillRoot, resource);
+	if (segments[0] !== "references") {
+		throw new Error("Output is required for scripts/ and assets/ resources");
+	}
+	const info = await stat(source);
+	if (info.size > MAX_TEXT_RESOURCE_BYTES) {
+		throw new Error(`Resource exceeds ${MAX_TEXT_RESOURCE_BYTES} byte limit: ${resource}`);
+	}
+	return readFile(source, "utf-8");
+}
+
+export type CopiedSkillResource = { path: string; bytes: number };
+
+/** Copy any conventional bundle resource as raw bytes into the caller project. */
+export async function copySkillResource(
+	skillRoot: string,
+	resource: string,
+	projectRoot: string,
+	output: string,
+): Promise<CopiedSkillResource> {
+	const invalid = () => new Error("Invalid output path");
+	if (
+		!output ||
+		output.includes("\\") ||
+		output.includes("\0") ||
+		isAbsolute(output) ||
+		win32.isAbsolute(output)
+	) {
+		throw invalid();
+	}
+	const outputSegments = output.split("/");
+	if (outputSegments.some((segment) => !segment || segment === "." || segment === "..")) {
+		throw invalid();
+	}
+
+	const source = await resolveSkillResource(skillRoot, resource);
+	const canonicalProject = await realpath(projectRoot);
+	const destination = resolve(canonicalProject, ...outputSegments);
+	const lexicalRelative = relative(canonicalProject, destination);
+	if (lexicalRelative.startsWith("..") || isAbsolute(lexicalRelative)) throw invalid();
+
+	const parent = dirname(destination);
+	await mkdir(parent, { recursive: true });
+	const canonicalParent = await realpath(parent);
+	const parentRelative = relative(canonicalProject, canonicalParent);
+	if (parentRelative.startsWith("..") || isAbsolute(parentRelative)) throw invalid();
+
+	const temporary = join(
+		canonicalParent,
+		`.pix-skill-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.tmp`,
+	);
+	try {
+		await copyFile(source, temporary);
+		await rename(temporary, destination);
+	} finally {
+		await rm(temporary, { force: true });
+	}
+	return { path: destination, bytes: (await stat(source)).size };
 }
 
 // ─── Command directive interpolation ───────────────────────────────────────────
@@ -170,6 +284,72 @@ export type ThemeLike = {
 	fg: (key: "accent" | "muted" | "toolTitle", text: string) => string;
 };
 
+export function formatSkillList(names: string[]): string {
+	return `Available skills (${names.length}): ${names.join(" · ")}`;
+}
+
+export type SkillCallArgs = {
+	name?: string;
+	full?: boolean;
+	resource?: string;
+	output?: string;
+};
+
+export type SkillResultDetails =
+	| { mode: "list"; count: number }
+	| { mode: "description"; name: string }
+	| { mode: "instructions"; name: string; lines: number }
+	| { mode: "reference"; name: string; resource: string; bytes: number }
+	| { mode: "copy"; name: string; resource: string; output: string; bytes: number };
+
+function formatBytes(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	return `${(bytes / 1024).toFixed(1)} KiB`;
+}
+
+export function formatSkillCallLabel(args: SkillCallArgs): string {
+	if (!args.name) return "list";
+	if (args.resource && args.output) {
+		return `copy · ${args.name}/${args.resource} → ${args.output}`;
+	}
+	if (args.resource) return `reference · ${args.name}/${args.resource}`;
+	if (args.full) return `instructions · ${args.name}`;
+	return `description · ${args.name}`;
+}
+
+export function formatCollapsedSkillResult(details: SkillResultDetails): string {
+	switch (details.mode) {
+		case "list":
+			return `${details.count} skills`;
+		case "description":
+			return `${details.name} · description`;
+		case "instructions":
+			return `${details.name} · ${details.lines} instruction lines`;
+		case "reference":
+			return `${details.name} · reference · ${formatBytes(details.bytes)}`;
+		case "copy":
+			return `copied · ${details.output} · ${formatBytes(details.bytes)}`;
+	}
+}
+
+export function formatExpandedSkillResult(details: SkillResultDetails, text: string): string {
+	switch (details.mode) {
+		case "list":
+			return text;
+		case "description": {
+			const prefix = `${details.name}:`;
+			const description = text.startsWith(prefix) ? text.slice(prefix.length).trimStart() : text;
+			return `DESCRIPTION · ${details.name}\n${description}`;
+		}
+		case "instructions":
+			return `INSTRUCTIONS · ${details.name} · ${details.lines} lines\n${text}`;
+		case "reference":
+			return `REFERENCE · ${details.name}\n${details.resource} · ${formatBytes(details.bytes)}\n${text}`;
+		case "copy":
+			return `COPIED · ${details.name}\n${details.resource} → ${details.output} · ${formatBytes(details.bytes)}`;
+	}
+}
+
 export function formatSkillSummary(text: string, theme: ThemeLike): string {
 	const trimmed = text.trim();
 	if (!trimmed) return theme.fg("muted", "No skills found.");
@@ -208,6 +388,18 @@ const ParamsSchema = Type.Object({
 				"When true, return the full SKILL.md content. When false (default), return the description only.",
 		}),
 	),
+	resource: Type.Optional(
+		Type.String({
+			description:
+				"Bundle-relative file under scripts/, references/, or assets/. Scripts/assets require output; references may be read directly.",
+		}),
+	),
+	output: Type.Optional(
+		Type.String({
+			description:
+				"Project-relative destination for copying the resource as raw bytes. Required for scripts/ and assets/; optional for references/.",
+		}),
+	),
 });
 
 function registerSkillLoader(pi: ExtensionAPI): void {
@@ -215,7 +407,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 		name: "read_skills",
 		label: "Read Skills",
 		description:
-			"Browse and load bundled skills. No args → list all skills with descriptions. name only → description for that skill. name + full=true → full instructions.",
+			"Browse skills and access conventional bundle resources. References can be read into context; scripts/assets must be copied to a project-relative output path before use.",
 		promptSnippet: "Browse and load bundled skill instructions",
 		promptGuidelines: [
 			"Before any task, call read_skills(); load a matching skill in full before acting.",
@@ -224,9 +416,9 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 		parameters: ParamsSchema,
 
 		async execute(_toolCallId, params, _signal, _upd, toolCtx) {
-			const ok = (text: string) => ({
+			const ok = (text: string, details: SkillResultDetails) => ({
 				content: [{ type: "text" as const, text }],
-				details: undefined,
+				details,
 			});
 			const fail = (text: string) => ({
 				content: [{ type: "text" as const, text }],
@@ -234,24 +426,25 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 				isError: true,
 			});
 
-			const { name, full } = params as { name?: string; full?: boolean };
+			const { name, full, resource, output } = params as {
+				name?: string;
+				full?: boolean;
+				resource?: string;
+				output?: string;
+			};
+
+			if (resource && !name) return fail("A skill name is required to access a resource.");
+			if (output && !resource) return fail("A resource is required when output is provided.");
 
 			// No name → list all skills
 			if (!name) {
 				const skills = discoverSkills();
-				if (!skills.length) return ok("No skills found.");
+				if (!skills.length) return ok("No skills found.", { mode: "list", count: 0 });
 
-				const lines = skills.map((s) => {
-					try {
-						const content = readFileSync(s.path, "utf-8");
-						const desc = extractDescription(content);
-						return desc ? `${s.name}: ${desc}` : s.name;
-					} catch {
-						return s.name;
-					}
+				return ok(formatSkillList(skills.map((skill) => skill.name)), {
+					mode: "list",
+					count: skills.length,
 				});
-
-				return ok(`Available skills (${skills.length}):\n\n${lines.join("\n")}`);
 			}
 
 			// Resolve skill
@@ -264,19 +457,50 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 			}
 
 			try {
+				if (resource) {
+					if (!entry.root) {
+						return fail(`Skill "${entry.name}" uses the flat layout and has no bundled resources.`);
+					}
+					if (output) {
+						const cwd = (toolCtx as { cwd?: string })?.cwd ?? process.cwd();
+						const copied = await copySkillResource(entry.root, resource, cwd, output);
+						return ok(`Copied ${resource} to ${output} (${copied.bytes} bytes).`, {
+							mode: "copy",
+							name: entry.name,
+							resource,
+							output,
+							bytes: copied.bytes,
+						});
+					}
+					const reference = await readSkillResource(entry.root, resource);
+					return ok(reference, {
+						mode: "reference",
+						name: entry.name,
+						resource,
+						bytes: Buffer.byteLength(reference, "utf-8"),
+					});
+				}
+
 				const content = readFileSync(entry.path, "utf-8");
 
 				// full=false (default) → description only
 				if (!full) {
 					const desc = extractDescription(content);
-					return ok(desc ? `${entry.name}: ${desc}` : `${entry.name}: (no description)`);
+					return ok(desc ? `${entry.name}: ${desc}` : `${entry.name}: (no description)`, {
+						mode: "description",
+						name: entry.name,
+					});
 				}
 
 				// full=true → interpolate !`cmd` directives (pix-gate-gated, no
 				// prompt; auto-deny on any rule match), then return.
 				const cwd = (toolCtx as { cwd?: string })?.cwd ?? process.cwd();
 				const expanded = await interpolateSkill(content, cwd);
-				return ok(expanded);
+				return ok(expanded, {
+					mode: "instructions",
+					name: entry.name,
+					lines: expanded.split(/\r?\n/).length,
+				});
 			} catch (err) {
 				return fail(
 					`Failed to read skill "${name}": ${err instanceof Error ? err.message : String(err)}`,
@@ -285,8 +509,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 		},
 
 		renderCall(args, theme) {
-			const { name, full } = args as { name?: string; full?: boolean };
-			const label = name ? `${name}${full ? " (full)" : ""}` : "list";
+			const label = formatSkillCallLabel(args as SkillCallArgs);
 			return new Text(
 				`${theme.fg("toolTitle", theme.bold("read_skills"))} ${theme.fg("muted", label)}`,
 				0,
@@ -294,12 +517,27 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 			);
 		},
 
-		renderResult(result, _options, theme) {
+		renderResult(result, _options, theme, renderCtx) {
 			const text = result.content
 				?.filter((content) => content.type === "text")
 				.map((content) => content.text || "")
 				.join("\n");
-			return new Text(formatSkillSummary(text ?? "", theme), 0, 0);
+			const component =
+				renderCtx.lastComponent instanceof Text ? renderCtx.lastComponent : new Text("", 0, 0);
+			const details = result.details as SkillResultDetails | undefined;
+			if (!renderCtx.isError && details) {
+				const state = renderCtx.state as CollapseState;
+				if (tickCollapse("read_skills", state, renderCtx.invalidate)) {
+					component.setText(theme.fg("muted", formatCollapsedSkillResult(details)));
+					return component;
+				}
+				component.setText(
+					formatSkillSummary(formatExpandedSkillResult(details, text ?? ""), theme),
+				);
+				return component;
+			}
+			component.setText(formatSkillSummary(text ?? "", theme));
+			return component;
 		},
 	});
 }

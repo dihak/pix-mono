@@ -256,6 +256,7 @@
       "name": "@xynogen/pix-skills",
       "version": "0.5.5",
       "dependencies": {
+        "@xynogen/pix-data": "^0.3.2",
         "@xynogen/pix-gate": "^0.1.13",
       },
       "peerDependencies": {

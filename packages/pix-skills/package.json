@@ -46,6 +46,7 @@
 		"@earendil-works/pi-tui": "*"
 	},
 	"dependencies": {
+		"@xynogen/pix-data": "^0.3.2",
 		"@xynogen/pix-gate": "^0.1.13"
 	}
 }
