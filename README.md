@@ -40,7 +40,7 @@ Shared dependencies pulled in automatically — install directly only if you nee
 | [`@xynogen/pix-diagnostics`](packages/pix-diagnostics) | Compact LSP diagnostic widget — recent files list, overrides pi-lens |
 | [`@xynogen/pix-display`](packages/pix-display) | Paste chip rendering (`[paste image #1]`) + leaked `<think>` tag → native thinking blocks |
 | [`@xynogen/pix-prompts`](packages/pix-prompts) | System-prompt injection — bundled `AGENT.md` baseline + repo directive files |
-| [`@xynogen/pix-skills`](packages/pix-skills) | Agent skill loader (`read_skills` tool + 29 bundled skills) |
+| [`@xynogen/pix-skills`](packages/pix-skills) | `read_skills` discovery and loader — names-only listing, description and full-instruction loading, reference reads, and safe bundled resource copies |
 
 **Behaviour**
 
