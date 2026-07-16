@@ -54,6 +54,20 @@ background?      boolean   Default true (non-blocking); false waits for an inlin
 
 **Background is the default.** Omit `background` (or set it to `true`) to return immediately and receive the result automatically on completion. Set `background: false` only when the parent must block until the result is available inline. The initial task prompt is shown in the tool card, then hidden after the shared `collapse.delaySec` threshold; set `collapse.tools.agent` to `false` to keep it visible.
 
+### Short delegation guidelines
+
+- Prefer direct tools for known or small tasks; launch agents only when delegation
+  provides clear value.
+- Give every child a compact, self-contained prompt. Do not fork or inherit the
+  parent conversation: avoid `inherit_context: true` and `prompt_mode: append`.
+- Use `thinking: "medium"` by default and `thinking: "high"` for genuinely
+  complex work.
+- Never use a thinking level above `high` unless the user first approves it after
+  receiving a concrete benefit and cost/latency justification.
+
+These rules are also embedded in the `agent` tool description so callers see
+them even when they do not load the separate subagent skill.
+
 **`allowed_tools[]`** is the work-splitting hook. Pass `["read","grep","find"]` to scope an Explore agent to read-only ops. The list is intersected with the agent type's default set — it can only narrow, never widen.
 
 **`model`** accepts `"provider/id"` or fuzzy strings like `"haiku"`, `"sonnet"`. The recurring tool description does not embed the live model catalog; use `agent_info(kind: "models")` to inspect it on demand. An unknown explicit model also returns the currently available models. Omit `model` to inherit the parent model.

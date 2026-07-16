@@ -22,14 +22,17 @@ import {
 } from "../src/tools.ts";
 import { describeActivity, formatSpeed } from "../src/ui/widget.ts";
 
-test("agent description delegates volatile catalogs to agent_info", () => {
+test("agent description includes compact delegation safety guidance", () => {
 	const description = buildAgentToolDescription();
 
 	expect(description).toContain("agent_info");
-	expect(description).toContain("omit model to inherit");
+	expect(description).toContain("never fork/inherit parent context");
+	expect(description).toContain("thinking medium or high");
+	expect(description).toContain("prior user approval");
+	expect(description).toContain("Omit model to inherit the parent model");
 	expect(description).not.toContain("Custom agents:");
 	expect(description).not.toContain("Types:");
-	expect(description.length).toBeLessThan(200);
+	expect(description.length).toBeLessThan(400);
 });
 
 test("agent_info exposes kind as a string enum with actionable guidance", () => {
@@ -47,15 +50,20 @@ test("agent_info exposes kind as a string enum with actionable guidance", () => 
 test("agent exposes thinking as a guided string enum", () => {
 	const tool = createAgentTool({} as never, {} as never, new Map(), () => {});
 	const parameters = tool.parameters as {
-		properties: { thinking: { type?: string; enum?: string[]; description?: string } };
+		properties: {
+			prompt: { description?: string };
+			thinking: { type?: string; enum?: string[]; description?: string };
+		};
 	};
 	const thinking = parameters.properties.thinking;
 
+	expect(parameters.properties.prompt.description).toContain("self-contained");
+	expect(parameters.properties.prompt.description).toContain("never rely on forked parent context");
 	expect(thinking?.type).toBe("string");
 	expect(thinking?.enum).toEqual(["off", "minimal", "low", "medium", "high", "xhigh"]);
-	expect(thinking?.description).toContain('default: "medium"');
-	expect(thinking?.description).toContain('exactly one of: "off"');
-	expect(thinking?.description).toContain('"xhigh"');
+	expect(thinking?.description).toContain('"medium" (default)');
+	expect(thinking?.description).toContain('or "high"');
+	expect(thinking?.description).toContain("user explicitly approves");
 });
 
 test("agent_steer exposes action as a guided string enum", () => {

@@ -59,13 +59,13 @@ Do **not** use when:
 For simple/medium tasks, plan inline using the `plan` skill's discipline: fix the
 exact file paths, the shared contracts (types, function signatures, interfaces),
 the naming, and the acceptance criteria **before** splitting. The whole point is
-that workers inherit decisions instead of inventing them.
+that workers receive explicitly stated decisions instead of inventing them.
 
 For large/complex tasks, delegate planning to the builtin `Plan` agent first, get
 the plan, then decompose it:
 
 ```typescript
-subagent({ subagent_type: "Plan", prompt: "Plan: <task>. Emphasize independent, parallelizable units." })
+subagent({ subagent_type: "Plan", thinking: "high", prompt: "Plan: <task>. Emphasize independent, parallelizable units." })
 ```
 
 ### 2. Decompose
@@ -135,6 +135,49 @@ whatever is current. So before fanning out:
 3. If no clearly-cheaper option is obvious, **ask** which model to delegate to
    rather than guessing — the wrong pick wastes the run.
 
+#### Thinking budget: medium or high by default
+
+Set the worker's `thinking` level explicitly on every subagent launch. Use only:
+
+- **`medium`** for routine, bounded, or mechanical work; this is the default.
+- **`high`** for genuinely complex analysis where deeper reasoning has a clear
+  expected benefit.
+
+Treat **`high` as the maximum without user approval**. Do not use `off`,
+`minimal`, `low`, or any level above `high` by default. A level above `high`
+(such as `xhigh`) is allowed only when all of the following are true:
+
+1. the task presents an exceptional, concrete need that `high` is unlikely to
+   handle adequately;
+2. before launching the worker, explain to the user why the extra reasoning is
+   warranted, what useful outcome it is intended to improve, and the likely
+   latency or cost trade-off; and
+3. explicitly ask for and receive the user's approval.
+
+Model prestige, vague hopes of a "better" answer, or reviewer thoroughness alone
+are not sufficient justification. If approval is absent or unclear, use
+`high`. Never silently escalate a subagent above `high`.
+
+#### Do not fork or inherit parent context
+
+Avoid context forking entirely. Do not use `inherit_context: true`,
+`prompt_mode: append`, or a custom agent configured to inherit the parent
+conversation or system prompt. Forking repeatedly sends a large amount of
+irrelevant parent context to every worker, burns input tokens, increases latency,
+and can distract the worker with unrelated decisions.
+
+Use the default replacement/isolated behavior and provide a compact,
+self-contained task prompt containing only the goal, required contract,
+constraints, relevant paths or excerpts, validation command, and expected
+output. If a worker needs a fact from the parent conversation, copy only that
+specific fact into its prompt; never pass the whole conversation for
+convenience. If the task cannot be specified without inheriting the parent
+context, keep it on the orchestrator instead of launching a subagent.
+
+Before using a custom agent, check that its frontmatter does not enable
+`inherit_context` or `prompt_mode: append`. Treat either setting as incompatible
+with this delegation guide.
+
 The per-task `model` override is the right mechanism precisely because the main
 model can change: the override pins each worker to the chosen model regardless
 of what the orchestrator is running at that moment. Examples below use
@@ -144,9 +187,9 @@ only when you deliberately want the worker to inherit the parent's model.
 ```typescript
 subagent({
   tasks: [
-    { agent: "worker", model: "<cheap-model>", task: "<full self-contained spec for unit A>", output: "units/a.md", outputMode: "file-only" },
-    { agent: "worker", model: "<cheap-model>", task: "<full self-contained spec for unit B>", output: "units/b.md", outputMode: "file-only" },
-    { agent: "worker", model: "<cheap-model>", task: "<full self-contained spec for unit C>", output: "units/c.md", outputMode: "file-only" }
+    { agent: "worker", model: "<cheap-model>", thinking: "medium", task: "<full self-contained spec for unit A>", output: "units/a.md", outputMode: "file-only" },
+    { agent: "worker", model: "<cheap-model>", thinking: "medium", task: "<full self-contained spec for unit B>", output: "units/b.md", outputMode: "file-only" },
+    { agent: "worker", model: "<cheap-model>", thinking: "medium", task: "<full self-contained spec for unit C>", output: "units/c.md", outputMode: "file-only" }
   ],
   concurrency: 3,
   async: true
@@ -198,6 +241,7 @@ self-check before reporting done:
 {
   agent: "worker",
   model: "<cheap-model>",
+  thinking: "medium",
   task: "<full spec>",
   acceptance: {
     criteria: ["Conforms to the given contract", "Edits only the named files", "Local check passes"],
@@ -321,8 +365,10 @@ type's model, that's a bug in the precedence, not a feature of the type.
   decompose, or spawn subagents.
 - **Single writer per target.** Independent files or isolated worktrees only —
   never concurrent writes to the same region.
+- **Never fork context.** Do not enable `inherit_context` or `prompt_mode:
+  append`; pass only a compact, self-contained task prompt.
 - **Self-contained specs.** Children don't inherit parent history; copy every
-  contract detail into the task string.
+  necessary contract detail into the task string.
 - **Strong model integrates and verifies.** Cheap models do bulk units; the
   orchestrator owns the seams and the final gate.
 - **Resolve the worker model at call time.** The active model can change

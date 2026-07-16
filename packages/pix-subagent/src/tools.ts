@@ -265,7 +265,7 @@ export function formatAgentCompletedLine(d: AgentDetails, theme: Theme): string 
 // ── compact tool description + on-demand discovery ──────────────────────────
 
 export function buildAgentToolDescription(): string {
-	return "Launch a sub-agent for delegated work. Use direct tools for known tasks. Call agent_info to discover types or models; omit model to inherit the parent.";
+	return "Launch a sub-agent only for delegated work; use direct tools for known tasks. Call agent_info to discover types or models. Keep prompts self-contained and never fork/inherit parent context. Use thinking medium or high; anything above high requires prior user approval after a concrete benefit and cost/latency justification. Omit model to inherit the parent model.";
 }
 
 export function agentTypeGuidance(): string {
@@ -371,7 +371,9 @@ export function createAgentTool(
 		promptSnippet: "Launch autonomous sub-agents for complex multi-step tasks",
 
 		parameters: Type.Object({
-			prompt: Type.String({ description: "Self-contained task instructions." }),
+			prompt: Type.String({
+				description: "Compact, self-contained instructions; never rely on forked parent context.",
+			}),
 			description: Type.String({ description: "Short 3-5 word UI label." }),
 			type: Type.String({ description: "Agent type; see agent_info(kind:'types')." }),
 			model: Type.Optional(
@@ -384,7 +386,7 @@ export function createAgentTool(
 				Type.Enum(["off", "minimal", "low", "medium", "high", "xhigh"] as const, {
 					type: "string",
 					description:
-						'Reasoning effort (default: "medium"). Enter exactly one of: "off", "minimal", "low", "medium", "high", or "xhigh".',
+						'Reasoning effort. Use only "medium" (default) or "high" unless the user explicitly approves a higher level after a concrete benefit and cost/latency justification.',
 				}),
 			),
 			turns: Type.Optional(
