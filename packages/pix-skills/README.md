@@ -179,7 +179,9 @@ Directive commands are gated by the **same rule engine** as the `bash` tool
 
 Interpolation only happens on the `full=true` path; name listing and description
 lookups never run commands. Calls and results identify the operation as `list`,
-`description`, `instructions`, `reference`, or `copy`; copied-resource results show
+`description`, `instructions`, `reference`, or `copy`; instruction results preview
+at most the first 100 characters, while the full content still reaches the agent.
+Copied-resource results show
 the destination and byte size. Tool results follow Pix's configured auto-collapse
 delay, including `read_skills`.
 

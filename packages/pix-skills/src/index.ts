@@ -341,8 +341,10 @@ export function formatExpandedSkillResult(details: SkillResultDetails, text: str
 			const description = text.startsWith(prefix) ? text.slice(prefix.length).trimStart() : text;
 			return `DESCRIPTION · ${details.name}\n${description}`;
 		}
-		case "instructions":
-			return `INSTRUCTIONS · ${details.name} · ${details.lines} lines\n${text}`;
+		case "instructions": {
+			const preview = text.length > 100 ? `${text.slice(0, 100)}...` : text;
+			return `INSTRUCTIONS · ${details.name} · ${details.lines} lines\n${preview}`;
+		}
 		case "reference":
 			return `REFERENCE · ${details.name}\n${details.resource} · ${formatBytes(details.bytes)}\n${text}`;
 		case "copy":

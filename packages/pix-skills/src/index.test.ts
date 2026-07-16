@@ -125,12 +125,16 @@ describe("formatExpandedSkillResult", () => {
 		expect(
 			formatExpandedSkillResult({ mode: "description", name: "test" }, "test: Test helper"),
 		).toBe("DESCRIPTION · test\nTest helper");
+		const instructions = "a".repeat(101);
+		expect(
+			formatExpandedSkillResult({ mode: "instructions", name: "test", lines: 42 }, instructions),
+		).toBe(`INSTRUCTIONS · test · 42 lines\n${"a".repeat(100)}...`);
 		expect(
 			formatExpandedSkillResult(
-				{ mode: "instructions", name: "test", lines: 42 },
-				"full instructions",
+				{ mode: "instructions", name: "test", lines: 1 },
+				"short instructions",
 			),
-		).toBe("INSTRUCTIONS · test · 42 lines\nfull instructions");
+		).toBe("INSTRUCTIONS · test · 1 lines\nshort instructions");
 		expect(
 			formatExpandedSkillResult(
 				{
