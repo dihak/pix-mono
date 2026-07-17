@@ -43,9 +43,8 @@ describe("collapsed tool rows", () => {
 		expect(formatCollapsedToolRow(rowTheme, "read", "src/a.ts", "12 lines")).toBe(
 			"✓ read src/a.ts · 12 lines",
 		);
-		expect(plain(renderCollapsedToolRow(rowTheme, "read", "src/a.ts", "12 lines"))).toContain(
-			"✓ read src/a.ts · 12 lines",
-		);
+		const rendered = plain(renderCollapsedToolRow(rowTheme, "read", "src/a.ts", "12 lines"));
+		expect(rendered).toStartWith("✓ read src/a.ts · 12 lines");
 	});
 
 	it("hides only collapsed, non-expanded call rows", () => {

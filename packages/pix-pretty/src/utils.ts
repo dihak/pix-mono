@@ -87,7 +87,7 @@ export function renderCollapsedToolRow(
 	meta = "",
 	status: CollapsedToolStatus = "success",
 ): string {
-	return fillToolBackground(`  ${formatCollapsedToolRow(theme, tool, target, meta, status)}`);
+	return fillToolBackground(formatCollapsedToolRow(theme, tool, target, meta, status));
 }
 
 /** Hide renderCall after its paired result has auto-collapsed. */
