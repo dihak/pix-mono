@@ -20,10 +20,12 @@ import {
 	countRipgrepMatches,
 	fillToolBackground,
 	getTextContent,
+	hideCollapsedToolCall,
 	isTextContent,
 	makeTextResult,
 	normalizeLineEndings,
 	pluralize,
+	renderCollapsedToolRow,
 	renderDimPreview,
 	renderToolError,
 	setResultDetails,
@@ -100,6 +102,7 @@ export function registerGrepTool(
 							_type: "grepResult",
 							text: textContent,
 							pattern: effectiveParams.pattern,
+							path: effectiveParams.path,
 							matchCount: Math.min(grep.items.length, effectiveLimit),
 						});
 					}
@@ -122,6 +125,7 @@ export function registerGrepTool(
 				_type: "grepResult",
 				text: textContent,
 				pattern: params.pattern,
+				path: params.path,
 				matchCount,
 			});
 
@@ -133,6 +137,12 @@ export function registerGrepTool(
 			const path = args.path ? ` ${theme.fg("muted", `in ${sp(args.path)}`)}` : "";
 			const glob = args.glob ? ` ${theme.fg("muted", `(${args.glob})`)}` : "";
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
 			text.setText(
 				fillToolBackground(
 					`${theme.fg("toolTitle", theme.bold("grep"))} ${theme.fg("accent", pattern)}${path}${glob}`,
@@ -161,7 +171,9 @@ export function registerGrepTool(
 			if (tickCollapse("grep", cs, renderCtx.invalidate)) {
 				const summary =
 					d?._type === "grepResult" ? pluralize(d.matchCount, "match", "matches") : "searched";
-				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				const target = d?._type === "grepResult" ? `“${d.pattern}”` : "";
+				const scope = d?._type === "grepResult" && d.path ? ` in ${sp(d.path)}` : "";
+				text.setText(renderCollapsedToolRow(theme, "grep", `${target}${scope}`, summary));
 				return text;
 			}
 

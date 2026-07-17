@@ -30,7 +30,9 @@ import type {
 import {
 	fillToolBackground,
 	getTextContent,
+	hideCollapsedToolCall,
 	isTextContent,
+	renderCollapsedToolRow,
 	renderToolError,
 	setResultDetails,
 	termW,
@@ -78,6 +80,7 @@ export function registerWriteTool(
 				const diff = parseDiff(old, content);
 				setResultDetails(result, {
 					_type: "diff",
+					filePath: fp,
 					summary: summarize(diff.added, diff.removed),
 					oldContent: old,
 					newContent: content,
@@ -91,7 +94,7 @@ export function registerWriteTool(
 					filePath: fp,
 				});
 			} else {
-				setResultDetails(result, { _type: "noChange" });
+				setResultDetails(result, { _type: "noChange", filePath: fp });
 			}
 			return result;
 		},
@@ -105,6 +108,12 @@ export function registerWriteTool(
 			const isNew = !fp || !existsSync(fp);
 			const label = isNew ? "create" : "write";
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
 			const hdr = `${theme.fg("toolTitle", theme.bold(label))} ${theme.fg("accent", sp(fp))}`;
 
 			if (args?.content && isNew) {
@@ -151,15 +160,12 @@ export function registerWriteTool(
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
 			if (tickCollapse("write", cs, renderCtx.invalidate)) {
-				const summary =
-					d?._type === "diff"
-						? (d.summary as string)
-						: d?._type === "noChange"
-							? "✓ no changes"
-							: d?._type === "new"
-								? `✓ new file (${d.lines} lines)`
-								: "written";
-				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				let summary = "written";
+				if (d?._type === "diff") summary = String(d.summary);
+				else if (d?._type === "noChange") summary = "no changes";
+				else if (d?._type === "new") summary = `new file · ${d.lines} lines`;
+				const target = sp(String(d?.filePath ?? ""));
+				text.setText(renderCollapsedToolRow(theme, "write", target, summary));
 				return text;
 			}
 

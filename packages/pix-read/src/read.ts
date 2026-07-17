@@ -20,10 +20,12 @@ import type {
 import {
 	fillToolBackground,
 	getTextContent,
+	hideCollapsedToolCall,
 	humanSize,
 	isImageContent,
 	isTextContent,
 	normalizeLineEndings,
+	renderCollapsedToolRow,
 	renderToolError,
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
@@ -100,6 +102,12 @@ export function registerReadTool(
 		renderCall(args: ReadParams, theme: ThemeLike, renderCtx: RenderContextLike) {
 			const fp = args.path ?? "";
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
 			const offset = args.offset ? ` ${theme.fg("muted", `from line ${args.offset}`)}` : "";
 			const limit = args.limit ? ` ${theme.fg("muted", `(${args.limit} lines)`)}` : "";
 			text.setText(
@@ -129,16 +137,26 @@ export function registerReadTool(
 			const cs = renderCtx.state as CollapseState;
 			if (tickCollapse("read", cs, renderCtx.invalidate)) {
 				if (d?._type === "readFile") {
-					text.setText(fillToolBackground(`  ${FG_DIM}${d.lineCount} lines${RST}`));
+					text.setText(
+						renderCollapsedToolRow(
+							theme,
+							"read",
+							sp(String(d.filePath ?? "")),
+							`${d.lineCount} lines`,
+						),
+					);
 				} else if (d?._type === "readImage") {
 					const byteSize = Math.ceil(((d.data as string).length * 3) / 4);
 					text.setText(
-						fillToolBackground(
-							`  ${FG_DIM}${d.mimeType ?? "image"} · ${humanSize(byteSize)}${RST}`,
+						renderCollapsedToolRow(
+							theme,
+							"read",
+							sp(String(d.filePath ?? "")),
+							`${d.mimeType ?? "image"} · ${humanSize(byteSize)}`,
 						),
 					);
 				} else {
-					text.setText(fillToolBackground(`  ${theme.fg("muted", "read")}`));
+					text.setText(renderCollapsedToolRow(theme, "read", "", "done"));
 				}
 				return text;
 			}

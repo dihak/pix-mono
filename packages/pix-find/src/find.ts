@@ -18,7 +18,9 @@ import {
 	appendNotices,
 	fillToolBackground,
 	getTextContent,
+	hideCollapsedToolCall,
 	makeTextResult,
+	renderCollapsedToolRow,
 	renderDimPreview,
 	renderToolError,
 	setResultDetails,
@@ -80,6 +82,7 @@ export function registerFindTool(
 							_type: "findResult",
 							text: textContent,
 							pattern: effectiveParams.pattern,
+							path: effectiveParams.path,
 							matchCount: trimmed.length,
 						});
 					}
@@ -97,6 +100,7 @@ export function registerFindTool(
 				_type: "findResult",
 				text: textContent,
 				pattern: params.pattern,
+				path: params.path,
 				matchCount,
 			});
 
@@ -107,6 +111,12 @@ export function registerFindTool(
 			const pattern = args.pattern ?? "";
 			const path = args.path ? ` ${theme.fg("muted", `in ${sp(args.path)}`)}` : "";
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
 			text.setText(
 				fillToolBackground(
 					`${theme.fg("toolTitle", theme.bold("find"))} ${theme.fg("accent", pattern)}${path}`,
@@ -134,7 +144,9 @@ export function registerFindTool(
 				const d = result.details;
 				const summary =
 					d?._type === "findResult" && d.matchCount != null ? `${d.matchCount} files` : "found";
-				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				const target = d?._type === "findResult" ? d.pattern : "";
+				const scope = d?._type === "findResult" && d.path ? ` in ${sp(d.path)}` : "";
+				text.setText(renderCollapsedToolRow(theme, "find", `${target}${scope}`, summary));
 				return text;
 			}
 

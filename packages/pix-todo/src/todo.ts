@@ -13,6 +13,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { formatCollapsedToolRow } from "@xynogen/pix-pretty/utils";
 import { Type } from "typebox";
 
 import { once } from "./once.ts";
@@ -99,9 +100,19 @@ export type TodoTheme = {
 
 /** One-line dim summary used once a card has collapsed. */
 export function renderTodoSummaryLine(items: TodoItem[], theme: TodoTheme): string {
-	if (!items.length) return theme.fg("muted", "(no todos)");
+	if (!items.length) return formatCollapsedToolRow(theme, "todo", "empty");
 	const done = items.filter((t) => t.status === "done").length;
-	return theme.fg("muted", `Todos ${done}/${items.length} done ✓`);
+	const active = items.find((t) => t.status === "in_progress");
+	const blocked = items.filter((t) => t.status === "blocked").length;
+	const meta = [`${done}/${items.length} done`, blocked > 0 ? `${blocked} blocked` : ""]
+		.filter(Boolean)
+		.join(" · ");
+	const target = active
+		? `#${active.id} ${active.text}`
+		: done === items.length
+			? "complete"
+			: "checklist";
+	return formatCollapsedToolRow(theme, "todo", target, meta);
 }
 
 /** Colored checklist for the TUI: glyphs tinted by status, active row bold. */
@@ -202,6 +213,11 @@ export default function registerTodo(pi: ExtensionAPI): void {
 					}),
 				),
 			}),
+			// The result already owns the checklist and its collapsed `✓ todo …` row.
+			// Keeping the call renderer empty prevents a duplicate standalone header.
+			renderCall() {
+				return new Text("", 0, 0);
+			},
 			renderResult(_result, _options, theme, context) {
 				// Snapshot this row's todos once (live `todos` mutate across calls;
 				// a card should keep the state it was created with).

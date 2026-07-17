@@ -16,7 +16,7 @@ function plain(line: string): string {
 }
 
 describe("renderCodeFences", () => {
-	it("renders a bash fence in a labeled frame", () => {
+	it("renders a bash fence with a labeled header", () => {
 		const lines = [
 			" ```bash                                                                  ",
 			"   curl -sfL https://get.k3s.io | \\                                      ",
@@ -30,11 +30,14 @@ describe("renderCodeFences", () => {
 		const text = rendered.map(plain);
 
 		expect(text[0]).toContain("╭─ bash ");
-		expect(text[1]).toContain("│   curl -sfL https://get.k3s.io");
-		expect(text[2]).toContain("│     K3S_URL=https://192.168.1.20:6443");
-		expect(text[3]).toContain('K3S_TOKEN="PASTE_TOKEN_HERE"');
+		expect(text[1]).toBe("curl -sfL https://get.k3s.io | \\");
+		expect(text[2]).toBe("  K3S_URL=https://192.168.1.20:6443 \\");
+		expect(text[3]).toBe('  K3S_TOKEN="PASTE_TOKEN_HERE" \\');
+		expect(text[4]).toBe("  sh -");
+		expect(text.slice(1, 5).every((line) => !line.includes("│"))).toBe(true);
 		expect(text[5]).toContain("╰─");
-		expect(rendered.every((line) => visibleWidth(line) === 72)).toBe(true);
+		expect(visibleWidth(rendered[0] ?? "")).toBe(72);
+		expect(visibleWidth(rendered[5] ?? "")).toBe(72);
 	});
 
 	it.each([
@@ -51,8 +54,9 @@ describe("renderCodeFences", () => {
 		"c++",
 		"custom-language",
 	])("supports and labels the %s fence", (language) => {
-		const rendered = renderCodeFences([`\`\`\`${language}`, "  example", "```"], 40, theme);
+		const rendered = renderCodeFences([`\`\`\`${language}`, "  example  ", "```"], 40, theme);
 		expect(plain(rendered[0] ?? "")).toContain(`╭─ ${language} `);
+		expect(plain(rendered[1] ?? "")).toBe("example");
 	});
 
 	it("uses a generic label for an untagged fence", () => {
@@ -85,6 +89,35 @@ describe("renderCodeFences", () => {
 		expect(rendered.some((line) => line.includes("╭─ json "))).toBe(true);
 	});
 
+	it("keeps multiline shell commands copyable without border glyphs", () => {
+		const rendered = renderCodeFences(
+			["```bash", "git tag release-1", "git push origin main release-1", "```"],
+			48,
+			theme,
+		).map(plain);
+
+		expect(rendered[1]?.trim()).toBe("git tag release-1");
+		expect(rendered[2]?.trim()).toBe("git push origin main release-1");
+		expect(rendered[1]).not.toContain("│");
+		expect(rendered[2]).not.toContain("│");
+	});
+
+	it("removes layout padding while preserving meaningful Python indentation", () => {
+		const rendered = renderCodeFences(
+			[
+				"  ```python",
+				"    def greet(name):                                      ",
+				'        print(f"Hello, {name}")                          ',
+				"  ```",
+			],
+			64,
+			theme,
+		).map(plain);
+
+		expect(rendered[1]).toBe("def greet(name):");
+		expect(rendered[2]).toBe('    print(f"Hello, {name}")');
+	});
+
 	it("preserves syntax-highlight ANSI while applying the frame background", () => {
 		const highlighted = '\x1b[38;2;206;145;120m"TOKEN"\x1b[39m';
 		const rendered = renderCodeFences(["```python", `  print(${highlighted})`, "```"], 40, theme);
@@ -101,6 +134,6 @@ describe("renderCodeFences", () => {
 		);
 
 		expect(plain(rendered[1] ?? "")).toContain("…");
-		expect(rendered.every((line) => visibleWidth(line) === 24)).toBe(true);
+		expect(rendered.every((line) => visibleWidth(line) <= 24)).toBe(true);
 	});
 });

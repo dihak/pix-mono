@@ -87,13 +87,10 @@ function bodyLine(
 	layoutIndent: number,
 	theme: CodeFrameTheme,
 ): string {
-	const innerWidth = Math.max(1, width - 4);
-	const content = truncateToWidth(stripLayoutWhitespace(line, layoutIndent), innerWidth, "…");
-	const padding = " ".repeat(Math.max(0, innerWidth - visibleWidth(content)));
-	return paintFrame(
-		theme,
-		`${theme.fg("borderMuted", "│")} ${content}${padding} ${theme.fg("borderMuted", "│")}`,
-	);
+	const content = truncateToWidth(stripLayoutWhitespace(line, layoutIndent), width, "…");
+	// Keep every code row free of frame glyphs and layout padding. Selection must
+	// copy only source text, including meaningful relative indentation in Python.
+	return paintFrame(theme, content);
 }
 
 /**
@@ -117,13 +114,11 @@ export function renderCodeFences(lines: string[], width: number, theme: CodeFram
 		const pad = Math.min(leadingSpaces(out[start] ?? ""), Math.floor((width - 12) / 2));
 		const frameWidth = Math.max(12, width - pad * 2);
 		const body = out.slice(start + 1, end);
-		const bodyIndent = Math.min(
-			...body
-				.map((line) => plainText(line))
-				.filter((line) => line.trim().length > 0)
-				.map((line) => leadingSpaces(line)),
-			pad,
-		);
+		const bodyIndents = body
+			.map((line) => plainText(line))
+			.filter((line) => line.trim().length > 0)
+			.map((line) => leadingSpaces(line));
+		const bodyIndent = bodyIndents.length > 0 ? Math.min(...bodyIndents) : 0;
 		const left = " ".repeat(pad);
 		const right = " ".repeat(Math.max(0, width - pad - frameWidth));
 		const framed: string[] = [];
@@ -133,7 +128,7 @@ export function renderCodeFences(lines: string[], width: number, theme: CodeFram
 		);
 		for (let index = start + 1; index < end; index++) {
 			framed.push(
-				`${oscSequences(out[index] ?? "")}${left}${bodyLine(out[index] ?? "", frameWidth, bodyIndent, theme)}${right}`,
+				`${oscSequences(out[index] ?? "")}${bodyLine(out[index] ?? "", width, bodyIndent, theme)}`,
 			);
 		}
 		framed.push(`${oscSequences(out[end] ?? "")}${left}${bottomBorder(frameWidth, theme)}${right}`);

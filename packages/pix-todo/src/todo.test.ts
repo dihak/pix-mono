@@ -47,16 +47,21 @@ function makeHost(
 				context: unknown,
 		  ) => { render(width: number): string[] })
 		| null = null;
+	let capturedRenderCall:
+		| ((args: unknown, theme: unknown, context: unknown) => { render(width: number): string[] })
+		| null = null;
 
 	const pi = {
 		registerTool(def: {
 			name: string;
 			parameters: unknown;
 			execute: typeof capturedExecute;
+			renderCall?: typeof capturedRenderCall;
 			renderResult?: typeof capturedRender;
 		}) {
 			capturedParameters = def.parameters;
 			capturedExecute = def.execute;
+			if (def.renderCall) capturedRenderCall = def.renderCall;
 			if (def.renderResult) capturedRender = def.renderResult;
 		},
 		appendEntry(type: string, data: unknown) {
@@ -92,6 +97,10 @@ function makeHost(
 		get execute() {
 			if (!capturedExecute) throw new Error("execute not captured");
 			return capturedExecute;
+		},
+		get renderCall() {
+			if (!capturedRenderCall) throw new Error("renderCall not captured");
+			return capturedRenderCall;
 		},
 		get render() {
 			if (!capturedRender) throw new Error("render not captured");
@@ -772,6 +781,15 @@ describe("renderTodoLines (colored TUI render)", () => {
 	});
 });
 
+describe("todo card layout", () => {
+	test("keeps the call row empty so the collapsed card is one line", () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		const call = host.renderCall({ action: "list" }, tagTheme, {});
+		expect(call.render(80).join("\n")).toBe("");
+	});
+});
+
 describe("renderResult snapshot isolation", () => {
 	// The card snapshots `todos` on first render; later execute() mutations must
 	// NOT bleed into an already-rendered card. Guards the invariant the inline
@@ -801,15 +819,19 @@ describe("renderResult snapshot isolation", () => {
 });
 
 describe("renderTodoSummaryLine (collapsed one-liner)", () => {
-	test("empty list renders muted placeholder", () => {
-		expect(renderTodoSummaryLine([], tagTheme)).toBe("[muted](no todos)[/]");
+	test("empty list renders a compact tool row", () => {
+		expect(renderTodoSummaryLine([], tagTheme)).toBe(
+			"[success]✓[/] [toolTitle]<b>todo</b>[/] [muted]empty[/]",
+		);
 	});
 
-	test("renders single dim done/total line with check", () => {
+	test("renders active work and progress in one row", () => {
 		const items: TodoItem[] = [
 			{ id: 1, text: "a", status: "done" },
-			{ id: 2, text: "b", status: "pending" },
+			{ id: 2, text: "b", status: "in_progress" },
 		];
-		expect(renderTodoSummaryLine(items, tagTheme)).toBe("[muted]Todos 1/2 done ✓[/]");
+		expect(renderTodoSummaryLine(items, tagTheme)).toBe(
+			"[success]✓[/] [toolTitle]<b>todo</b>[/] [muted]#2 b[/] [dim]·[/] [dim]1/2 done[/]",
+		);
 	});
 });

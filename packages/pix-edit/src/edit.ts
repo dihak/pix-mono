@@ -30,7 +30,9 @@ import type {
 import {
 	fillToolBackground,
 	getTextContent,
+	hideCollapsedToolCall,
 	isTextContent,
+	renderCollapsedToolRow,
 	renderToolError,
 	setResultDetails,
 	termW,
@@ -171,6 +173,12 @@ export function registerEditTool(
 			const fp = args?.path ?? args?.file_path ?? "";
 			const operations = getEditOperations(args);
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
 			const hdr = `${theme.fg("toolTitle", theme.bold("edit"))} ${theme.fg("accent", sp(fp))}`;
 
 			if (operations.length === 0) {
@@ -204,9 +212,15 @@ export function registerEditTool(
 					d?._type === "editInfo"
 						? (d.summary as string)
 						: d?._type === "multiEditInfo"
-							? `${d.editCount} edits ${d.summary}`
+							? `${d.editCount} edits · ${d.summary}`
 							: "edited";
-				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				let filePath = "";
+				if (d?._type === "editInfo") filePath = String(d.filePath ?? "");
+				else if (d?._type === "multiEditInfo") {
+					const ops = d.ops as Array<Record<string, unknown>> | undefined;
+					filePath = String(ops?.[0]?.filePath ?? "");
+				}
+				text.setText(renderCollapsedToolRow(theme, "edit", sp(filePath), summary));
 				return text;
 			}
 

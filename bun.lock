@@ -256,10 +256,11 @@
     },
     "packages/pix-skills": {
       "name": "@xynogen/pix-skills",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.2",
         "@xynogen/pix-gate": "^0.1.13",
+        "@xynogen/pix-pretty": "^1.7.19",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -300,6 +301,7 @@
       "name": "@xynogen/pix-todo",
       "version": "0.1.13",
       "dependencies": {
+        "@xynogen/pix-pretty": "^1.7.19",
         "typebox": "^1.1.38",
       },
       "peerDependencies": {

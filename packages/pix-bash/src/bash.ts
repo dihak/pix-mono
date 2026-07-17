@@ -21,13 +21,41 @@ import type {
 import {
 	fillToolBackground,
 	getTextContent,
+	hideCollapsedToolCall,
 	isTextContent,
 	normalizeLineEndings,
+	renderCollapsedToolRow,
 	renderToolError,
 	rule,
 	setResultDetails,
 	termW,
 } from "@xynogen/pix-pretty/utils";
+
+export function summarizeBashCommand(command: string): string {
+	const lines = command
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line && line !== "set -e" && !line.startsWith("#"));
+	const steps = lines
+		.flatMap((line) => line.split(/\s*(?:&&|\|\||;)\s*/))
+		.map((step) => step.trim())
+		.filter(Boolean);
+
+	if (steps.length === 0) return "command";
+	const first = steps[0] ?? "command";
+	if (/^(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*=|^(?:if|for|while|case)\b/.test(first)) {
+		return `shell script · ${lines.length} lines`;
+	}
+
+	const compact = first.replace(/\s+/g, " ");
+	return steps.length > 1 ? `${compact} · +${steps.length - 1} steps` : compact;
+}
+
+export function formatBashDuration(durationMs: number): string {
+	if (durationMs < 1_000) return `${durationMs}ms`;
+	if (durationMs < 10_000) return `${(durationMs / 1_000).toFixed(1)}s`;
+	return `${Math.round(durationMs / 1_000)}s`;
+}
 
 export function registerBashTool(
 	pi: PiPrettyApi,
@@ -51,6 +79,7 @@ export function registerBashTool(
 			upd: AgentToolUpdateCallback<unknown> | undefined,
 			toolCtx: ExtensionContext,
 		) {
+			const startedAt = Date.now();
 			const result = (await origBash.execute(tid, params, sig, upd, toolCtx)) as ToolResultLike;
 			const textContent = getTextContent(result);
 
@@ -68,6 +97,7 @@ export function registerBashTool(
 				text: textContent ?? "",
 				exitCode,
 				command: params.command ?? "",
+				durationMs: Date.now() - startedAt,
 			});
 
 			return result;
@@ -78,6 +108,9 @@ export function registerBashTool(
 			const displayCmdRaw = cmd.trim();
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 			const label = theme.fg("toolTitle", theme.bold("bash"));
+			const collapseState = renderCtx.state as CollapseState;
+			if (hideCollapsedToolCall(collapseState, renderCtx.expanded, (value) => text.setText(value)))
+				return text;
 			const timeout = args.timeout ? ` ${theme.fg("muted", `(${args.timeout}s timeout)`)}` : "";
 			const cmdLines = displayCmdRaw.split("\n");
 			const firstLine = cmdLines[0] ?? "";
@@ -117,13 +150,27 @@ export function registerBashTool(
 			const cs = renderCtx.state as CollapseState;
 			if (tickCollapse("bash", cs, renderCtx.invalidate)) {
 				if (d?._type === "bashResult") {
-					const { summary } = renderBashOutput("", d.exitCode as number | null);
 					const normalizedText = normalizeLineEndings(d.text as string)
 						.replace(/\n{3,}/g, "\n\n")
 						.replace(/^\n+|\n+$/g, "");
 					const lc = normalizedText ? normalizedText.split("\n").length : 0;
-					const info = lc > 0 ? ` ${FG_DIM}(${lc} lines)${RST}` : "";
-					text.setText(fillToolBackground(`  ${summary}${info}`));
+					const durationMs = Number(d.durationMs ?? 0);
+					const exitCode = d.exitCode as number | null;
+					const status = exitCode === null ? "warning" : exitCode === 0 ? "success" : "error";
+					const meta = [
+						exitCode !== null && exitCode !== 0 ? `exit ${exitCode}` : "",
+						lc > 0 ? `${lc} ${lc === 1 ? "line" : "lines"}` : "",
+						durationMs > 0 ? formatBashDuration(durationMs) : "",
+					].filter(Boolean);
+					text.setText(
+						renderCollapsedToolRow(
+							theme,
+							"bash",
+							summarizeBashCommand(String(d.command ?? "")),
+							meta.join(" · "),
+							status,
+						),
+					);
 				} else {
 					text.setText(fillToolBackground(`  ${theme.fg("muted", "done")}`));
 				}

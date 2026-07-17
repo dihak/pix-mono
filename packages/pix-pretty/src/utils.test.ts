@@ -2,7 +2,14 @@ import { describe, expect, it } from "bun:test";
 
 import { MAX_PREVIEW_LINES } from "./config.js";
 import type { FgTheme } from "./types.js";
-import { pluralize, renderDimPreview, setResultDetails } from "./utils.js";
+import {
+	formatCollapsedToolRow,
+	hideCollapsedToolCall,
+	pluralize,
+	renderCollapsedToolRow,
+	renderDimPreview,
+	setResultDetails,
+} from "./utils.js";
 
 // Strip ANSI escapes so assertions test content, not color codes.
 const ANSI = /\x1b\[[0-9;]*m/g;
@@ -26,6 +33,26 @@ describe("pluralize", () => {
 	it("defaults plural to noun + s", () => {
 		expect(pluralize(1, "line")).toBe("1 line");
 		expect(pluralize(3, "line")).toBe("3 lines");
+	});
+});
+
+describe("collapsed tool rows", () => {
+	const rowTheme = { fg: (_key: string, text: string) => text, bold: (text: string) => text };
+
+	it("renders a consistent status, tool, target, and metadata row", () => {
+		expect(formatCollapsedToolRow(rowTheme, "read", "src/a.ts", "12 lines")).toBe(
+			"✓ read src/a.ts · 12 lines",
+		);
+		expect(plain(renderCollapsedToolRow(rowTheme, "read", "src/a.ts", "12 lines"))).toContain(
+			"✓ read src/a.ts · 12 lines",
+		);
+	});
+
+	it("hides only collapsed, non-expanded call rows", () => {
+		let value = "unchanged";
+		expect(hideCollapsedToolCall({ collapsed: true }, false, (text) => (value = text))).toBe(true);
+		expect(value).toBe("");
+		expect(hideCollapsedToolCall({ collapsed: true }, true, () => {})).toBe(false);
 	});
 });
 

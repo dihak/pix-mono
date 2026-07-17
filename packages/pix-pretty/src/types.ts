@@ -185,6 +185,7 @@ export type FindResultDetails = {
 	_type: "findResult";
 	text: string;
 	pattern: string;
+	path?: string;
 	matchCount: number;
 };
 
@@ -192,6 +193,7 @@ export type GrepResultDetails = {
 	_type: "grepResult";
 	text: string;
 	pattern: string;
+	path?: string;
 	matchCount: number;
 };
 

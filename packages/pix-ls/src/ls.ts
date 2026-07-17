@@ -18,6 +18,8 @@ import type {
 import {
 	fillToolBackground,
 	getTextContent,
+	hideCollapsedToolCall,
+	renderCollapsedToolRow,
 	renderToolError,
 	setResultDetails,
 } from "@xynogen/pix-pretty/utils";
@@ -75,6 +77,12 @@ export function registerLsTool(
 		renderCall(args: LsParams, theme: ThemeLike, renderCtx: RenderContextLike) {
 			const fp = args.path ?? ".";
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
 			text.setText(
 				fillToolBackground(
 					`${theme.fg("toolTitle", theme.bold("ls"))} ${theme.fg("accent", sp(fp))}`,
@@ -101,7 +109,8 @@ export function registerLsTool(
 			if (tickCollapse("ls", cs, renderCtx.invalidate)) {
 				const d2 = result.details as Record<string, unknown> | undefined;
 				const summary = d2?._type === "lsResult" ? `${d2.entryCount} entries` : "listed";
-				text.setText(fillToolBackground(`  ${theme.fg("muted", summary)}`));
+				const target = d2?._type === "lsResult" ? sp(String(d2.path ?? ".")) : ".";
+				text.setText(renderCollapsedToolRow(theme, "ls", target, summary));
 				return text;
 			}
 

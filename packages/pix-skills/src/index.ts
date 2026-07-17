@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
+import { formatCollapsedToolRow, hideCollapsedToolCall } from "@xynogen/pix-pretty/utils";
 import { Type } from "typebox";
 import {
 	directiveBlockReason,
@@ -510,13 +511,20 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 			}
 		},
 
-		renderCall(args, theme) {
+		renderCall(args, theme, renderCtx) {
+			const component =
+				renderCtx.lastComponent instanceof Text ? renderCtx.lastComponent : new Text("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					component.setText(value),
+				)
+			)
+				return component;
 			const label = formatSkillCallLabel(args as SkillCallArgs);
-			return new Text(
+			component.setText(
 				`${theme.fg("toolTitle", theme.bold("read_skills"))} ${theme.fg("muted", label)}`,
-				0,
-				0,
 			);
+			return component;
 		},
 
 		renderResult(result, _options, theme, renderCtx) {
@@ -530,7 +538,9 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 			if (!renderCtx.isError && details) {
 				const state = renderCtx.state as CollapseState;
 				if (tickCollapse("read_skills", state, renderCtx.invalidate)) {
-					component.setText(theme.fg("muted", formatCollapsedSkillResult(details)));
+					component.setText(
+						formatCollapsedToolRow(theme, "skill", formatCollapsedSkillResult(details)),
+					);
 					return component;
 				}
 				component.setText(

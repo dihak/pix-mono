@@ -52,6 +52,55 @@ export function pluralize(count: number, noun: string, plural?: string): string 
 	return `${count} ${count === 1 ? noun : (plural ?? `${noun}s`)}`;
 }
 
+export type CollapsedToolStatus = "success" | "error" | "warning";
+
+type CollapsedToolTheme = {
+	fg: (
+		key: "success" | "error" | "warning" | "toolTitle" | "muted" | "dim",
+		text: string,
+	) => string;
+	bold: (text: string) => string;
+};
+
+/** Format the shared one-row content without assuming a render shell. */
+export function formatCollapsedToolRow(
+	theme: CollapsedToolTheme,
+	tool: string,
+	target: string,
+	meta = "",
+	status: CollapsedToolStatus = "success",
+): string {
+	const icon = status === "success" ? "✓" : status === "warning" ? "⚡" : "✗";
+	const parts = [
+		`${theme.fg(status, icon)} ${theme.fg("toolTitle", theme.bold(tool))}`,
+		target ? theme.fg("muted", target) : "",
+		meta ? `${theme.fg("dim", "·")} ${theme.fg("dim", meta)}` : "",
+	].filter(Boolean);
+	return parts.join(" ");
+}
+
+/** Render shared one-row content for tools using the self-rendered shell. */
+export function renderCollapsedToolRow(
+	theme: CollapsedToolTheme,
+	tool: string,
+	target: string,
+	meta = "",
+	status: CollapsedToolStatus = "success",
+): string {
+	return fillToolBackground(`  ${formatCollapsedToolRow(theme, tool, target, meta, status)}`);
+}
+
+/** Hide renderCall after its paired result has auto-collapsed. */
+export function hideCollapsedToolCall(
+	state: { collapsed?: boolean },
+	expanded: boolean,
+	setText: (text: string) => void,
+): boolean {
+	if (!state.collapsed || expanded) return false;
+	setText("");
+	return true;
+}
+
 export type DimPreviewOptions = {
 	maxLines?: number;
 	header?: string;
