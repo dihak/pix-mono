@@ -45,7 +45,7 @@
 		"@xynogen/pix-diagnostics": "^0.1.6",
 		"@xynogen/pix-display": "^0.1.8",
 		"@xynogen/pix-prompts": "^0.3.1",
-		"@xynogen/pix-skills": "^0.6.0",
+		"@xynogen/pix-skills": "^0.6.1",
 		"@xynogen/pix-models": "^0.1.19",
 		"@xynogen/pix-update": "^0.1.13",
 		"@xynogen/pix-commands": "^0.2.0",
