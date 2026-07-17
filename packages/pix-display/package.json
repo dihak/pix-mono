@@ -1,7 +1,7 @@
 {
 	"name": "@xynogen/pix-display",
-	"version": "0.1.7",
-	"description": "Pi core extension — paste chip rendering and thinking block display",
+	"version": "0.1.8",
+	"description": "Pi core extension — paste chips, thinking blocks, and framed code rendering",
 	"type": "module",
 	"main": "src/index.ts",
 	"scripts": {
@@ -23,6 +23,8 @@
 		"pi-extension",
 		"paste-chips",
 		"thinking",
+		"code-rendering",
+		"syntax-highlighting",
 		"display"
 	],
 	"author": "xynogen",
