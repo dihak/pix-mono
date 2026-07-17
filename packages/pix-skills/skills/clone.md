@@ -1,14 +1,14 @@
 ---
 name: clone
-description: Clone any git repository (GitHub/GitLab/Bitbucket URL, SSH, or owner/repo shorthand) into /tmp/clones for read-only code exploration. Use proactively whenever the user provides a git URL, asks to "look at", "explore", "read", "check out", or "analyze" an external repository, or shares a github.com/gitlab.com/bitbucket.org link.
+description: Temporarily clone an external git repository into /tmp/clones for read-only exploration. Use only when the user's goal is to inspect or analyze a repository; do not use for working copies or requested destinations.
 disable-model-invocation: true
 ---
-# Clone Directive
+# Temporary Repository Exploration
 
 ## Below are what agent MUST do
 
+- **FIT CHECK**: Use only for temporary, read-only exploration. Do not use when the user asks to clone "here," specifies a destination, needs a persistent working copy, or intends to modify the repository. A git URL or the word "clone" alone is not sufficient.
 - **AUTO-RUN**: Run terminal commands proactively without confirmation unless explicit input required.
-- **AUTO-INVOKE**: Trigger automatically when user message contains git URL, repo shorthand (`owner/repo`), or phrases like "clone", "look at this repo", "explore", "analyze this project", "check out <url>".
 - **INPUT**: Accept git URL (https, ssh, or `github.com/owner/repo` / `owner/repo` shorthand). Normalize shorthand → `https://github.com/owner/repo`.
 - **TARGET**: Derive repo name from URL (strip `.git`). Clone dest: `/tmp/clones/<repo-name>`.
 - **IDEMPOTENT**: `/tmp/clones/<repo-name>` exists + is git repo → `cd` in, `git fetch --all --prune`, report current branch/HEAD instead of re-cloning. Path exists but NOT git repo → abort with error.

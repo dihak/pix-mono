@@ -412,7 +412,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 			"Browse skills and access conventional bundle resources. References can be read into context; scripts/assets must be copied to a project-relative output path before use.",
 		promptSnippet: "Browse and load bundled skill instructions",
 		promptGuidelines: [
-			"Before any task, call read_skills(); load a matching skill in full before acting.",
+			"Load a skill only when it clearly fits the user's intent, never by keyword alone, and do not reload skills already read this session.",
 		],
 		executionMode: "sequential",
 		parameters: ParamsSchema,
