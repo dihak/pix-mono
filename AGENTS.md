@@ -20,8 +20,7 @@ packages/
   pix-footer/      # Status bar — mode, git, model, tokens, cost, TPS
   pix-models/      # /models — model picker (score, context, cost)
   pix-update/      # /update — self-update Pi + extensions
-  pix-commands/    # /clear — flush ~/.cache/pi
-  pix-btw/         # /btw — isolated concurrent side questions
+  pix-commands/    # /clear cache + /btw isolated concurrent side questions
   pix-nudge/       # Tools + capability nudge
   pix-diagnostics/ # Compact session-files widget
   pix-display/     # Paste chip rendering + leaked <think> cleanup

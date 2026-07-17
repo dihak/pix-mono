@@ -14,7 +14,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import registerAsk from "@xynogen/pix-ask/src/index.ts";
 import registerBash from "@xynogen/pix-bash/src/extension.ts";
-import registerBtw from "@xynogen/pix-btw/src/extension.ts";
 import registerCommands from "@xynogen/pix-commands/src/extension.ts";
 import registerData from "@xynogen/pix-data/src/index.ts";
 import registerDiagnostics from "@xynogen/pix-diagnostics/src/extension.ts";
@@ -55,7 +54,6 @@ const MEMBERS: Factory[] = [
 	registerModels,
 	registerUpdate,
 	registerCommands,
-	registerBtw,
 	registerNudge,
 	registerDiagnostics,
 	registerDisplay,

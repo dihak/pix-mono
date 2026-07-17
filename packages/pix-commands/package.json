@@ -1,7 +1,7 @@
 {
 	"name": "@xynogen/pix-commands",
-	"version": "0.1.8",
-	"description": "Pi extension — slash commands (/clear; more planned)",
+	"version": "0.2.0",
+	"description": "Pi extension — slash commands for cache clearing and isolated side questions",
 	"type": "module",
 	"main": "src/index.ts",
 	"scripts": {
@@ -21,7 +21,9 @@
 		"pi",
 		"pi-package",
 		"pi-extension",
-		"pix"
+		"pix",
+		"side-question",
+		"concurrent"
 	],
 	"author": "xynogen",
 	"license": "MIT",
@@ -38,6 +40,8 @@
 		"access": "public"
 	},
 	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*"
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
 	}
 }

@@ -51,30 +51,22 @@
         "@earendil-works/pi-tui": "*",
       },
     },
-    "packages/pix-btw": {
-      "name": "@xynogen/pix-btw",
-      "version": "0.1.0",
+    "packages/pix-commands": {
+      "name": "@xynogen/pix-commands",
+      "version": "0.2.0",
       "peerDependencies": {
         "@earendil-works/pi-ai": "*",
         "@earendil-works/pi-coding-agent": "*",
         "@earendil-works/pi-tui": "*",
       },
     },
-    "packages/pix-commands": {
-      "name": "@xynogen/pix-commands",
-      "version": "0.1.8",
-      "peerDependencies": {
-        "@earendil-works/pi-coding-agent": "*",
-      },
-    },
     "packages/pix-core": {
       "name": "@xynogen/pix-core",
-      "version": "0.4.30",
+      "version": "0.4.31",
       "dependencies": {
         "@xynogen/pix-ask": "^0.2.7",
         "@xynogen/pix-bash": "^0.1.11",
-        "@xynogen/pix-btw": "^0.1.0",
-        "@xynogen/pix-commands": "^0.1.8",
+        "@xynogen/pix-commands": "^0.2.0",
         "@xynogen/pix-data": "^0.3.2",
         "@xynogen/pix-diagnostics": "^0.1.6",
         "@xynogen/pix-display": "^0.1.7",
@@ -537,8 +529,6 @@
     "@xynogen/pix-ask": ["@xynogen/pix-ask@workspace:packages/pix-ask"],
 
     "@xynogen/pix-bash": ["@xynogen/pix-bash@workspace:packages/pix-bash"],
-
-    "@xynogen/pix-btw": ["@xynogen/pix-btw@workspace:packages/pix-btw"],
 
     "@xynogen/pix-commands": ["@xynogen/pix-commands@workspace:packages/pix-commands"],
 

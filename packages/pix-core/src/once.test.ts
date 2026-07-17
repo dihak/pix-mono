@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import registerBtw from "@xynogen/pix-btw/src/extension.ts";
+import registerCommands from "@xynogen/pix-commands/src/extension.ts";
 import registerSubagent from "@xynogen/pix-subagent/src/extension.ts";
 import registerTodo from "@xynogen/pix-todo/src/todo.ts";
 
@@ -145,7 +145,7 @@ describe("member factory dedupe (pix-todo)", () => {
 	});
 });
 
-describe("member factory dedupe (pix-btw)", () => {
+describe("member factory dedupe (pix-commands)", () => {
 	function makeHost() {
 		const commandNames: string[] = [];
 		const pi = {
@@ -158,20 +158,20 @@ describe("member factory dedupe (pix-btw)", () => {
 		return { pi, commandNames };
 	}
 
-	it("registers /btw once across core + standalone activation", () => {
+	it("registers /clear and /btw once across core + standalone activation", () => {
 		const { pi, commandNames } = makeHost();
-		registerBtw(pi);
-		registerBtw(pi);
-		expect(commandNames).toEqual(["btw"]);
+		registerCommands(pi);
+		registerCommands(pi);
+		expect(commandNames).toEqual(["clear", "btw"]);
 	});
 
-	it("registers /btw again for a fresh pi instance", () => {
+	it("registers commands again for a fresh pi instance", () => {
 		const first = makeHost();
 		const second = makeHost();
-		registerBtw(first.pi);
-		registerBtw(second.pi);
-		expect(first.commandNames).toEqual(["btw"]);
-		expect(second.commandNames).toEqual(["btw"]);
+		registerCommands(first.pi);
+		registerCommands(second.pi);
+		expect(first.commandNames).toEqual(["clear", "btw"]);
+		expect(second.commandNames).toEqual(["clear", "btw"]);
 	});
 });
 

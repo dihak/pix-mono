@@ -1,12 +1,32 @@
 # pix-commands
 
-Pi extension — slash commands. `/clear`; more commands are planned.
+Pi extension providing focused slash commands:
 
-## What it does
+- `/clear` — flush Pi's cached model data.
+- `/btw <question>` — ask an isolated side question without interrupting the main agent.
 
-Registers slash commands. Currently `/clear`, which deletes `~/.cache/pi` — useful for flushing stale model-data cache — and prompts you to run `/reload` to apply the change. **More commands are on the way.** No extra dependencies beyond Pi.
+## `/clear`
 
-> Diff review moved to the `diff` skill in [`@xynogen/pix-skills`](https://github.com/xynogen/pix-mono/tree/main/packages/pix-skills), which pre-populates `git status` + staged/unstaged diffs via the `` !`cmd` `` directive.
+Deletes `~/.cache/pi` to flush stale model-data cache, then prompts you to run `/reload`.
+
+## `/btw`
+
+`/btw` runs a separate in-memory child session concurrently with the main agent:
+
+```text
+/btw what is the difference between a mutex and a semaphore?
+```
+
+The child session:
+
+- starts with an empty conversation and a lean Pix system prompt;
+- snapshots the main session's model, thinking level, active tools, credentials, extensions, and working directory;
+- never imports the main conversation;
+- publishes its Markdown answer in a visually distinct side-thread card;
+- keeps rendered BTW answers out of future main-agent LLM context;
+- supports multiple concurrent side questions.
+
+When the main agent is streaming, completion is shown as a notification and the durable card is appended after the main session becomes idle. This prevents the side answer from becoming steering input.
 
 ## Install
 
@@ -24,7 +44,7 @@ pi install npm:@xynogen/pix-commands
 
 Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
 
-To install the complete pix suite (all packages + Pi itself):
+To install the complete pix suite:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
