@@ -19,7 +19,7 @@ set -eu
 #                        package.json lists every bundled member as an npm
 #                        `dependency` — the core UI/UX extensions (pix-welcome,
 #                        pix-footer, pix-models, pix-update, pix-commands,
-#                        pix-nudge, pix-diagnostics, pix-prompts, pix-skills),
+#                        pix-btw, pix-nudge, pix-diagnostics, pix-prompts, pix-skills),
 #                        the standard tool suite (pix-read, pix-write, pix-edit,
 #                        pix-find, pix-grep, pix-ls, pix-bash, pix-todo,
 #                        pix-ask), plus pix-optimizer and pix-gate — and pulls

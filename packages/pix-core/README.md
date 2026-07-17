@@ -19,6 +19,7 @@ Pi activates extensions per installed package via each package's `pi.extensions`
 | `pix-models` | `/models` — enhanced model picker with coding score/rank, context, cost |
 | `pix-update` | `/update` — self-update Pi + refresh extensions |
 | `pix-commands` | Slash commands — `/clear`; more on the way |
+| `pix-btw` | `/btw` — concurrent, context-isolated side questions while the main agent works |
 | `pix-diagnostics` | Compact LSP diagnostic widget |
 | `pix-display` | Paste chip rendering + thinking block display |
 | `pix-prompts` | System-prompt injection (AGENTS.md + repo directive files) |

@@ -1,0 +1,47 @@
+{
+	"name": "@xynogen/pix-btw",
+	"version": "0.1.0",
+	"description": "Pi slash command — ask isolated side questions without interrupting the main agent",
+	"type": "module",
+	"main": "src/extension.ts",
+	"pi": {
+		"extensions": [
+			"src/extension.ts"
+		]
+	},
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"pix",
+		"side-question",
+		"concurrent"
+	],
+	"author": "xynogen",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"directory": "packages/pix-btw"
+	},
+	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-btw#readme",
+	"bugs": {
+		"url": "https://github.com/xynogen/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	}
+}
