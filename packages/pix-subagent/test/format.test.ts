@@ -12,6 +12,7 @@ import {
 	fmtTokenCount,
 	formatAgentCall,
 	formatAgentCompletedLine,
+	formatAgentFinishedLine,
 	formatContext,
 	formatMs,
 	formatTokens,
@@ -193,7 +194,64 @@ test("formatAgentCompletedLine keeps the completed agent row visible", () => {
 		theme,
 	);
 
-	expect(rendered).toBe("  ✓ Agent · Audit recording dead code · 0.3s");
+	expect(rendered).toBe("  ✓ Agent · Audit recording dead code · 0.3s · completed");
+});
+
+test("all foreground terminal states use one identity-first row", () => {
+	const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
+	for (const status of ["completed", "steered", "stopped", "aborted", "error"] as const) {
+		const rendered = formatAgentFinishedLine(
+			{
+				displayName: "Agent",
+				description: "Inspect renderers",
+				subagentType: "general-purpose",
+				toolUses: 2,
+				context: "20% ctx",
+				outputTokens: 550,
+				streamingMs: 10_000,
+				durationMs: 12_000,
+				status,
+				modelName: "haiku",
+				tags: ["isolated"],
+				turnCount: 4,
+				maxTurns: 8,
+				error: status === "error" ? "provider unavailable" : undefined,
+			},
+			theme,
+		);
+		expect(rendered.split("\n")).toHaveLength(1);
+		expect(rendered).toContain("Agent");
+		expect(rendered).toContain("Inspect renderers");
+		expect(rendered).toContain(status === "steered" ? "steered" : status);
+	}
+});
+
+test("expanded foreground terminal result keeps summary first and bounded detail below", () => {
+	const tool = createAgentTool({} as never, {} as never, new Map(), () => {});
+	const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
+	const component = tool.renderResult?.(
+		{
+			content: [{ type: "text", text: "Exact terminal detail\nSecond line" }],
+			details: {
+				displayName: "Agent",
+				description: "Inspect renderers",
+				subagentType: "general-purpose",
+				toolUses: 0,
+				context: "",
+				durationMs: 250,
+				status: "error",
+				error: "provider unavailable",
+			},
+		},
+		{ expanded: true, isPartial: false },
+		theme as never,
+		{} as never,
+	);
+	const rendered = component?.render(120).join("\n") ?? "";
+	expect(rendered.split("\n")[0]).toContain("Agent");
+	expect(rendered.split("\n")[0]).toContain("error");
+	expect(rendered).toContain("Exact terminal detail");
+	expect(rendered).toContain("Second line");
 });
 
 test("formatTokens < 1k", () => {

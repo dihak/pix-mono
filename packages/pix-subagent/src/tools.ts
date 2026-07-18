@@ -245,21 +245,53 @@ function buildStats(d: AgentDetails, theme: Theme): string {
 	return parts.join(` ${theme.fg("dim", "·")} `);
 }
 
-/** Keep agent identity and completion stats visible after the prompt is hidden. */
-export function formatAgentCompletedLine(d: AgentDetails, theme: Theme): string {
+/** Format every foreground terminal state with stable identity-first ordering. */
+export function formatAgentFinishedLine(d: AgentDetails, theme: Theme): string {
+	let marker: string;
+	let status: string;
+	switch (d.status) {
+		case "completed":
+			marker = theme.fg("success", "✓");
+			status = "completed";
+			break;
+		case "steered":
+			marker = theme.fg("success", "✓");
+			status = "steered (turn limit)";
+			break;
+		case "stopped":
+			marker = theme.fg("dim", "■");
+			status = "stopped";
+			break;
+		case "aborted":
+			marker = theme.fg("warning", "⚡");
+			status = "aborted (max turns exceeded)";
+			break;
+		default: {
+			marker = theme.fg("error", "✗");
+			const reason = d.error?.replace(/\s+/g, " ").trim().slice(0, 100);
+			status = reason ? `error: ${reason}` : "error";
+			break;
+		}
+	}
+
 	const parts: string[] = [];
 	if (d.description) parts.push(theme.fg("muted", d.description));
 	const stats = buildStats(d, theme);
 	if (stats) parts.push(stats);
-	parts.push(theme.fg("dim", formatMs(d.durationMs)));
 	const speed = formatSpeed(d.outputTokens ?? 0, d.streamingMs ?? d.durationMs);
 	if (speed) parts.push(theme.fg("dim", speed));
-	if (d.status === "steered") parts.push(theme.fg("dim", "(turn limit)"));
+	parts.push(theme.fg("dim", formatMs(d.durationMs)));
+	parts.push(theme.fg(d.status === "error" ? "error" : "dim", status));
 
 	return (
-		`  ${theme.fg("success", "✓")} ${theme.fg("toolTitle", theme.bold(d.displayName))}` +
-		(parts.length > 0 ? ` ${theme.fg("dim", "·")} ${parts.join(` ${theme.fg("dim", "·")} `)}` : "")
+		`  ${marker} ${theme.fg("toolTitle", theme.bold(d.displayName))}` +
+		` ${theme.fg("dim", "·")} ${parts.join(` ${theme.fg("dim", "·")} `)}`
 	);
+}
+
+/** Backward-compatible name for completed-row consumers. */
+export function formatAgentCompletedLine(d: AgentDetails, theme: Theme): string {
+	return formatAgentFinishedLine(d, theme);
 }
 
 // ── compact tool description + on-demand discovery ──────────────────────────
@@ -415,8 +447,6 @@ export function createAgentTool(
 				return new Text(text, 0, 0);
 			}
 
-			const stats = buildStats(details, theme);
-
 			// Streaming / running — show a compact live status line so the model
 			// and activity are visible inline in the transcript (the ● Agents
 			// widget carries full detail above the editor).
@@ -457,36 +487,24 @@ export function createAgentTool(
 				);
 			}
 
-			// Completed / steered. Keep the one-line identity and summary visible;
-			// auto-collapse hides only the initial prompt, never the whole agent row.
-			if (details.status === "completed" || details.status === "steered") {
-				let line = formatAgentCompletedLine(details, theme);
-
-				// Expanded view appends the full result below the one-line summary.
-				if (expanded) {
-					const resultText = result.content[0]?.type === "text" ? result.content[0].text : "";
-					if (resultText) {
-						const lines = resultText.split("\n").slice(0, 50);
-						for (const l of lines) line += `\n${theme.fg("dim", `  ${l}`)}`;
-						if (resultText.split("\n").length > 50)
-							line += `\n${theme.fg("muted", "  … (use agent_result with verbose for full output)")}`;
+			// Every terminal branch uses the same one-line identity and stats order.
+			// Expansion appends the existing bounded model-visible result beneath it.
+			let line = formatAgentFinishedLine(details, theme);
+			if (expanded) {
+				const resultText = result.content
+					.filter((block) => block.type === "text")
+					.map((block) => block.text)
+					.join("\n");
+				if (resultText) {
+					const resultLines = resultText.split("\n");
+					for (const resultLine of resultLines.slice(0, 50)) {
+						line += `\n${theme.fg("dim", `  ${resultLine}`)}`;
+					}
+					if (resultLines.length > 50) {
+						line += `\n${theme.fg("muted", "  … (use agent_result with verbose for full output)")}`;
 					}
 				}
-				return new Text(line, 0, 0);
 			}
-
-			// Stopped
-			if (details.status === "stopped") {
-				let line = theme.fg("dim", "■") + (stats ? ` ${stats}` : "");
-				line += `\n${theme.fg("dim", "  ⎿  Stopped")}`;
-				return new Text(line, 0, 0);
-			}
-
-			// Error / aborted
-			let line = theme.fg("error", "✗") + (stats ? ` ${stats}` : "");
-			if (details.status === "error")
-				line += `\n${theme.fg("error", `  ⎿  Error: ${details.error ?? "unknown"}`)}`;
-			else line += `\n${theme.fg("warning", "  ⎿  Aborted (max turns exceeded)")}`;
 			return new Text(line, 0, 0);
 		},
 
