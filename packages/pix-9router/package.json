@@ -39,10 +39,12 @@
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",
-		"@earendil-works/pi-ai": "*"
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-tui": "*"
 	},
 	"dependencies": {
 		"@xynogen/pix-data": "^0.3.0",
+		"@xynogen/pix-pretty": "^1.7.21",
 		"typebox": "^1.1.38"
 	}
 }

@@ -16,6 +16,12 @@ import type {
 	ToolRenderResultOptions,
 } from "@earendil-works/pi-coding-agent";
 import type { Component } from "@earendil-works/pi-tui";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
+import {
+	type CollapsedToolStatus,
+	formatCollapsedToolRow,
+	hideCollapsedToolCall,
+} from "@xynogen/pix-pretty/utils";
 
 interface TextLike extends Component {
 	setText(text: string): void;
@@ -26,6 +32,16 @@ interface TextLike extends Component {
 interface RenderCtx {
 	lastComponent: Component | undefined;
 	isError: boolean;
+	state: Record<string, unknown>;
+	expanded: boolean;
+	invalidate: () => void;
+}
+
+interface CompactRendererConfig<TDetails> {
+	tool: string;
+	target: (details: TDetails) => string;
+	meta: (details: TDetails) => string;
+	status?: (details: TDetails) => CollapsedToolStatus;
 }
 
 type TextCtor = new (text?: string, padX?: number, padY?: number) => TextLike;
@@ -51,9 +67,11 @@ function getText(lastComponent: Component | undefined): TextLike {
 	throw new Error("pi-tui Text component unavailable");
 }
 
-function firstText(result: AgentToolResult<unknown>): string {
-	const block = result.content?.find((c) => c.type === "text");
-	return (block as { text?: string } | undefined)?.text ?? "";
+function allText(result: AgentToolResult<unknown>): string {
+	return (result.content ?? [])
+		.filter((block): block is { type: "text"; text: string } => block.type === "text")
+		.map((block) => block.text)
+		.join("\n");
 }
 
 function dimBody(body: string, theme: Theme, expanded: boolean): string {
@@ -72,14 +90,20 @@ function dimBody(body: string, theme: Theme, expanded: boolean): string {
 export function makeRenderCall<TArgs>(title: string, pickArg: (args: TArgs) => string) {
 	return (args: TArgs, theme: Theme, ctx: RenderCtx): Component => {
 		const text = getText(ctx.lastComponent);
+		if (
+			hideCollapsedToolCall(ctx.state as CollapseState, ctx.expanded, (value) =>
+				text.setText(value),
+			)
+		)
+			return text;
 		const arg = pickArg(args);
 		text.setText(`${theme.fg("toolTitle", theme.bold(title))} ${theme.fg("accent", arg)}`);
 		return text;
 	};
 }
 
-/** Build a `renderResult` that dims the whole result body. */
-export function makeRenderResult() {
+/** Build a `renderResult` with a bounded detail preview and optional compact terminal row. */
+export function makeRenderResult<TDetails>(config?: CompactRendererConfig<TDetails>) {
 	return (
 		result: AgentToolResult<unknown>,
 		opts: ToolRenderResultOptions,
@@ -87,7 +111,7 @@ export function makeRenderResult() {
 		ctx: RenderCtx,
 	): Component => {
 		const text = getText(ctx.lastComponent);
-		const body = firstText(result);
+		const body = allText(result);
 
 		if (ctx.isError) {
 			text.setText(`  ${theme.fg("error", body || "Error")}`);
@@ -95,6 +119,25 @@ export function makeRenderResult() {
 		}
 		if (!body.trim()) {
 			text.setText(`  ${theme.fg("dim", "(empty)")}`);
+			return text;
+		}
+
+		const details = result.details as TDetails | undefined;
+		if (
+			!opts.isPartial &&
+			config &&
+			details &&
+			tickCollapse(config.tool, ctx.state as CollapseState, ctx.invalidate, opts.expanded)
+		) {
+			text.setText(
+				formatCollapsedToolRow(
+					theme,
+					config.tool,
+					config.target(details),
+					config.meta(details),
+					config.status?.(details) ?? "success",
+				),
+			);
 			return text;
 		}
 
