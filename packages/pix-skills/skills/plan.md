@@ -64,6 +64,11 @@ Expected: PASS
 
 ### Save and Handoff
 
-- Save plan to `.pi/plans/YYYY-MM-DD-<feature-name>.md`
-- Commit plan document
-- Announce: "Plan complete. Ready to execute via `/task`."
+- Save the plan locally to `.pi/plans/YYYY-MM-DD-<feature-name>.md` so an
+  execution agent can follow it via `/task`.
+- Plans are local execution artifacts and MUST NOT be added to Git, committed,
+  pushed, or included in repository history under normal circumstances.
+- If `.pi/` is ignored, leave it ignored. Never use `git add -f` for a plan.
+- Only commit a plan when the user explicitly asks to version or publish that
+  specific plan; the directive itself is not permission.
+- Announce: "Plan complete and saved locally. Ready to execute via `/task`."
