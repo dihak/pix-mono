@@ -135,7 +135,7 @@ export function registerReadTool(
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("read", cs, renderCtx.invalidate)) {
+			if (tickCollapse("read", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				if (d?._type === "readFile") {
 					text.setText(
 						renderCollapsedToolRow(
@@ -172,7 +172,7 @@ export function registerReadTool(
 			}
 
 			if (d?._type === "readFile" && d.content) {
-				const key = `read:${d.filePath}:${d.offset}:${d.lineCount}:${process.stdout.columns ?? 80}`;
+				const key = `read:${d.filePath}:${d.offset}:${d.lineCount}:${process.stdout.columns ?? 80}:${renderCtx.expanded ? "full" : "preview"}`;
 				if (renderCtx.state._rk !== key) {
 					renderCtx.state._rk = key;
 					const info = `${FG_DIM}${d.lineCount} lines${RST}`;

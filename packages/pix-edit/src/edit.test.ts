@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { CursorStore, FffState } from "@xynogen/pix-pretty/fff";
-import type { PiPrettyApi, TextComponentCtor } from "@xynogen/pix-pretty/types";
+import type {
+	PiPrettyApi,
+	RenderContextLike,
+	TextComponentCtor,
+	ThemeLike,
+} from "@xynogen/pix-pretty/types";
 import { getEditOperations, registerEditTool, summarizeEditOperations } from "./edit";
 
 class MockTextComponent {
@@ -45,6 +50,58 @@ describe("registerEditTool", () => {
 			(_id: string, _inv: () => void) => {},
 		);
 		expect(tools).toEqual(["edit"]);
+	});
+
+	it("restores the bounded diff when an elapsed card is expanded", () => {
+		const registered: { renderResult?: (...args: unknown[]) => MockTextComponent } = {};
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerEditTool(
+			mockPi,
+			() => ({ execute: async () => ({ content: [], details: undefined }) }),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+			() => {},
+		);
+		const theme: ThemeLike = {
+			fg: (_key: string, value: string) => value,
+			bold: (value: string) => value,
+		};
+		const result = registered.renderResult?.(
+			{
+				content: [{ type: "text", text: "edited" }],
+				details: {
+					_type: "editInfo",
+					filePath: "sample.ts",
+					summary: "+1 -1",
+					oldContent: "old",
+					newContent: "new",
+					language: "typescript",
+					editLine: 1,
+				},
+			},
+			undefined,
+			theme,
+			{
+				expanded: true,
+				isError: false,
+				invalidate: () => {},
+				state: { collapsed: true },
+			} as unknown as RenderContextLike,
+		);
+
+		expect(result?.getText()).toContain("rendering diff");
+		expect(result?.getText()).not.toContain("✓ edit");
 	});
 });
 

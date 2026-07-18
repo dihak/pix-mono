@@ -117,7 +117,7 @@ export function registerWriteTool(
 			const hdr = `${theme.fg("toolTitle", theme.bold(label))} ${theme.fg("accent", sp(fp))}`;
 
 			if (args?.content && isNew) {
-				const previewKey = `create:${diffThemeCacheKey(theme)}:${fp}:${String(args.content).length}`;
+				const previewKey = `create:${diffThemeCacheKey(theme)}:${fp}:${String(args.content).length}:${renderCtx.expanded ? "full" : "preview"}`;
 				if (renderCtx.state._previewKey !== previewKey) {
 					renderCtx.state._previewKey = previewKey;
 					renderCtx.state._previewText = hdr;
@@ -159,7 +159,7 @@ export function registerWriteTool(
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("write", cs, renderCtx.invalidate)) {
+			if (tickCollapse("write", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				let summary = "written";
 				if (d?._type === "diff") summary = String(d.summary);
 				else if (d?._type === "noChange") summary = "no changes";
@@ -205,7 +205,7 @@ export function registerWriteTool(
 					filePath: fp,
 				} = d as { lines: number; content: string; filePath: string };
 				const base = `  ${theme.fg("success", `✓ new file (${lineCount} lines)`)}`;
-				const pk = `nf:${diffThemeCacheKey(theme)}:${fp}:${lineCount}`;
+				const pk = `nf:${diffThemeCacheKey(theme)}:${fp}:${lineCount}:${renderCtx.expanded ? "full" : "preview"}`;
 				if (renderCtx.state._nfk !== pk) {
 					renderCtx.state._nfk = pk;
 					renderCtx.state._nft = base;

@@ -207,7 +207,7 @@ export function registerEditTool(
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("edit", cs, renderCtx.invalidate)) {
+			if (tickCollapse("edit", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				const summary =
 					d?._type === "editInfo"
 						? (d.summary as string)
