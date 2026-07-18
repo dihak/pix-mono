@@ -33,6 +33,7 @@ function makeHost(
 				params: Record<string, unknown>,
 		  ) => Promise<{
 				content: Array<{ type: string; text: string }>;
+				details?: unknown;
 				isError?: boolean;
 		  }>)
 		| null = null;
@@ -124,6 +125,7 @@ async function run(
 		params: Record<string, unknown>,
 	) => Promise<{
 		content: Array<{ type: string; text: string }>;
+		details?: unknown;
 		isError?: boolean;
 	}>,
 	params: Record<string, unknown>,
@@ -788,33 +790,88 @@ describe("todo card layout", () => {
 		const call = host.renderCall({ action: "list" }, tagTheme, {});
 		expect(call.render(80).join("\n")).toBe("");
 	});
-});
 
-describe("renderResult snapshot isolation", () => {
-	// The card snapshots `todos` on first render; later execute() mutations must
-	// NOT bleed into an already-rendered card. Guards the invariant the inline
-	// comment defends.
-	test("a rendered card keeps its state after todos mutate", async () => {
+	test("expanded mode restores a collapsed checklist", async () => {
 		const host = makeHost();
 		registerTodo(host.pi);
 		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
-		await run(host.execute, { action: "set", items: "alpha\nbravo" });
+		const result = await run(host.execute, { action: "set", items: "alpha\nbravo" });
+		const rendered = host
+			.render(result, { expanded: true }, tagTheme, {
+				state: { collapsed: true },
+				invalidate: () => {},
+			})
+			.render(80)
+			.join("\n");
 
-		// Render once with a per-row state bag; snapshot is taken here.
-		const state: Record<string, unknown> = {};
-		const ctx = { state, invalidate: () => {} };
-		const first = host.render({}, {}, tagTheme, ctx).render(80).join("\n");
-		expect(first).toContain("1. alpha");
-		expect(first).toContain("2. bravo");
+		expect(rendered).toContain("1. alpha");
+		expect(rendered).toContain("[muted]○[/]");
+		expect(rendered).not.toContain("[success]✓[/] [toolTitle]<b>todo</b>[/]");
+	});
 
-		// Mutate underlying todos via a new execute call.
+	test("failed todo actions render their exact error", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		const result = await run(host.execute, { action: "update", id: 99, status: "done" });
+		const rendered = host
+			.render(result, { expanded: false }, tagTheme, {
+				state: { collapsed: true },
+				invalidate: () => {},
+			})
+			.render(80)
+			.join("\n")
+			.trimEnd();
+
+		expect(rendered).toBe("No todo with id 99.");
+	});
+
+	test("a collapsed result is exactly one shared-style line", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "foundation\ntodo renderer" });
+		const result = await run(host.execute, { action: "update", id: 1, status: "done" });
+		const activeResult = await run(host.execute, {
+			action: "update",
+			id: 2,
+			status: "in_progress",
+		});
+		const lines = host
+			.render(activeResult, { expanded: false }, tagTheme, {
+				state: { collapsed: true },
+				invalidate: () => {},
+			})
+			.render(120);
+
+		expect(result.details).toBeDefined();
+		expect(lines).toHaveLength(1);
+		expect(lines[0]?.trimEnd()).toBe(
+			"[success]✓[/] [toolTitle]<b>todo</b>[/] [muted]#2 todo renderer[/] [dim]·[/] [dim]1/2 done[/]",
+		);
+	});
+});
+
+describe("renderResult snapshot isolation", () => {
+	test("successful results carry immutable snapshots", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		const original = await run(host.execute, { action: "set", items: "alpha\nbravo" });
 		await run(host.execute, { action: "set", items: "changed" });
 
-		// Re-render the SAME row (same state bag) — must still show the snapshot.
-		const second = host.render({}, {}, tagTheme, ctx).render(80).join("\n");
-		expect(second).toContain("1. alpha");
-		expect(second).toContain("2. bravo");
-		expect(second).not.toContain("changed");
+		const details = original.details as { snapshot: TodoItem[] };
+		expect(details.snapshot.map((item) => item.text)).toEqual(["alpha", "bravo"]);
+		const rendered = host
+			.render(original, { expanded: true }, tagTheme, {
+				state: {},
+				invalidate: () => {},
+			})
+			.render(80)
+			.join("\n");
+		expect(rendered).toContain("1. alpha");
+		expect(rendered).toContain("2. bravo");
+		expect(rendered).not.toContain("changed");
 	});
 });
 

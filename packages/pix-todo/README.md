@@ -8,7 +8,7 @@ Registers the `todo` tool, which gives the agent a persistent task checklist tha
 
 ## Auto-collapse
 
-The checklist card auto-collapses after a configurable delay (default 10 seconds, previously hardcoded). The delay and the per-tool toggle are read from `~/.pi/agent/pix.json`:
+The checklist card uses the shared `@xynogen/pix-data/collapse` state machine and auto-collapses after a configurable delay (default 10 seconds). Expanding an elapsed card restores the colored checklist without restarting its timer. The delay and per-tool toggle are read from `~/.pi/agent/pix.json`:
 
 ```jsonc
 {

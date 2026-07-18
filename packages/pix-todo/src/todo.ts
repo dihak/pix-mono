@@ -9,66 +9,13 @@
  * checklist is seeded by the model via the tool's `set` action.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { formatCollapsedToolRow } from "@xynogen/pix-pretty/utils";
 import { Type } from "typebox";
 
 import { once } from "./once.ts";
-
-// ── Collapse config from ~/.pi/agent/pix.json ────────────────────────────────
-
-interface CollapseConf {
-	enabled: boolean;
-	delaySec: number;
-	tools: Record<string, boolean | undefined>;
-}
-
-const DEFAULT_COLLAPSE: CollapseConf = {
-	enabled: true,
-	delaySec: 10,
-	tools: {},
-};
-
-function readCollapseConfig(): CollapseConf {
-	try {
-		const home = process.env.HOME ?? "";
-		if (!home) return DEFAULT_COLLAPSE;
-		const p = join(home, ".pi/agent", "pix.json");
-		if (!existsSync(p)) return DEFAULT_COLLAPSE;
-		const raw = JSON.parse(readFileSync(p, "utf-8")) as Record<string, unknown>;
-		const c = raw?.collapse as Record<string, unknown> | undefined;
-		if (!c || typeof c !== "object") return DEFAULT_COLLAPSE;
-		return {
-			enabled: typeof c.enabled === "boolean" ? c.enabled : true,
-			delaySec: typeof c.delaySec === "number" && c.delaySec > 0 ? c.delaySec : 10,
-			tools:
-				c.tools && typeof c.tools === "object"
-					? (c.tools as Record<string, boolean | undefined>)
-					: {},
-		};
-	} catch {
-		return DEFAULT_COLLAPSE;
-	}
-}
-
-let collapseConf: CollapseConf | null = null;
-function getCollapseConfig(): CollapseConf {
-	if (!collapseConf) collapseConf = readCollapseConfig();
-	return collapseConf;
-}
-
-function shouldCollapseTodo(): boolean {
-	const c = getCollapseConfig();
-	const perTool = c.tools.todo;
-	return typeof perTool === "boolean" ? perTool : c.enabled;
-}
-
-function collapseDelayMs(): number {
-	return getCollapseConfig().delaySec * 1000;
-}
 
 export type TodoStatus = "pending" | "in_progress" | "done" | "blocked";
 
@@ -76,6 +23,15 @@ export interface TodoItem {
 	id: number;
 	text: string;
 	status: TodoStatus;
+}
+
+type TodoAction = "list" | "set" | "add" | "update" | "clear";
+
+interface TodoResultDetails {
+	_type: "todoResult";
+	action: TodoAction;
+	outcome: "success" | "error";
+	snapshot: TodoItem[];
 }
 
 const TODO_GLYPH: Record<TodoStatus, string> = {
@@ -112,7 +68,7 @@ export function renderTodoSummaryLine(items: TodoItem[], theme: TodoTheme): stri
 		: done === items.length
 			? "complete"
 			: "checklist";
-	return formatCollapsedToolRow(theme, "todo", target, meta);
+	return formatCollapsedToolRow(theme, "todo", target, meta, "success");
 }
 
 /** Colored checklist for the TUI: glyphs tinted by status, active row bold. */
@@ -218,37 +174,41 @@ export default function registerTodo(pi: ExtensionAPI): void {
 			renderCall() {
 				return new Text("", 0, 0);
 			},
-			renderResult(_result, _options, theme, context) {
-				// Snapshot this row's todos once (live `todos` mutate across calls;
-				// a card should keep the state it was created with).
-				const state = context.state as {
-					snapshot?: TodoItem[];
-					collapsed?: boolean;
-					timer?: ReturnType<typeof setTimeout>;
-				};
-				if (!state.snapshot) state.snapshot = todos.map((t) => ({ ...t }));
-				// Start the collapse timer once per row; invalidate() triggers rerender.
-				// Config-driven: reads from ~/.pi/agent/pix.json collapse section.
-				if (shouldCollapseTodo() && !state.collapsed && !state.timer) {
-					state.timer = setTimeout(() => {
-						state.collapsed = true;
-						context.invalidate();
-					}, collapseDelayMs());
+			renderResult(result, options, theme, context) {
+				const details = result.details as TodoResultDetails | undefined;
+				const resultText = result.content
+					.filter((part) => part.type === "text")
+					.map((part) => part.text)
+					.join("\n");
+				if (context.isError || details?.outcome === "error" || !details) {
+					return new Text(resultText, 0, 0);
 				}
-				const render = state.collapsed ? renderTodoSummaryLine : renderTodoLines;
-				return new Text(render(state.snapshot, theme as TodoTheme), 0, 0);
+
+				const collapsed = tickCollapse(
+					"todo",
+					context.state as CollapseState,
+					context.invalidate,
+					options.expanded,
+				);
+				const render = collapsed ? renderTodoSummaryLine : renderTodoLines;
+				return new Text(render(details.snapshot, theme as TodoTheme), 0, 0);
 			},
 
 			async execute(_id, params) {
-				// AgentToolResult now requires a `details` field. These todo results have
-				// no structured details, so emit `undefined` via small local helpers.
+				const action = params.action as TodoAction;
+				const details = (outcome: TodoResultDetails["outcome"]): TodoResultDetails => ({
+					_type: "todoResult",
+					action,
+					outcome,
+					snapshot: todos.map((item) => ({ ...item })),
+				});
 				const ok = (text: string) => ({
 					content: [{ type: "text" as const, text }],
-					details: undefined,
+					details: details("success"),
 				});
 				const fail = (text: string) => ({
 					content: [{ type: "text" as const, text }],
-					details: undefined,
+					details: details("error"),
 					isError: true,
 				});
 				switch (params.action) {
