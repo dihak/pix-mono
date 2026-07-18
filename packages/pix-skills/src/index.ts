@@ -537,7 +537,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 			const details = result.details as SkillResultDetails | undefined;
 			if (!renderCtx.isError && details) {
 				const state = renderCtx.state as CollapseState;
-				if (tickCollapse("read_skills", state, renderCtx.invalidate)) {
+				if (tickCollapse("read_skills", state, renderCtx.invalidate, renderCtx.expanded)) {
 					component.setText(
 						formatCollapsedToolRow(theme, "skill", formatCollapsedSkillResult(details)),
 					);

@@ -403,6 +403,7 @@ export function createAgentTool(
 				SUBAGENT_TOOL_NAMES.AGENT,
 				renderCtx.state as CollapseState,
 				renderCtx.invalidate,
+				renderCtx.expanded,
 			);
 			return new Text(formatAgentCall(args as Record<string, unknown>, theme, !collapsed), 0, 0);
 		},

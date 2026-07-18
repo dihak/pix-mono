@@ -127,6 +127,26 @@ test("agent model discovery filters and limits enriched available models", () =>
 	expect(describeParentModel(registry, models[0])).toBe("test/alpha-fast");
 });
 
+test("agent call restores its prompt when an elapsed card is expanded", () => {
+	const tool = createAgentTool({} as never, {} as never, new Map(), () => {});
+	const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
+	const component = tool.renderCall?.(
+		{
+			type: "Explore",
+			description: "Inspect renderers",
+			prompt: "Find every collapse consumer",
+		},
+		theme as never,
+		{
+			expanded: true,
+			state: { collapsed: true },
+			invalidate: () => {},
+		} as never,
+	);
+
+	expect(component?.render(120).join("\n")).toContain("Find every collapse consumer");
+});
+
 test("formatAgentCall includes the task prompt before auto-collapse", () => {
 	const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
 	const rendered = formatAgentCall(

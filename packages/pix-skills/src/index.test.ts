@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import {
+import registerSkills, {
 	copySkillResource,
 	extractDescription,
 	extractName,
@@ -117,6 +117,46 @@ describe("formatCollapsedSkillResult", () => {
 				bytes: 2048,
 			}),
 		).toBe("copied · .pi/tools/render.ts · 2.0 KiB");
+	});
+});
+
+describe("skill renderer", () => {
+	it("restores the normal result when an elapsed card is expanded", () => {
+		let registered: Record<string, unknown> = {};
+		registerSkills({
+			registerTool(tool: unknown) {
+				registered = tool as Record<string, unknown>;
+			},
+			on() {},
+		} as never);
+		const renderResult = registered.renderResult as (...args: unknown[]) => {
+			render: (width: number) => string[];
+		};
+		const rendered = renderResult(
+			{
+				content: [{ type: "text", text: "portable guidance" }],
+				details: {
+					mode: "reference",
+					name: "docx",
+					resource: "references/guide.md",
+					bytes: 17,
+				},
+			},
+			{},
+			tagTheme,
+			{
+				expanded: true,
+				isError: false,
+				state: { collapsed: true },
+				invalidate: () => {},
+			},
+		)
+			.render(120)
+			.join("\n");
+
+		expect(rendered).toContain("REFERENCE · docx");
+		expect(rendered).toContain("portable guidance");
+		expect(rendered).not.toContain("✓ skill");
 	});
 });
 
