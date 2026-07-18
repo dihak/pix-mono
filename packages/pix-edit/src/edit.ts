@@ -199,15 +199,18 @@ export function registerEditTool(
 			renderCtx: RenderContextLike<EditRenderState>,
 		) {
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
-			if (renderCtx.isError) {
+			const d = result.details as Record<string, unknown> | undefined;
+			const isPartial = _opt?.isPartial === true;
+			const structuredError =
+				renderCtx.isError && (d?._type === "editInfo" || d?._type === "multiEditInfo");
+			if (renderCtx.isError && (!structuredError || isPartial)) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
-			const d = result.details as Record<string, unknown> | undefined;
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("edit", cs, renderCtx.invalidate, renderCtx.expanded)) {
+			if (!isPartial && tickCollapse("edit", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				const summary =
 					d?._type === "editInfo"
 						? (d.summary as string)
@@ -220,7 +223,20 @@ export function registerEditTool(
 					const ops = d.ops as Array<Record<string, unknown>> | undefined;
 					filePath = String(ops?.[0]?.filePath ?? "");
 				}
-				text.setText(renderCollapsedToolRow(theme, "edit", sp(filePath), summary));
+				text.setText(
+					renderCollapsedToolRow(
+						theme,
+						"edit",
+						sp(filePath),
+						renderCtx.isError ? "failed" : summary,
+						renderCtx.isError ? "error" : "success",
+					),
+				);
+				return text;
+			}
+
+			if (renderCtx.isError) {
+				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 

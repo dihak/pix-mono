@@ -116,4 +116,54 @@ describe("registerGrepTool", () => {
 		expect(rendered).toContain("src/b.ts:2:");
 		expect(rendered).not.toContain("✓ grep");
 	});
+
+	it("collapses structured errors and restores the exact diagnostic on expansion", () => {
+		const registered: { renderResult?: (...args: unknown[]) => MockTextComponent } = {};
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerGrepTool(
+			mockPi,
+			() => ({ execute: async () => ({ content: [], details: undefined }) }),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+		);
+		const theme: ThemeLike = {
+			fg: (_key: string, value: string) => value,
+			bold: (value: string) => value,
+		};
+		const diagnostic = "regex parse error: unclosed group";
+		const result = {
+			content: [{ type: "text", text: diagnostic }],
+			details: {
+				_type: "grepResult",
+				text: diagnostic,
+				pattern: "(",
+				path: "src",
+				matchCount: 0,
+			},
+		};
+		const render = (state: Record<string, unknown>, expanded = false) =>
+			registered
+				.renderResult?.(result, { isPartial: false }, theme, {
+					expanded,
+					isError: true,
+					invalidate: () => {},
+					state,
+				} as unknown as RenderContextLike)
+				?.getText() ?? "";
+
+		expect(render({ timer: 1 })).toContain(diagnostic);
+		expect(render({ collapsed: true })).toContain("✗ grep “(” in src · failed");
+		expect(render({ collapsed: true }, true)).toContain(diagnostic);
+	});
 });

@@ -151,21 +151,41 @@ export function registerWriteTool(
 			renderCtx: RenderContextLike<WriteRenderState>,
 		) {
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
-			if (renderCtx.isError) {
+			const d = result.details as Record<string, unknown> | undefined;
+			const isPartial = _opt?.isPartial === true;
+			const structuredError =
+				renderCtx.isError && (d?._type === "diff" || d?._type === "new" || d?._type === "noChange");
+			if (renderCtx.isError && (!structuredError || isPartial)) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
-			const d = result.details as Record<string, unknown> | undefined;
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("write", cs, renderCtx.invalidate, renderCtx.expanded)) {
+			if (!isPartial && tickCollapse("write", cs, renderCtx.invalidate, renderCtx.expanded)) {
+				if (renderCtx.isError) {
+					text.setText(
+						renderCollapsedToolRow(
+							theme,
+							"write",
+							sp(String(d?.filePath ?? "")),
+							"failed",
+							"error",
+						),
+					);
+					return text;
+				}
 				let summary = "written";
 				if (d?._type === "diff") summary = String(d.summary);
 				else if (d?._type === "noChange") summary = "no changes";
 				else if (d?._type === "new") summary = `new file · ${d.lines} lines`;
 				const target = sp(String(d?.filePath ?? ""));
 				text.setText(renderCollapsedToolRow(theme, "write", target, summary));
+				return text;
+			}
+
+			if (renderCtx.isError) {
+				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 

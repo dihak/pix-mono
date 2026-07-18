@@ -103,6 +103,59 @@ describe("registerEditTool", () => {
 		expect(result?.getText()).toContain("rendering diff");
 		expect(result?.getText()).not.toContain("✓ edit");
 	});
+
+	it("collapses structured errors and restores the exact diagnostic on expansion", () => {
+		const registered: { renderResult?: (...args: unknown[]) => MockTextComponent } = {};
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerEditTool(
+			mockPi,
+			() => ({ execute: async () => ({ content: [], details: undefined }) }),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+			() => {},
+		);
+		const theme: ThemeLike = {
+			fg: (_key: string, value: string) => value,
+			bold: (value: string) => value,
+		};
+		const diagnostic = "oldText was not found in sample.ts";
+		const result = {
+			content: [{ type: "text", text: diagnostic }],
+			details: {
+				_type: "editInfo",
+				filePath: "sample.ts",
+				summary: "+1 -1",
+				oldContent: "old",
+				newContent: "new",
+				language: "typescript",
+				editLine: 0,
+			},
+		};
+		const render = (state: Record<string, unknown>, expanded = false) =>
+			registered
+				.renderResult?.(result, { isPartial: false }, theme, {
+					expanded,
+					isError: true,
+					invalidate: () => {},
+					state,
+				} as unknown as RenderContextLike)
+				?.getText() ?? "";
+
+		expect(render({ timer: 1 })).toContain(diagnostic);
+		expect(render({ collapsed: true })).toContain("✗ edit sample.ts · failed");
+		expect(render({ collapsed: true }, true)).toContain(diagnostic);
+	});
 });
 
 describe("getEditOperations", () => {

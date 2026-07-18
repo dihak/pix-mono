@@ -132,21 +132,36 @@ export function registerFindTool(
 			renderCtx: RenderContextLike,
 		) {
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			const d = result.details;
+			const isPartial = _opt?.isPartial === true;
+			const structuredError = renderCtx.isError && d?._type === "findResult";
 
-			if (renderCtx.isError) {
+			if (renderCtx.isError && (!structuredError || isPartial)) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("find", cs, renderCtx.invalidate, renderCtx.expanded)) {
-				const d = result.details;
+			if (!isPartial && tickCollapse("find", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				const summary =
 					d?._type === "findResult" && d.matchCount != null ? `${d.matchCount} files` : "found";
 				const target = d?._type === "findResult" ? d.pattern : "";
 				const scope = d?._type === "findResult" && d.path ? ` in ${sp(d.path)}` : "";
-				text.setText(renderCollapsedToolRow(theme, "find", `${target}${scope}`, summary));
+				text.setText(
+					renderCollapsedToolRow(
+						theme,
+						"find",
+						`${target}${scope}`,
+						renderCtx.isError ? "failed" : summary,
+						renderCtx.isError ? "error" : "success",
+					),
+				);
+				return text;
+			}
+
+			if (renderCtx.isError) {
+				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 

@@ -138,17 +138,18 @@ export function registerBashTool(
 			renderCtx: RenderContextLike,
 		) {
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			const d = result.details as Record<string, unknown> | undefined;
+			const isPartial = (_opt as { isPartial?: boolean } | undefined)?.isPartial === true;
+			const structuredError = renderCtx.isError && d?._type === "bashResult";
 
-			if (renderCtx.isError) {
+			if (renderCtx.isError && (!structuredError || isPartial)) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 
-			const d = result.details as Record<string, unknown> | undefined;
-
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("bash", cs, renderCtx.invalidate, renderCtx.expanded)) {
+			if (!isPartial && tickCollapse("bash", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				if (d?._type === "bashResult") {
 					const normalizedText = normalizeLineEndings(d.text as string)
 						.replace(/\n{3,}/g, "\n\n")
@@ -174,6 +175,11 @@ export function registerBashTool(
 				} else {
 					text.setText(fillToolBackground(`  ${theme.fg("muted", "done")}`));
 				}
+				return text;
+			}
+
+			if (renderCtx.isError) {
+				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 

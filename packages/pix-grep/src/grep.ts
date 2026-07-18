@@ -158,22 +158,36 @@ export function registerGrepTool(
 			renderCtx: RenderContextLike,
 		) {
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			const d = result.details;
+			const isPartial = _opt?.isPartial === true;
+			const structuredError = renderCtx.isError && d?._type === "grepResult";
 
-			if (renderCtx.isError) {
+			if (renderCtx.isError && (!structuredError || isPartial)) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 
-			const d = result.details;
-
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("grep", cs, renderCtx.invalidate, renderCtx.expanded)) {
+			if (!isPartial && tickCollapse("grep", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				const summary =
 					d?._type === "grepResult" ? pluralize(d.matchCount, "match", "matches") : "searched";
 				const target = d?._type === "grepResult" ? `“${d.pattern}”` : "";
 				const scope = d?._type === "grepResult" && d.path ? ` in ${sp(d.path)}` : "";
-				text.setText(renderCollapsedToolRow(theme, "grep", `${target}${scope}`, summary));
+				text.setText(
+					renderCollapsedToolRow(
+						theme,
+						"grep",
+						`${target}${scope}`,
+						renderCtx.isError ? "failed" : summary,
+						renderCtx.isError ? "error" : "success",
+					),
+				);
+				return text;
+			}
+
+			if (renderCtx.isError) {
+				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 

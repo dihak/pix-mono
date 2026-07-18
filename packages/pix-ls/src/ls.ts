@@ -98,23 +98,36 @@ export function registerLsTool(
 			renderCtx: RenderContextLike,
 		) {
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			const d = result.details as Record<string, unknown> | undefined;
+			const isPartial = (_opt as { isPartial?: boolean } | undefined)?.isPartial === true;
+			const structuredError = renderCtx.isError && d?._type === "lsResult";
 
-			if (renderCtx.isError) {
+			if (renderCtx.isError && (!structuredError || isPartial)) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("ls", cs, renderCtx.invalidate, renderCtx.expanded)) {
-				const d2 = result.details as Record<string, unknown> | undefined;
-				const summary = d2?._type === "lsResult" ? `${d2.entryCount} entries` : "listed";
-				const target = d2?._type === "lsResult" ? sp(String(d2.path ?? ".")) : ".";
-				text.setText(renderCollapsedToolRow(theme, "ls", target, summary));
+			if (!isPartial && tickCollapse("ls", cs, renderCtx.invalidate, renderCtx.expanded)) {
+				const summary = d?._type === "lsResult" ? `${d.entryCount} entries` : "listed";
+				const target = d?._type === "lsResult" ? sp(String(d.path ?? ".")) : ".";
+				text.setText(
+					renderCollapsedToolRow(
+						theme,
+						"ls",
+						target,
+						renderCtx.isError ? "failed" : summary,
+						renderCtx.isError ? "error" : "success",
+					),
+				);
 				return text;
 			}
 
-			const d = result.details as Record<string, unknown> | undefined;
+			if (renderCtx.isError) {
+				text.setText(renderToolError(getTextContent(result) || "Error", theme));
+				return text;
+			}
 			if (d?._type === "lsResult" && d.text) {
 				const tree = renderTree(d.text as string, d.path as string);
 				const info = `${FG_DIM}${d.entryCount} entries${RST}`;

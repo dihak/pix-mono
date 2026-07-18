@@ -125,18 +125,24 @@ export function registerReadTool(
 			renderCtx: RenderContextLike,
 		) {
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
+			const d = result.details as Record<string, unknown> | undefined;
+			const isPartial = (_opt as { isPartial?: boolean } | undefined)?.isPartial === true;
+			const structuredError =
+				renderCtx.isError && (d?._type === "readFile" || d?._type === "readImage");
 
-			if (renderCtx.isError) {
+			if (renderCtx.isError && (!structuredError || isPartial)) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 
-			const d = result.details as Record<string, unknown> | undefined;
-
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("read", cs, renderCtx.invalidate, renderCtx.expanded)) {
-				if (d?._type === "readFile") {
+			if (!isPartial && tickCollapse("read", cs, renderCtx.invalidate, renderCtx.expanded)) {
+				if (renderCtx.isError) {
+					text.setText(
+						renderCollapsedToolRow(theme, "read", sp(String(d?.filePath ?? "")), "failed", "error"),
+					);
+				} else if (d?._type === "readFile") {
 					text.setText(
 						renderCollapsedToolRow(
 							theme,
@@ -158,6 +164,11 @@ export function registerReadTool(
 				} else {
 					text.setText(renderCollapsedToolRow(theme, "read", "", "done"));
 				}
+				return text;
+			}
+
+			if (renderCtx.isError) {
+				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 
