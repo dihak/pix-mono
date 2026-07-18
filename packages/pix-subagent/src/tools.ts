@@ -25,6 +25,7 @@ import { Text } from "@earendil-works/pi-tui";
 import { lookupBenchmark } from "@xynogen/pix-data";
 import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
+import { formatCollapsedToolRow } from "@xynogen/pix-pretty/utils";
 import { Type } from "typebox";
 import type { AgentManager } from "./agent-manager.ts";
 import { getAgentConversation, normalizeMaxTurns, SUBAGENT_TOOL_NAMES } from "./agent-runner.ts";
@@ -36,7 +37,14 @@ import {
 	type ModelRegistry,
 	resolveModel,
 } from "./model-resolver.ts";
-import type { AgentInvocation, LifetimeUsage } from "./types.ts";
+import type {
+	AgentInfoResultDetails,
+	AgentInvocation,
+	AgentResultDetails,
+	AgentSteerResultDetails,
+	AgentUtilityResultDetails,
+	LifetimeUsage,
+} from "./types.ts";
 import { type ContextUsageLike, getSessionContextUsage, type SessionLike } from "./usage.ts";
 
 // ── Types shared with ui/widget.ts (widget imports from here to avoid circular) ─
@@ -219,11 +227,97 @@ export function describeActivity(activeTools: Map<string, string>, responseText?
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function textResult(msg: string, details?: AgentDetails) {
+function textResult(
+	msg: string,
+	details?: AgentDetails | AgentInfoResultDetails | AgentResultDetails | AgentSteerResultDetails,
+) {
 	return {
 		content: [{ type: "text" as const, text: msg }],
 		details: details as unknown,
 	};
+}
+
+function resultText(result: { content: { type: string; text?: string }[] }): string {
+	return result.content
+		.filter((block) => block.type === "text")
+		.map((block) => block.text ?? "")
+		.join("\n");
+}
+
+function renderAgentUtilityResult(
+	result: { content: { type: string; text?: string }[]; details?: unknown },
+	expanded: boolean,
+	theme: Theme,
+): Text {
+	const details = result.details as AgentUtilityResultDetails | undefined;
+	const text = resultText(result);
+	if (!details || expanded) return new Text(text, 0, 0);
+
+	if (details._type === "agent-info") {
+		return new Text(
+			formatCollapsedToolRow(
+				theme,
+				SUBAGENT_TOOL_NAMES.INFO,
+				details.query ? `${details.kind} “${details.query}”` : details.kind,
+				`${details.count} available`,
+			),
+			0,
+			0,
+		);
+	}
+
+	if (details._type === "agent-result") {
+		const meta =
+			details.status === "running"
+				? "still running"
+				: details.status === "not-found"
+					? "not found"
+					: details.status;
+		const status =
+			details.status === "completed" || details.status === "steered"
+				? "success"
+				: details.status === "running" ||
+						details.status === "queued" ||
+						details.status === "aborted" ||
+						details.status === "stopped"
+					? "warning"
+					: "error";
+		const row = formatCollapsedToolRow(
+			theme,
+			SUBAGENT_TOOL_NAMES.GET_RESULT,
+			details.agentId,
+			meta,
+			status,
+		);
+		return new Text(
+			details.status === "stopped"
+				? row.replace(theme.fg("warning", "⚡"), theme.fg("dim", "■"))
+				: row,
+			0,
+			0,
+		);
+	}
+
+	const tool = details.action === "stop" ? "agent_stop" : SUBAGENT_TOOL_NAMES.STEER;
+	const meta =
+		details.outcome === "stopped" && text.includes("Partial output saved")
+			? "partial output saved"
+			: details.outcome === "already-finished"
+				? "already finished"
+				: details.outcome === "not-found"
+					? "not found"
+					: details.outcome;
+	if (details.outcome === "stopped") {
+		const row = formatCollapsedToolRow(theme, tool, details.agentId, meta);
+		return new Text(row.replace(theme.fg("success", "✓"), theme.fg("dim", "■")), 0, 0);
+	}
+	const status =
+		details.outcome === "delivered"
+			? "success"
+			: details.outcome === "queued" || details.outcome === "already-finished"
+				? "warning"
+				: "error";
+	return new Text(formatCollapsedToolRow(theme, tool, details.agentId, meta, status), 0, 0);
 }
 
 /** Strip provider prefix + date suffix for a compact model label. e.g. "anthropic/claude-haiku-4-5-20251001" → "haiku-4-5" */
@@ -364,6 +458,10 @@ export function createAgentInfoTool(reloadCustomAgents: () => void) {
 				}),
 			),
 		}),
+		renderResult(result, { expanded }, theme) {
+			return renderAgentUtilityResult(result, expanded, theme);
+		},
+
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const query = params.query as string | undefined;
 			const limit = boundedLimit(params.limit);
@@ -383,6 +481,12 @@ export function createAgentInfoTool(reloadCustomAgents: () => void) {
 					: "";
 			return textResult(
 				`${parent}${heading}${query ? ` matching “${query}”` : ""}:\n${lines.join("\n") || "(none)"}\n\n${guidance}`,
+				{
+					_type: "agent-info",
+					kind: params.kind,
+					query,
+					count: lines.length,
+				},
 			);
 		},
 	});
@@ -867,19 +971,24 @@ export function createAgentResultTool(
 			);
 		},
 
+		renderResult(result, { expanded }, theme) {
+			return renderAgentUtilityResult(result, expanded, theme);
+		},
+
 		async execute(_toolCallId, params) {
 			const id = params.agent_id as string;
 			const record = manager.getRecord(id);
 			if (!record) {
-				return {
-					content: [
-						{
-							type: "text" as const,
-							text: `Agent not found: "${id}". It may have been cleaned up or the ID is wrong.`,
-						},
-					],
-					details: undefined as unknown,
-				};
+				return textResult(
+					`Agent not found: "${id}". It may have been cleaned up or the ID is wrong.`,
+					{
+						_type: "agent-result",
+						agentId: id,
+						status: "not-found",
+						verbose: params.verbose === true,
+						hasOutput: false,
+					},
+				);
 			}
 
 			// Suppress the pending completion nudge (agent_result consumed it)
@@ -887,26 +996,31 @@ export function createAgentResultTool(
 
 			if (params.verbose && record.session) {
 				const convo = getAgentConversation(record.session);
-				return {
-					content: [
-						{
-							type: "text" as const,
-							text: convo || "No conversation history yet.",
-						},
-					],
-					details: undefined as unknown,
-				};
+				const text = convo || "No conversation history yet.";
+				return textResult(text, {
+					_type: "agent-result",
+					agentId: id,
+					status: record.status,
+					verbose: true,
+					hasOutput: Boolean(convo),
+				});
 			}
 
 			const activity = agentActivity.get(id);
+			const output =
+				record.status === "running" ? activity?.responseText?.trim() : record.result?.trim();
 			const text =
-				record.status === "running"
-					? activity?.responseText?.trim() || "Agent is still running. No output yet."
-					: record.result?.trim() || record.error?.trim() || "No output.";
-			return {
-				content: [{ type: "text" as const, text }],
-				details: undefined as unknown,
-			};
+				output ||
+				(record.status === "running"
+					? "Agent is still running. No output yet."
+					: record.error?.trim() || "No output.");
+			return textResult(text, {
+				_type: "agent-result",
+				agentId: id,
+				status: record.status,
+				verbose: false,
+				hasOutput: Boolean(output),
+			});
 		},
 	});
 }
@@ -948,16 +1062,21 @@ export function createAgentSteerTool(manager: AgentManager) {
 			);
 		},
 
+		renderResult(result, { expanded }, theme) {
+			return renderAgentUtilityResult(result, expanded, theme);
+		},
+
 		async execute(_toolCallId, params) {
 			const id = params.agent_id as string;
-			const action = (params.action as string) || "steer";
+			const action = ((params.action as string) || "steer") as "steer" | "stop";
+			const details = (outcome: AgentSteerResultDetails["outcome"]): AgentSteerResultDetails => ({
+				_type: "agent-steer",
+				agentId: id,
+				action,
+				outcome,
+			});
 			const record = manager.getRecord(id);
-			if (!record) {
-				return {
-					content: [{ type: "text" as const, text: `Agent not found: "${id}".` }],
-					details: undefined as unknown,
-				};
-			}
+			if (!record) return textResult(`Agent not found: "${id}".`, details("not-found"));
 
 			// ── stop action: force-abort immediately ──────────────────
 			if (action === "stop") {
@@ -965,15 +1084,10 @@ export function createAgentSteerTool(manager: AgentManager) {
 				if (!stopped) {
 					// Already finished — return whatever result it produced
 					const existing = record.result ?? "";
-					return {
-						content: [
-							{
-								type: "text" as const,
-								text: `Agent "${id}" is not running (status: ${record.status}).${existing ? `\nPartial output:\n${existing}` : ""}`,
-							},
-						],
-						details: undefined as unknown,
-					};
+					return textResult(
+						`Agent "${id}" is not running (status: ${record.status}).${existing ? `\nPartial output:\n${existing}` : ""}`,
+						details("already-finished"),
+					);
 				}
 
 				// Wait briefly for the session to flush its partial response text
@@ -987,63 +1101,37 @@ export function createAgentSteerTool(manager: AgentManager) {
 						? `Partial output saved. Use agent_result("${id}") to retrieve it.`
 						: "No output was captured before the agent was stopped.",
 				];
-				return {
-					content: [{ type: "text" as const, text: lines.join("\n") }],
-					details: undefined as unknown,
-				};
+				return textResult(lines.join("\n"), details("stopped"));
 			}
 
 			// ── steer action: inject message ──────────────────────────
 			const message = params.message as string | undefined;
 			if (!message) {
-				return {
-					content: [
-						{
-							type: "text" as const,
-							text: `Missing required 'message' parameter for steer action.`,
-						},
-					],
-					details: undefined as unknown,
-				};
+				return textResult(
+					"Missing required 'message' parameter for steer action.",
+					details("invalid"),
+				);
 			}
 
 			if (record.session) {
 				try {
 					await record.session.steer(message);
-					return {
-						content: [
-							{
-								type: "text" as const,
-								text: `Steering message delivered to agent "${id}".`,
-							},
-						],
-						details: undefined as unknown,
-					};
+					return textResult(`Steering message delivered to agent "${id}".`, details("delivered"));
 				} catch (err) {
-					return {
-						content: [
-							{
-								type: "text" as const,
-								text: `Failed to steer agent: ${err instanceof Error ? err.message : String(err)}`,
-							},
-						],
-						details: undefined as unknown,
-					};
+					return textResult(
+						`Failed to steer agent: ${err instanceof Error ? err.message : String(err)}`,
+						details("error"),
+					);
 				}
 			}
 
 			// Session not ready yet — queue the steer
 			if (!record.pendingSteers) record.pendingSteers = [];
 			record.pendingSteers.push(message);
-			return {
-				content: [
-					{
-						type: "text" as const,
-						text: `Agent "${id}" session not yet ready. Steer queued and will be delivered on session start.`,
-					},
-				],
-				details: undefined as unknown,
-			};
+			return textResult(
+				`Agent "${id}" session not yet ready. Steer queued and will be delivered on session start.`,
+				details("queued"),
+			);
 		},
 	});
 }

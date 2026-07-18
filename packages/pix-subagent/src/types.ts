@@ -104,6 +104,40 @@ export interface AgentInvocation {
 export type TerminalAgentStatus = "completed" | "steered" | "aborted" | "stopped" | "error";
 
 /** Details attached to terminal custom notification messages for visual rendering. */
+export interface AgentInfoResultDetails {
+	_type: "agent-info";
+	kind: "types" | "models";
+	query?: string;
+	count: number;
+}
+
+export interface AgentResultDetails {
+	_type: "agent-result";
+	agentId: string;
+	status: AgentRecord["status"] | "not-found";
+	verbose: boolean;
+	hasOutput: boolean;
+}
+
+export interface AgentSteerResultDetails {
+	_type: "agent-steer";
+	agentId: string;
+	action: "steer" | "stop";
+	outcome:
+		| "delivered"
+		| "queued"
+		| "stopped"
+		| "already-finished"
+		| "not-found"
+		| "invalid"
+		| "error";
+}
+
+export type AgentUtilityResultDetails =
+	| AgentInfoResultDetails
+	| AgentResultDetails
+	| AgentSteerResultDetails;
+
 export interface NotificationDetails {
 	id: string;
 	description: string;
