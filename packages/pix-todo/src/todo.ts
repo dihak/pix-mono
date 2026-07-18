@@ -54,7 +54,7 @@ export type TodoTheme = {
 	bold: (text: string) => string;
 };
 
-/** One-line dim summary used once a card has collapsed. */
+/** One-line shared summary used once a card has collapsed. */
 export function renderTodoSummaryLine(items: TodoItem[], theme: TodoTheme): string {
 	if (!items.length) return formatCollapsedToolRow(theme, "todo", "empty");
 	const done = items.filter((t) => t.status === "done").length;
@@ -75,7 +75,7 @@ export function renderTodoSummaryLine(items: TodoItem[], theme: TodoTheme): stri
 export function renderTodoLines(items: TodoItem[], theme: TodoTheme): string {
 	if (!items.length) return theme.fg("muted", "(no todos)");
 	const done = items.filter((t) => t.status === "done").length;
-	const head = theme.fg("muted", `Todos ${done}/${items.length} done:`);
+	const head = theme.fg("accent", `Todos ${done}/${items.length} done:`);
 	const lines = items.map((t) => {
 		const color = TODO_COLOR[t.status];
 		const glyph = theme.fg(color, TODO_GLYPH[t.status]);
@@ -134,6 +134,9 @@ export default function registerTodo(pi: ExtensionAPI): void {
 		pi.registerTool({
 			name: "todo",
 			label: "Todo",
+			// Avoid the default Box shell's one-cell x padding: Todo owns its compact
+			// result row and should align its status glyph with other compact tools.
+			renderShell: "self",
 			description:
 				"Track BUILD-phase execution progress. Durable across context compaction. Actions: list, set (replace all items from newline/numbered text), add, update (change one item's status), clear.",
 			promptSnippet:

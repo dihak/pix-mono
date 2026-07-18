@@ -27,6 +27,7 @@ function makeHost(
 	}> = [],
 ) {
 	let capturedParameters: unknown;
+	let capturedRenderShell: unknown;
 	let capturedExecute:
 		| ((
 				id: string,
@@ -57,10 +58,12 @@ function makeHost(
 			name: string;
 			parameters: unknown;
 			execute: typeof capturedExecute;
+			renderShell?: unknown;
 			renderCall?: typeof capturedRenderCall;
 			renderResult?: typeof capturedRender;
 		}) {
 			capturedParameters = def.parameters;
+			capturedRenderShell = def.renderShell;
 			capturedExecute = def.execute;
 			if (def.renderCall) capturedRenderCall = def.renderCall;
 			if (def.renderResult) capturedRender = def.renderResult;
@@ -98,6 +101,9 @@ function makeHost(
 		get execute() {
 			if (!capturedExecute) throw new Error("execute not captured");
 			return capturedExecute;
+		},
+		get renderShell() {
+			return capturedRenderShell;
 		},
 		get renderCall() {
 			if (!capturedRenderCall) throw new Error("renderCall not captured");
@@ -777,13 +783,20 @@ describe("renderTodoLines (colored TUI render)", () => {
 		expect(out).toContain("[text]3. charlie[/]"); // pending body text
 	});
 
-	test("shows the done/total count header", () => {
+	test("shows the done/total count header in blue", () => {
 		const out = renderTodoLines(items, tagTheme);
-		expect(out).toContain("[muted]Todos 1/4 done:[/]");
+		expect(out).toContain("[accent]Todos 1/4 done:[/]");
+		expect(out).not.toContain("[muted]Todos 1/4 done:[/]");
 	});
 });
 
 describe("todo card layout", () => {
+	test("uses the self-rendered shell so the compact checkmark has no leading space", () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		expect(host.renderShell).toBe("self");
+	});
+
 	test("keeps the call row empty so the collapsed card is one line", () => {
 		const host = makeHost();
 		registerTodo(host.pi);
