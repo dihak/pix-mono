@@ -1,9 +1,11 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
 	applyRtkRewrite,
 	type BashCallEvent,
 	buildSudoBlockReason,
 	detectSudoSegments,
+	probeRtkAvailability,
 	rewriteChain,
 	splitChain,
 } from "./rtk.ts";
@@ -12,6 +14,34 @@ import {
 function bashEvent(command: string): BashCallEvent {
 	return { toolName: "bash", input: { command } };
 }
+
+describe("probeRtkAvailability", () => {
+	it("probes rtk directly and accepts a successful version check", async () => {
+		const exec = mock(async () => ({
+			stdout: "rtk 0.1.0",
+			stderr: "",
+			code: 0,
+			killed: false,
+		}));
+
+		expect(await probeRtkAvailability({ exec } as Pick<ExtensionAPI, "exec">)).toBe(true);
+		expect(exec).toHaveBeenCalledWith("rtk", ["--version"], { timeout: 3000 });
+	});
+
+	it("rejects an unsuccessful version check", async () => {
+		const exec = mock(async () => ({ stdout: "", stderr: "missing", code: 1, killed: false }));
+
+		expect(await probeRtkAvailability({ exec } as Pick<ExtensionAPI, "exec">)).toBe(false);
+	});
+
+	it("treats a spawn failure as unavailable", async () => {
+		const exec = mock(async () => {
+			throw new Error("ENOENT");
+		});
+
+		expect(await probeRtkAvailability({ exec } as Pick<ExtensionAPI, "exec">)).toBe(false);
+	});
+});
 
 describe("splitChain", () => {
 	it("returns single segment for plain command", () => {

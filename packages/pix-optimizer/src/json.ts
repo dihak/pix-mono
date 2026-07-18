@@ -22,6 +22,7 @@ import type {
 	ExtensionCommandContext,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { canExecute } from "./capability.ts";
 import { loadOptValue, saveOptValue } from "./persist.ts";
 import type { OptimizerHandle, OptimizerStatus } from "./status.ts";
 
@@ -241,12 +242,10 @@ export function json(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle
 
 		// Probe once on first JSON-relevant prompt.
 		if (jqAvailable === null || toonAvailable === null) {
-			const [jqRes, toonRes] = await Promise.all([
-				pi.exec("which", ["jq"], { timeout: 1000 }).catch(() => ({ code: 1 })),
-				pi.exec("which", ["toon"], { timeout: 1000 }).catch(() => ({ code: 1 })),
+			[jqAvailable, toonAvailable] = await Promise.all([
+				canExecute(pi, "jq", ["--version"]),
+				canExecute(pi, "toon", ["--version"]),
 			]);
-			jqAvailable = jqRes.code === 0;
-			toonAvailable = toonRes.code === 0;
 			if (!jqAvailable)
 				ctx.ui.notify(
 					"jq not found — JSON/TOON guidance disabled. Install: sudo apt install jq  or  brew install jq",

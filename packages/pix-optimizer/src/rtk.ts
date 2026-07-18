@@ -11,6 +11,7 @@ import type {
 	ExtensionCommandContext,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
+import { canExecute } from "./capability.ts";
 import { loadOptValue, saveOptValue } from "./persist.ts";
 import type { OptimizerHandle, OptimizerStatus } from "./status.ts";
 
@@ -136,7 +137,11 @@ const RTK_COMMANDS = new Set([
 interface RtkStatus {
 	available: boolean;
 	checkedAt: number;
-	path?: string;
+}
+
+/** Probe the command we actually use instead of relying on a platform-specific locator. */
+export function probeRtkAvailability(pi: Pick<ExtensionAPI, "exec">): Promise<boolean> {
+	return canExecute(pi, "rtk", ["--version"]);
 }
 
 /**
@@ -242,25 +247,12 @@ export function rtk(pi: ExtensionAPI, status: OptimizerStatus): OptimizerHandle 
 			return rtkStatus;
 		}
 
-		try {
-			const result = await pi.exec("which", ["rtk"], { timeout: 1000 });
-			if (result.code === 0 && result.stdout?.trim()) {
-				rtkStatus = {
-					available: true,
-					checkedAt: Date.now(),
-					path: result.stdout.trim(),
-				};
-				warnedMissing = false;
-				return rtkStatus;
-			}
-		} catch (_error) {
-			// which command failed
-		}
-
+		const available = await probeRtkAvailability(pi);
 		rtkStatus = {
-			available: false,
+			available,
 			checkedAt: Date.now(),
 		};
+		if (available) warnedMissing = false;
 		return rtkStatus;
 	};
 
