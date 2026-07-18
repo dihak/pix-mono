@@ -1,13 +1,8 @@
 /**
  * ui/notification.ts — subagent-notification custom message renderer.
  *
- * Renders background agent completion notifications as compact themed boxes:
- *   ✓ Explore [haiku]  scout auth flow  ↻5 · 3 · 12.4k · 55 t/s · 8.3s
- *     ⎿  Found 3 references in src/middleware/…
- *
- * Pix twist: model name always in the stats line (even when same as parent).
- * Ported from tintinweb/pi-subagents (MIT), individual-nudge path only
- * (group-join deferred to v2).
+ * Terminal notifications stay on one physical line by default. Expansion adds
+ * the bounded result preview and diagnostic retained in the message details.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -15,56 +10,75 @@ import { Text } from "@earendil-works/pi-tui";
 import { formatContext, formatMs, formatSpeed, formatToolUses, formatTurns } from "../tools.ts";
 import type { NotificationDetails } from "../types.ts";
 
-/**
- * Register the subagent-notification message renderer on the pi instance.
- * Called once from index.ts during extension setup.
- */
+type NotificationTheme = {
+	fg(color: string, text: string): string;
+	bold(text: string): string;
+};
+
+/** Format the permanent single-row summary for a terminal background agent. */
+export function formatNotificationLine(d: NotificationDetails, theme: NotificationTheme): string {
+	let marker: string;
+	let statusText: string;
+	switch (d.status) {
+		case "completed":
+			marker = theme.fg("success", "✓");
+			statusText = "completed";
+			break;
+		case "steered":
+			marker = theme.fg("success", "✓");
+			statusText = "completed (steered)";
+			break;
+		case "stopped":
+			marker = theme.fg("dim", "■");
+			statusText = "stopped";
+			break;
+		case "aborted":
+			marker = theme.fg("warning", "⚡");
+			statusText = "aborted";
+			break;
+		case "error":
+			marker = theme.fg("error", "✗");
+			statusText = "error";
+	}
+
+	const parts: string[] = [];
+	if (d.modelName) parts.push(theme.fg("muted", `[${d.modelName}]`));
+	if (d.turnCount > 0) parts.push(theme.fg("dim", formatTurns(d.turnCount, d.maxTurns)));
+	if (d.toolUses > 0) parts.push(theme.fg("dim", formatToolUses(d.toolUses)));
+	const context = formatContext(d.contextUsage);
+	if (context) parts.push(theme.fg("dim", context));
+	const speed = formatSpeed(d.outputTokens ?? 0, d.streamingMs ?? d.durationMs);
+	if (speed) parts.push(theme.fg("dim", speed));
+	if (d.durationMs > 0) parts.push(theme.fg("dim", formatMs(d.durationMs)));
+
+	let line = `${marker} ${theme.bold(d.description)}`;
+	if (parts.length > 0)
+		line += ` ${theme.fg("dim", "·")} ${parts.join(` ${theme.fg("dim", "·")} `)}`;
+	line += ` ${theme.fg("dim", "·")} ${theme.fg(d.status === "error" ? "error" : "dim", statusText)}`;
+	if (d.status === "error" && d.error) line += theme.fg("error", `: ${d.error.slice(0, 100)}`);
+	return line;
+}
+
+/** Register the subagent-notification message renderer. */
 export function registerNotificationRenderer(pi: ExtensionAPI): void {
 	pi.registerMessageRenderer<NotificationDetails>(
 		"subagent-notification",
 		(message, { expanded }, theme) => {
-			const d = message.details;
-			if (!d) return undefined;
+			const details = message.details;
+			if (!details) return undefined;
 
-			const isError = d.status === "error" || d.status === "stopped" || d.status === "aborted";
-			const icon = isError ? theme.fg("error", "✗") : theme.fg("success", "✓");
-			const statusText = isError
-				? d.status
-				: d.status === "steered"
-					? "completed (steered)"
-					: "completed";
-
-			// Line 1: icon + description + status
-			let line = `${icon} ${theme.bold(d.description)} ${theme.fg("dim", statusText)}`;
-
-			// Line 2: stats — model always first (the pix twist)
-			const parts: string[] = [];
-			if (d.modelName) parts.push(theme.fg("muted", `[${d.modelName}]`));
-			if (d.turnCount > 0) parts.push(formatTurns(d.turnCount, d.maxTurns));
-			if (d.toolUses > 0) parts.push(formatToolUses(d.toolUses));
-			const ctxText = formatContext(d.contextUsage);
-			if (ctxText) parts.push(ctxText);
-			const speed = formatSpeed(d.outputTokens ?? 0, d.streamingMs ?? d.durationMs);
-			if (speed) parts.push(speed);
-			if (d.durationMs > 0) parts.push(formatMs(d.durationMs));
-			if (parts.length) {
-				line += `\n  ${parts.map((p) => theme.fg("dim", p)).join(` ${theme.fg("dim", "·")} `)}`;
-			}
-
-			// Line 3: result preview
+			let output = formatNotificationLine(details, theme);
 			if (expanded) {
-				const lines = d.resultPreview.split("\n").slice(0, 30);
-				for (const l of lines) line += `\n${theme.fg("dim", `  ${l}`)}`;
-			} else {
-				const preview = d.resultPreview.split("\n")[0]?.slice(0, 80) ?? "";
-				line += `\n  ${theme.fg("dim", `⎿  ${preview}`)}`;
+				for (const line of details.resultPreview.split("\n").slice(0, 30)) {
+					output += `\n${theme.fg("dim", `  ${line}`)}`;
+				}
+				if (details.resultTruncated) {
+					output += `\n${theme.fg("muted", "  … preview truncated; use agent_result for full output")}`;
+				}
+				if (details.error) output += `\n${theme.fg("error", `  ${details.error}`)}`;
 			}
 
-			if (d.error && isError) {
-				line += `\n  ${theme.fg("error", `⎿  ${d.error.slice(0, 100)}`)}`;
-			}
-
-			return new Text(line, 0, 0);
+			return new Text(output, 0, 0);
 		},
 	);
 }

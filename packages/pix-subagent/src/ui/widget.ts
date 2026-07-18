@@ -42,7 +42,7 @@ export {
 
 const MAX_WIDGET_LINES = 12;
 
-export const ERROR_STATUSES = new Set(["error", "aborted", "steered", "stopped"]);
+export const ERROR_STATUSES = new Set(["error", "aborted", "stopped"]);
 
 // ── UICtx type ────────────────────────────────────────────────────────────────
 

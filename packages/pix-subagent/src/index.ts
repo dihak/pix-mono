@@ -94,11 +94,18 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 				return;
 			}
 
+			const terminalStatus = record.status;
+			if (terminalStatus === "running" || terminalStatus === "queued") {
+				widget.update();
+				return;
+			}
+
 			const contextUsage = record.session
 				? getSessionContextUsage(record.session as SessionLike)
 				: null;
+			const resultTruncated = (record.result?.length ?? 0) > 500;
 			const resultPreview = record.result
-				? record.result.length > 500
+				? resultTruncated
 					? `${record.result.slice(0, 500)}…`
 					: record.result
 				: "No output.";
@@ -106,7 +113,7 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 			const details: NotificationDetails = {
 				id: record.id,
 				description: record.description,
-				status: record.status,
+				status: terminalStatus,
 				modelName: record.invocation?.modelName,
 				toolUses: record.toolUses,
 				turnCount: record.turnCount,
@@ -117,6 +124,7 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 				durationMs: record.completedAt ? record.completedAt - record.startedAt : 0,
 				error: record.error,
 				resultPreview,
+				resultTruncated,
 			};
 
 			scheduleNudge(record.id, () => {

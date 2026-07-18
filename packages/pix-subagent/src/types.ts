@@ -101,11 +101,13 @@ export interface AgentInvocation {
 	inheritContext?: boolean;
 }
 
-/** Details attached to custom notification messages for visual rendering. */
+export type TerminalAgentStatus = "completed" | "steered" | "aborted" | "stopped" | "error";
+
+/** Details attached to terminal custom notification messages for visual rendering. */
 export interface NotificationDetails {
 	id: string;
 	description: string;
-	status: string;
+	status: TerminalAgentStatus;
 	/** Short model label — shown in notification stats (the pix twist). */
 	modelName?: string;
 	toolUses: number;
@@ -123,7 +125,9 @@ export interface NotificationDetails {
 	streamingMs?: number;
 	durationMs: number;
 	error?: string;
+	/** Bounded output retained for the expanded notification. */
 	resultPreview: string;
+	resultTruncated?: boolean;
 }
 
 export interface EnvInfo {
