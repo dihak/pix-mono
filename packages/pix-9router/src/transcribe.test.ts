@@ -416,9 +416,9 @@ const theme = {
 } as never;
 
 function captureTranscribeRenderer() {
-	let tool: Record<string, (...args: never[]) => unknown> | undefined;
+	let tool: Record<string, unknown> | undefined;
 	registerTranscribe({
-		registerTool(value: Record<string, (...args: never[]) => unknown>) {
+		registerTool(value: Record<string, unknown>) {
 			tool = value;
 		},
 	} as never);
@@ -440,7 +440,8 @@ function renderTranscribe(
 		invalidate: () => {},
 	};
 	const tool = captureTranscribeRenderer();
-	tool.renderResult?.(result as never, { expanded, isPartial: false } as never, theme, {
+	const renderResult = tool.renderResult as ((...args: never[]) => unknown) | undefined;
+	renderResult?.(result as never, { expanded, isPartial: false } as never, theme, {
 		lastComponent: component,
 		isError,
 		state: { collapsed: true },
@@ -451,6 +452,10 @@ function renderTranscribe(
 }
 
 describe("transcribe compact renderer", () => {
+	it("uses the self-rendered shell so the status mark has no leading box padding", () => {
+		expect(captureTranscribeRenderer().renderShell).toBe("self");
+	});
+
 	it("summarizes inline and written transcripts", () => {
 		const inline = renderTranscribe({
 			content: [{ type: "text", text: "full transcript" }],

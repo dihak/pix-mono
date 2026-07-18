@@ -264,6 +264,7 @@ export default function registerFetch(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "fetch",
 		label: "Fetch",
+		renderShell: "self",
 		description: "Fetch a web page as markdown, text, or raw HTML via exa. Returns page content.",
 		promptSnippet:
 			"fetch(url, format, max_characters?) — format: 'markdown', 'text', or 'html'. Read page content via exa.",

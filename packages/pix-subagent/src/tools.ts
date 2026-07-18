@@ -25,7 +25,7 @@ import { Text } from "@earendil-works/pi-tui";
 import { lookupBenchmark } from "@xynogen/pix-data";
 import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { icon } from "@xynogen/pix-pretty/icon-catalog";
-import { formatCollapsedToolRow } from "@xynogen/pix-pretty/utils";
+import { formatCollapsedToolRow, hideCollapsedToolCall } from "@xynogen/pix-pretty/utils";
 import { Type } from "typebox";
 import type { AgentManager } from "./agent-manager.ts";
 import { getAgentConversation, normalizeMaxTurns, SUBAGENT_TOOL_NAMES } from "./agent-runner.ts";
@@ -248,10 +248,22 @@ function renderAgentUtilityResult(
 	result: { content: { type: string; text?: string }[]; details?: unknown },
 	expanded: boolean,
 	theme: Theme,
+	renderCtx: { state: Record<string, unknown>; invalidate: () => void },
 ): Text {
 	const details = result.details as AgentUtilityResultDetails | undefined;
 	const text = resultText(result);
 	if (!details || expanded) return new Text(text, 0, 0);
+	const collapseTool =
+		details._type === "agent-info"
+			? SUBAGENT_TOOL_NAMES.INFO
+			: details._type === "agent-result"
+				? SUBAGENT_TOOL_NAMES.GET_RESULT
+				: SUBAGENT_TOOL_NAMES.STEER;
+	if (
+		!tickCollapse(collapseTool, renderCtx.state as CollapseState, renderCtx.invalidate, expanded)
+	) {
+		return new Text(text, 0, 0);
+	}
 
 	if (details._type === "agent-info") {
 		return new Text(
@@ -378,7 +390,7 @@ export function formatAgentFinishedLine(d: AgentDetails, theme: Theme): string {
 	parts.push(theme.fg(d.status === "error" ? "error" : "dim", status));
 
 	return (
-		`  ${marker} ${theme.fg("toolTitle", theme.bold(d.displayName))}` +
+		`${marker} ${theme.fg("toolTitle", theme.bold(d.displayName))}` +
 		` ${theme.fg("dim", "·")} ${parts.join(` ${theme.fg("dim", "·")} `)}`
 	);
 }
@@ -443,6 +455,7 @@ export function createAgentInfoTool(reloadCustomAgents: () => void) {
 	return defineTool({
 		name: SUBAGENT_TOOL_NAMES.INFO,
 		label: "Agent Info",
+		renderShell: "self",
 		description: "List runtime agent types or available models.",
 		parameters: Type.Object({
 			kind: Type.Enum(["types", "models"] as const, {
@@ -458,8 +471,22 @@ export function createAgentInfoTool(reloadCustomAgents: () => void) {
 				}),
 			),
 		}),
-		renderResult(result, { expanded }, theme) {
-			return renderAgentUtilityResult(result, expanded, theme);
+		renderCall(args, theme, renderCtx) {
+			const text = new Text("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
+			const kind = String(args.kind ?? "types");
+			const query = typeof args.query === "string" && args.query ? ` “${args.query}”` : "";
+			text.setText(`${theme.fg("toolTitle", theme.bold("agent_info"))} ${kind}${query}`);
+			return text;
+		},
+
+		renderResult(result, { expanded }, theme, renderCtx) {
+			return renderAgentUtilityResult(result, expanded, theme, renderCtx);
 		},
 
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
@@ -503,6 +530,7 @@ export function createAgentTool(
 	return defineTool({
 		name: SUBAGENT_TOOL_NAMES.AGENT,
 		label: "Agent",
+		renderShell: "self",
 		description: buildAgentToolDescription(),
 		promptSnippet: "Launch autonomous sub-agents for complex multi-step tasks",
 
@@ -948,6 +976,7 @@ export function createAgentResultTool(
 	return defineTool({
 		name: SUBAGENT_TOOL_NAMES.GET_RESULT,
 		label: "Agent Result",
+		renderShell: "self",
 		description:
 			"Retrieve a previous agent result by ID. Results are delivered automatically; do not use this to wait or poll. verbose=true returns full conversation history.",
 		parameters: Type.Object({
@@ -962,17 +991,23 @@ export function createAgentResultTool(
 			),
 		}),
 
-		renderCall(args, theme) {
-			return new Text(
+		renderCall(args, theme, renderCtx) {
+			const text = new Text("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
+			text.setText(
 				theme.fg("toolTitle", theme.bold("agent_result ")) +
 					theme.fg("accent", args.agent_id as string),
-				0,
-				0,
 			);
+			return text;
 		},
 
-		renderResult(result, { expanded }, theme) {
-			return renderAgentUtilityResult(result, expanded, theme);
+		renderResult(result, { expanded }, theme, renderCtx) {
+			return renderAgentUtilityResult(result, expanded, theme, renderCtx);
 		},
 
 		async execute(_toolCallId, params) {
@@ -1031,6 +1066,7 @@ export function createAgentSteerTool(manager: AgentManager) {
 	return defineTool({
 		name: SUBAGENT_TOOL_NAMES.STEER,
 		label: "Steer Agent",
+		renderShell: "self",
 		description:
 			"Redirect or stop a running agent. steer delivers a message after its current tool call; stop aborts it immediately.",
 		parameters: Type.Object({
@@ -1051,19 +1087,25 @@ export function createAgentSteerTool(manager: AgentManager) {
 			),
 		}),
 
-		renderCall(args, theme) {
+		renderCall(args, theme, renderCtx) {
+			const text = new Text("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
 			const action = (args.action as string) || "steer";
 			const label = action === "stop" ? "agent_stop" : "agent_steer";
-			return new Text(
+			text.setText(
 				theme.fg("toolTitle", theme.bold(`${label} `)) +
 					theme.fg(action === "stop" ? "error" : "accent", args.agent_id as string),
-				0,
-				0,
 			);
+			return text;
 		},
 
-		renderResult(result, { expanded }, theme) {
-			return renderAgentUtilityResult(result, expanded, theme);
+		renderResult(result, { expanded }, theme, renderCtx) {
+			return renderAgentUtilityResult(result, expanded, theme, renderCtx);
 		},
 
 		async execute(_toolCallId, params) {

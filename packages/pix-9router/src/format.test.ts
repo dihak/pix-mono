@@ -282,6 +282,17 @@ const renderTheme = {
 	bold: (text: string) => `*${text}*`,
 } as never;
 
+function captureRegisteredTool(register: (pi: never) => void): Record<string, unknown> {
+	let tool: Record<string, unknown> | undefined;
+	register({
+		registerTool(value: Record<string, unknown>) {
+			tool = value;
+		},
+	} as never);
+	if (!tool) throw new Error("tool was not registered");
+	return tool;
+}
+
 function renderRegisteredResult(
 	register: (pi: never) => void,
 	result: Record<string, unknown>,
@@ -313,6 +324,11 @@ function renderRegisteredResult(
 }
 
 describe("fetch and search compact renderers", () => {
+	it("use the self-rendered shell so status marks have no leading box padding", () => {
+		expect(captureRegisteredTool(registerFetch).renderShell).toBe("self");
+		expect(captureRegisteredTool(registerSearch).renderShell).toBe("self");
+	});
+
 	it("renders fallback and failure rows from metadata", () => {
 		const fetchRow = renderRegisteredResult(registerFetch, {
 			content: [{ type: "text", text: "fallback body" }],

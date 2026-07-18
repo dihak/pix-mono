@@ -19,11 +19,11 @@ class MockTextComponent {
 }
 
 describe("registerEditTool", () => {
-	it("registers a tool named 'edit'", () => {
-		const tools: string[] = [];
+	it("registers a self-rendered edit tool", () => {
+		const tools: Array<{ name: string; renderShell?: string }> = [];
 		const mockPi: PiPrettyApi = {
 			registerTool(t: unknown) {
-				tools.push((t as { name: string }).name);
+				tools.push(t as { name: string; renderShell?: string });
 			},
 			registerCommand() {},
 			on() {},
@@ -49,7 +49,9 @@ describe("registerEditTool", () => {
 			},
 			(_id: string, _inv: () => void) => {},
 		);
-		expect(tools).toEqual(["edit"]);
+		expect(tools).toHaveLength(1);
+		expect(tools[0]?.name).toBe("edit");
+		expect(tools[0]?.renderShell).toBe("self");
 	});
 
 	it("restores the bounded diff when an elapsed card is expanded", () => {

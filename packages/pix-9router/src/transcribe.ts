@@ -358,6 +358,7 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "transcribe",
 		label: "Transcribe",
+		renderShell: "self",
 		description:
 			"Convert speech to text. Transcribes an audio file using the 9Router audio transcription API (Deepgram Nova 3). Optionally writes the full text to a file on disk.",
 		promptSnippet:

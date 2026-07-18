@@ -293,6 +293,7 @@ export default function registerSearch(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "search",
 		label: "Search",
+		renderShell: "self",
 		description: "Web or news search via exa. Returns title, url, and snippet for each result.",
 		promptSnippet:
 			"search(query, search_type, max_results?) — search_type: 'web' or 'news'. Defaults to 5 results, max 10.",

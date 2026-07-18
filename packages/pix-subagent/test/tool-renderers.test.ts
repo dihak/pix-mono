@@ -35,7 +35,33 @@ function render(tool: unknown, result: unknown, expanded = false): string {
 		tool as {
 			renderResult: (...args: unknown[]) => { render(width: number): string[] };
 		}
-	).renderResult(result, { expanded, isPartial: false }, theme, {});
+	).renderResult(result, { expanded, isPartial: false }, theme, {
+		state: { collapsed: true },
+		expanded,
+		invalidate: () => {},
+	});
+	return component
+		.render(160)
+		.map((line) => line.trimEnd())
+		.join("\n")
+		.trimEnd();
+}
+
+function renderCall(
+	tool: unknown,
+	args: Record<string, unknown>,
+	collapsed: boolean,
+	expanded = false,
+): string {
+	const component = (
+		tool as {
+			renderCall: (...args: unknown[]) => { render(width: number): string[] };
+		}
+	).renderCall(args, theme, {
+		state: { collapsed },
+		expanded,
+		invalidate: () => {},
+	});
 	return component
 		.render(160)
 		.map((line) => line.trimEnd())
@@ -44,6 +70,24 @@ function render(tool: unknown, result: unknown, expanded = false): string {
 }
 
 describe("subagent utility compact renderers", () => {
+	test("use the self-rendered shell so compact status marks have no box padding", () => {
+		expect(createAgentInfoTool(() => {}).renderShell).toBe("self");
+		expect(createAgentResultTool({} as never, new Map()).renderShell).toBe("self");
+		expect(createAgentSteerTool({} as never).renderShell).toBe("self");
+	});
+
+	test("hide the separate call heading after collapse and restore it on expansion", () => {
+		const cases: Array<[unknown, Record<string, unknown>]> = [
+			[createAgentInfoTool(() => {}), { kind: "types" }],
+			[createAgentResultTool({} as never, new Map()), { agent_id: "abc123" }],
+			[createAgentSteerTool({} as never), { agent_id: "abc123", action: "steer" }],
+		];
+		for (const [tool, args] of cases) {
+			expect(renderCall(tool, args, true)).toBe("");
+			expect(renderCall(tool, args, true, true)).not.toBe("");
+		}
+	});
+
 	test("agent_info summarizes the authoritative count and expands exact content", async () => {
 		const tool = createAgentInfoTool(() => {});
 		const result = await execute(tool, { kind: "models", limit: 5 }, ctx);

@@ -114,6 +114,7 @@ export function registerEditTool(
 	pi.registerTool({
 		...origEdit,
 		name: "edit",
+		renderShell: "self",
 
 		async execute(
 			tid: string,

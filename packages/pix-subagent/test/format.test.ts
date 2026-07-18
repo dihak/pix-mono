@@ -194,7 +194,29 @@ test("formatAgentCompletedLine keeps the completed agent row visible", () => {
 		theme,
 	);
 
-	expect(rendered).toBe("  ✓ Agent · Audit recording dead code · 0.3s · completed");
+	expect(rendered).toBe("✓ Agent · Audit recording dead code · 0.3s · completed");
+});
+
+test("agent uses the self-rendered shell so terminal status marks have no box padding", () => {
+	const tool = createAgentTool({} as never, {} as never, new Map(), () => {});
+	expect(tool.renderShell).toBe("self");
+});
+
+test("foreground terminal rows begin directly with their status mark", () => {
+	const theme = { fg: (_color: string, text: string) => text, bold: (text: string) => text };
+	const rendered = formatAgentFinishedLine(
+		{
+			displayName: "Agent",
+			description: "Inspect renderers",
+			subagentType: "general-purpose",
+			toolUses: 0,
+			context: "",
+			durationMs: 250,
+			status: "completed",
+		},
+		theme,
+	);
+	expect(rendered.startsWith("✓")).toBe(true);
 });
 
 test("all foreground terminal states use one identity-first row", () => {

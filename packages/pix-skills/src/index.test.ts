@@ -121,6 +121,17 @@ describe("formatCollapsedSkillResult", () => {
 });
 
 describe("skill renderer", () => {
+	it("uses the self-rendered shell so the compact status mark has no box padding", () => {
+		let registered: Record<string, unknown> = {};
+		registerSkills({
+			registerTool(tool: unknown) {
+				registered = tool as Record<string, unknown>;
+			},
+			on() {},
+		} as never);
+		expect(registered.renderShell).toBe("self");
+	});
+
 	it("restores the normal result when an elapsed card is expanded", () => {
 		let registered: Record<string, unknown> = {};
 		registerSkills({

@@ -409,6 +409,7 @@ function registerSkillLoader(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "read_skills",
 		label: "Read Skills",
+		renderShell: "self",
 		description:
 			"Browse skills and access conventional bundle resources. References can be read into context; scripts/assets must be copied to a project-relative output path before use.",
 		promptSnippet: "Browse and load bundled skill instructions",
