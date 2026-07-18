@@ -15,6 +15,36 @@ import { makeRenderCall, makeRenderResult } from "./render.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
+type RouterOutcome = "running" | "fallback" | "success" | "cancelled" | "error";
+type FetchFormat = "markdown" | "text" | "html";
+
+export interface FetchResultDetails {
+	_type: "fetchResult";
+	outcome: RouterOutcome;
+	url: string;
+	format: FetchFormat;
+	source?: "api" | "curl-fallback" | "failed";
+	chars?: number;
+	truncated?: boolean;
+}
+
+export interface FetchParams {
+	url: string;
+	format?: FetchFormat;
+	max_characters?: number;
+}
+
+interface FetchResult {
+	content: { type: "text"; text: string }[];
+	details: FetchResultDetails;
+	isError?: boolean;
+}
+
+interface FetchDependencies {
+	apiPost: typeof apiPost;
+	curl: typeof curl;
+}
+
 function auth(): string | undefined {
 	return process.env.ROUTER_API_KEY;
 }
@@ -101,6 +131,135 @@ export function formatFetchResult(raw: string): string {
 	return header.length > 0 ? `${header.join("\n")}\n\n${text}` : text;
 }
 
+function isCancelled(error: unknown, signal: AbortSignal | undefined): boolean {
+	return signal?.aborted === true || (error instanceof DOMException && error.name === "AbortError");
+}
+
+export async function executeFetch(
+	params: FetchParams,
+	signal?: AbortSignal,
+	onUpdate?: (result: FetchResult) => void,
+	dependencies: FetchDependencies = { apiPost, curl },
+): Promise<FetchResult> {
+	const maxChars = params.max_characters ?? 1000;
+	const fmt = params.format ?? "markdown";
+	let apiMsg = "";
+
+	try {
+		onUpdate?.({
+			content: [{ type: "text", text: `Fetching (${fmt}): ${params.url}...` }],
+			details: {
+				_type: "fetchResult",
+				outcome: "running",
+				url: params.url,
+				format: fmt,
+			},
+		});
+
+		const raw = await dependencies.apiPost(
+			"/web/fetch",
+			{
+				model: "exa",
+				url: params.url,
+				format: fmt,
+				max_characters: maxChars,
+			},
+			signal,
+		);
+
+		const formatted = formatFetchResult(raw);
+		const truncated =
+			maxChars > 0 && formatted.length > maxChars
+				? `${formatted.slice(0, maxChars)}\n\n[truncated]`
+				: formatted;
+
+		return {
+			content: [{ type: "text", text: truncated.slice(0, 20_000) }],
+			details: {
+				_type: "fetchResult",
+				outcome: "success",
+				url: params.url,
+				format: fmt,
+				source: "api",
+				chars: formatted.length,
+				truncated: maxChars > 0 && formatted.length > maxChars,
+			},
+		};
+	} catch (apiErr: unknown) {
+		apiMsg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+		if (isCancelled(apiErr, signal)) {
+			return {
+				content: [{ type: "text", text: `Fetch cancelled.\nAPI: ${apiMsg}` }],
+				details: {
+					_type: "fetchResult",
+					outcome: "cancelled",
+					url: params.url,
+					format: fmt,
+				},
+			};
+		}
+		onUpdate?.({
+			content: [
+				{
+					type: "text",
+					text: `API failed: ${apiMsg}\nFalling back to curl...`,
+				},
+			],
+			details: {
+				_type: "fetchResult",
+				outcome: "running",
+				url: params.url,
+				format: fmt,
+			},
+		});
+	}
+
+	try {
+		let html = await dependencies.curl(["-L", params.url]);
+		const chars = html.length;
+		const truncated = maxChars > 0 && html.length > maxChars;
+		if (truncated) html = `${html.slice(0, maxChars)}\n\n[truncated]`;
+
+		const banner =
+			"[FALLBACK — raw curl] API unavailable, content may differ from exa formatted output.";
+		const body =
+			fmt === "html"
+				? `${banner}\n\n${html.slice(0, 19_500)}`
+				: `${banner}\n\nRaw HTML (format='${fmt}' not applied):\n\n${html.slice(0, 19_000)}`;
+
+		return {
+			content: [{ type: "text", text: body.slice(0, 20_000) }],
+			details: {
+				_type: "fetchResult",
+				outcome: "fallback",
+				url: params.url,
+				format: fmt,
+				source: "curl-fallback",
+				chars,
+				truncated,
+			},
+		};
+	} catch (curlErr: unknown) {
+		const curlMsg = curlErr instanceof Error ? curlErr.message : String(curlErr);
+		return {
+			content: [
+				{
+					type: "text",
+					text: `Fetch failed (both API and curl).\nAPI: ${apiMsg}\nCurl: ${curlMsg}`,
+				},
+			],
+			details: {
+				_type: "fetchResult",
+				outcome: "error",
+				url: params.url,
+				format: fmt,
+				source: "failed",
+			},
+			isError: true,
+		};
+	}
+}
+
 export default function registerFetch(pi: ExtensionAPI): void {
 	pi.registerTool({
 		name: "fetch",
@@ -113,8 +272,35 @@ export default function registerFetch(pi: ExtensionAPI): void {
 			"Prefer format='markdown' for readable content, 'text' for plain text extraction, 'html' for raw source.",
 			"Set max_characters to cap response size (default 1000, 0 = unlimited). Use 5000-10000 for typical pages.",
 		],
-		renderCall: makeRenderCall("fetch", (args) => String(args.url ?? "")),
-		renderResult: makeRenderResult(),
+		renderCall: makeRenderCall<unknown>("fetch", (args) =>
+			String((args as Partial<FetchParams>).url ?? ""),
+		),
+		renderResult: (
+			(renderTerminal) => (result, options, theme, context) =>
+				renderTerminal(result, options, theme, {
+					...context,
+					isError: context.isError && options.expanded,
+				})
+		)(
+			makeRenderResult<FetchResultDetails>({
+				tool: "fetch",
+				target: (details) => details.url,
+				meta: (details) => {
+					if (details.outcome === "error") return "failed";
+					if (details.outcome === "cancelled") return "cancelled";
+					const chars = `${details.chars ?? 0} chars`;
+					return details.outcome === "fallback"
+						? `${chars} · curl fallback`
+						: `${chars} · ${details.format}`;
+				},
+				status: (details) =>
+					details.outcome === "error"
+						? "error"
+						: details.outcome === "fallback" || details.outcome === "cancelled"
+							? "warning"
+							: "success",
+			}),
+		),
 		parameters: Type.Object({
 			url: Type.String({ description: "URL to fetch" }),
 			format: StringEnum(["markdown", "text", "html"] as const, {
@@ -130,83 +316,7 @@ export default function registerFetch(pi: ExtensionAPI): void {
 		}),
 
 		async execute(_toolCallId, params, signal, onUpdate) {
-			const maxChars = params.max_characters ?? 1000;
-			const fmt = params.format ?? "markdown";
-			let apiMsg = "";
-
-			try {
-				onUpdate?.({
-					content: [{ type: "text", text: `Fetching (${fmt}): ${params.url}...` }],
-					details: undefined,
-				});
-
-				const raw = await apiPost(
-					"/web/fetch",
-					{
-						model: "exa",
-						url: params.url,
-						format: fmt,
-						max_characters: maxChars,
-					},
-					signal,
-				);
-
-				const formatted = formatFetchResult(raw);
-				const truncated =
-					maxChars > 0 && formatted.length > maxChars
-						? `${formatted.slice(0, maxChars)}\n\n[truncated]`
-						: formatted;
-
-				return {
-					content: [{ type: "text", text: truncated.slice(0, 20_000) }],
-					details: {
-						source: "api",
-						chars: formatted.length,
-						truncated: maxChars > 0 && formatted.length > maxChars,
-					},
-				};
-			} catch (apiErr: unknown) {
-				apiMsg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-				onUpdate?.({
-					content: [
-						{
-							type: "text",
-							text: `API failed: ${apiMsg}\nFalling back to curl...`,
-						},
-					],
-					details: undefined,
-				});
-			}
-
-			try {
-				let html = await curl(["-L", params.url]);
-				if (maxChars > 0 && html.length > maxChars)
-					html = `${html.slice(0, maxChars)}\n\n[truncated]`;
-
-				const banner =
-					"[FALLBACK — raw curl] API unavailable, content may differ from exa formatted output.";
-				const body =
-					fmt === "html"
-						? `${banner}\n\n${html.slice(0, 19_500)}`
-						: `${banner}\n\nRaw HTML (format='${fmt}' not applied):\n\n${html.slice(0, 19_000)}`;
-
-				return {
-					content: [{ type: "text", text: body.slice(0, 20_000) }],
-					details: { source: "curl-fallback", chars: html.length },
-				};
-			} catch (curlErr: unknown) {
-				const curlMsg = curlErr instanceof Error ? curlErr.message : String(curlErr);
-				return {
-					content: [
-						{
-							type: "text",
-							text: `Fetch failed (both API and curl).\nAPI: ${apiMsg}\nCurl: ${curlMsg}`,
-						},
-					],
-					details: { source: "failed" },
-					isError: true,
-				};
-			}
+			return executeFetch(params as FetchParams, signal, onUpdate);
 		},
 	});
 }

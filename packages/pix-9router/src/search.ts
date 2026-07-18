@@ -15,6 +15,35 @@ import { makeRenderCall, makeRenderResult } from "./render.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
+type RouterOutcome = "running" | "fallback" | "success" | "cancelled" | "error";
+type SearchType = "web" | "news";
+
+export interface SearchResultDetails {
+	_type: "searchResult";
+	outcome: RouterOutcome;
+	query: string;
+	searchType: SearchType;
+	source?: "api" | "curl-fallback" | "failed";
+	resultCount?: number;
+}
+
+export interface SearchParams {
+	query: string;
+	search_type?: SearchType;
+	max_results?: number;
+}
+
+interface SearchResult {
+	content: { type: "text"; text: string }[];
+	details: SearchResultDetails;
+	isError?: boolean;
+}
+
+interface SearchDependencies {
+	apiPost: typeof apiPost;
+	curl: typeof curl;
+}
+
 function auth(): string | undefined {
 	return process.env.ROUTER_API_KEY;
 }
@@ -84,25 +113,22 @@ interface SearchResultItem {
 	author?: string | null;
 }
 
-/**
- * Format a raw exa search response as a compact markdown list.
- * Falls back to pretty-printed JSON when the shape is unexpected.
- */
-export function formatSearchResults(raw: string): string {
+/** Parse and format a raw exa search response with its authoritative result count. */
+export function parseSearchResults(raw: string): { text: string; count: number } {
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(raw);
 	} catch {
-		return raw.slice(0, 20_000);
+		return { text: raw.slice(0, 20_000), count: 0 };
 	}
 
 	const obj = parsed as Record<string, unknown>;
 	const results = obj?.results;
 	if (!Array.isArray(results)) {
-		return JSON.stringify(parsed, null, 2).slice(0, 20_000);
+		return { text: JSON.stringify(parsed, null, 2).slice(0, 20_000), count: 0 };
 	}
 
-	if (results.length === 0) return "No results.";
+	if (results.length === 0) return { text: "No results.", count: 0 };
 
 	const lines: string[] = [];
 	results.forEach((r: SearchResultItem, i: number) => {
@@ -119,7 +145,148 @@ export function formatSearchResults(raw: string): string {
 		lines.push("");
 	});
 
-	return lines.join("\n").trim().slice(0, 20_000);
+	return {
+		text: lines.join("\n").trim().slice(0, 20_000),
+		count: results.length,
+	};
+}
+
+/** Format a raw exa search response as a compact markdown list. */
+export function formatSearchResults(raw: string): string {
+	return parseSearchResults(raw).text;
+}
+
+function isCancelled(error: unknown, signal: AbortSignal | undefined): boolean {
+	return signal?.aborted === true || (error instanceof DOMException && error.name === "AbortError");
+}
+
+export async function executeSearch(
+	params: SearchParams,
+	signal?: AbortSignal,
+	onUpdate?: (result: SearchResult) => void,
+	dependencies: SearchDependencies = { apiPost, curl },
+): Promise<SearchResult> {
+	const max = Math.min(params.max_results ?? 5, 10);
+	const searchType = params.search_type ?? "web";
+	let apiMsg = "";
+
+	try {
+		onUpdate?.({
+			content: [{ type: "text", text: `Searching (${searchType}): ${params.query}...` }],
+			details: {
+				_type: "searchResult",
+				outcome: "running",
+				query: params.query,
+				searchType,
+			},
+		});
+
+		const raw = await dependencies.apiPost(
+			"/search",
+			{
+				model: "exa",
+				query: params.query,
+				search_type: searchType,
+				max_results: max,
+			},
+			signal,
+		);
+		const parsed = parseSearchResults(raw);
+
+		return {
+			content: [{ type: "text", text: parsed.text }],
+			details: {
+				_type: "searchResult",
+				outcome: "success",
+				query: params.query,
+				searchType,
+				source: "api",
+				resultCount: parsed.count,
+			},
+		};
+	} catch (apiErr: unknown) {
+		apiMsg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+		if (isCancelled(apiErr, signal)) {
+			return {
+				content: [{ type: "text", text: `Search cancelled.\nAPI: ${apiMsg}` }],
+				details: {
+					_type: "searchResult",
+					outcome: "cancelled",
+					query: params.query,
+					searchType,
+				},
+			};
+		}
+		onUpdate?.({
+			content: [
+				{
+					type: "text",
+					text: `API failed: ${apiMsg}\nFalling back to curl...`,
+				},
+			],
+			details: {
+				_type: "searchResult",
+				outcome: "running",
+				query: params.query,
+				searchType,
+			},
+		});
+	}
+
+	try {
+		const body = JSON.stringify({
+			model: "exa",
+			query: params.query,
+			search_type: searchType,
+			max_results: max,
+		});
+		const raw = await dependencies.curl([
+			"-X",
+			"POST",
+			"-H",
+			"Content-Type: application/json",
+			...(auth() ? ["-H", `Authorization: Bearer ${auth()}`] : []),
+			"-d",
+			body,
+			`${routerBaseUrl()}/search`,
+		]);
+		const parsed = parseSearchResults(raw);
+
+		return {
+			content: [
+				{
+					type: "text",
+					text: `[FALLBACK — curl] API called via curl instead of fetch.\n\n${parsed.text.slice(0, 19_500)}`,
+				},
+			],
+			details: {
+				_type: "searchResult",
+				outcome: "fallback",
+				query: params.query,
+				searchType,
+				source: "curl-fallback",
+				resultCount: parsed.count,
+			},
+		};
+	} catch (curlErr: unknown) {
+		const curlMsg = curlErr instanceof Error ? curlErr.message : String(curlErr);
+		return {
+			content: [
+				{
+					type: "text",
+					text: `Search failed (both API and curl).\nAPI: ${apiMsg}\nCurl: ${curlMsg}`,
+				},
+			],
+			details: {
+				_type: "searchResult",
+				outcome: "error",
+				query: params.query,
+				searchType,
+				source: "failed",
+			},
+			isError: true,
+		};
+	}
 }
 
 export default function registerSearch(pi: ExtensionAPI): void {
@@ -133,8 +300,33 @@ export default function registerSearch(pi: ExtensionAPI): void {
 			"Use search when you need up-to-date information or facts from the web.",
 			"Set search_type='web' for general web results, search_type='news' for recent news articles.",
 		],
-		renderCall: makeRenderCall("search", (args) => String(args.query ?? "")),
-		renderResult: makeRenderResult(),
+		renderCall: makeRenderCall<unknown>("search", (args) =>
+			String((args as Partial<SearchParams>).query ?? ""),
+		),
+		renderResult: (
+			(renderTerminal) => (result, options, theme, context) =>
+				renderTerminal(result, options, theme, {
+					...context,
+					isError: context.isError && options.expanded,
+				})
+		)(
+			makeRenderResult<SearchResultDetails>({
+				tool: "search",
+				target: (details) => `“${details.query}”`,
+				meta: (details) => {
+					if (details.outcome === "error") return "failed";
+					if (details.outcome === "cancelled") return "cancelled";
+					const count = details.resultCount ?? 0;
+					return `${count} ${count === 1 ? "result" : "results"} · ${details.searchType}`;
+				},
+				status: (details) =>
+					details.outcome === "error"
+						? "error"
+						: details.outcome === "fallback" || details.outcome === "cancelled"
+							? "warning"
+							: "success",
+			}),
+		),
 		parameters: Type.Object({
 			query: Type.String({ description: "Search query" }),
 			search_type: StringEnum(["web", "news"] as const, {
@@ -150,94 +342,7 @@ export default function registerSearch(pi: ExtensionAPI): void {
 		}),
 
 		async execute(_toolCallId, params, signal, onUpdate) {
-			const max = Math.min(params.max_results ?? 5, 10);
-			const searchType = params.search_type ?? "web";
-			let apiMsg = "";
-
-			try {
-				onUpdate?.({
-					content: [
-						{
-							type: "text",
-							text: `Searching (${searchType}): ${params.query}...`,
-						},
-					],
-					details: undefined,
-				});
-
-				const raw = await apiPost(
-					"/search",
-					{
-						model: "exa",
-						query: params.query,
-						search_type: searchType,
-						max_results: max,
-					},
-					signal,
-				);
-
-				return {
-					content: [
-						{
-							type: "text",
-							text: formatSearchResults(raw),
-						},
-					],
-					details: { source: "api" },
-				};
-			} catch (apiErr: unknown) {
-				apiMsg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-				onUpdate?.({
-					content: [
-						{
-							type: "text",
-							text: `API failed: ${apiMsg}\nFalling back to curl...`,
-						},
-					],
-					details: undefined,
-				});
-			}
-
-			try {
-				const body = JSON.stringify({
-					model: "exa",
-					query: params.query,
-					search_type: searchType,
-					max_results: max,
-				});
-				const raw = await curl([
-					"-X",
-					"POST",
-					"-H",
-					"Content-Type: application/json",
-					...(auth() ? ["-H", `Authorization: Bearer ${auth()}`] : []),
-					"-d",
-					body,
-					`${routerBaseUrl()}/search`,
-				]);
-
-				return {
-					content: [
-						{
-							type: "text",
-							text: `[FALLBACK — curl] API called via curl instead of fetch.\n\n${formatSearchResults(raw).slice(0, 19_500)}`,
-						},
-					],
-					details: { source: "curl-fallback" },
-				};
-			} catch (curlErr: unknown) {
-				const curlMsg = curlErr instanceof Error ? curlErr.message : String(curlErr);
-				return {
-					content: [
-						{
-							type: "text",
-							text: `Search failed (both API and curl).\nAPI: ${apiMsg}\nCurl: ${curlMsg}`,
-						},
-					],
-					details: { source: "failed" },
-					isError: true,
-				};
-			}
+			return executeSearch(params as SearchParams, signal, onUpdate);
 		},
 	});
 }
