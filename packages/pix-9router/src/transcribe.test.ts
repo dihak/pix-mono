@@ -4,7 +4,7 @@ import { chmod, readFile, rm } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
-import {
+import registerTranscribe, {
 	buildTranscriptionResult,
 	mimeType,
 	parseTranscriptionResponse,
@@ -205,10 +205,13 @@ describe("buildTranscriptionResult", () => {
 		expect(result.content).toHaveLength(1);
 		expect(result.content[0]?.type).toBe("text");
 		expect(result.content[0]?.text.length).toBe(50_000);
-		expect(result.details).toEqual({
-			source: "api",
+		expect(result.details).toMatchObject({
+			_type: "transcribeResult",
+			outcome: "success",
 			model: "dg/nova-3",
+			source: "api",
 			chars: 60_000,
+			truncated: true,
 		});
 	});
 
@@ -384,13 +387,126 @@ describe("writeTranscriptionFile — rejection propagation", () => {
 describe("buildTranscriptionResult — write failure path", () => {
 	it("returns isError + inline fallback when output_file is rejected", async () => {
 		const text = "the actual transcription that was successfully produced";
-		const result = await buildTranscriptionResult(text, "dg/nova-3", "api", "/etc/passwd");
+		const result = await buildTranscriptionResult(
+			text,
+			"dg/nova-3",
+			"api",
+			"/etc/passwd",
+			"meeting.mp3",
+		);
 		expect(result.isError).toBe(true);
-		expect(result.details.write_error).toMatch(/refusing to write/);
+		expect(result.details).toMatchObject({
+			_type: "transcribeResult",
+			outcome: "error",
+			file: "meeting.mp3",
+			write_error: expect.stringMatching(/refusing to write/),
+		});
 		expect(result.details.output_path).toBeUndefined();
-		// inline text is still included so the model doesn't lose the result
+		// both blocks, including the recovered transcript, remain available to the model
+		expect(result.content).toHaveLength(2);
 		const joined = result.content.map((c) => c.text).join("\n");
 		expect(joined).toContain(text);
 		expect(joined).toContain("/etc/passwd");
+	});
+});
+
+const theme = {
+	fg: (token: string, text: string) => `[${token}]${text}`,
+	bold: (text: string) => `*${text}*`,
+} as never;
+
+function captureTranscribeRenderer() {
+	let tool: Record<string, (...args: never[]) => unknown> | undefined;
+	registerTranscribe({
+		registerTool(value: Record<string, (...args: never[]) => unknown>) {
+			tool = value;
+		},
+	} as never);
+	if (!tool) throw new Error("transcribe tool was not registered");
+	return tool;
+}
+
+function renderTranscribe(
+	result: Record<string, unknown>,
+	expanded = false,
+	isError = false,
+): string {
+	let text = "";
+	const component = {
+		setText(value: string) {
+			text = value;
+		},
+		render: () => [],
+		invalidate: () => {},
+	};
+	const tool = captureTranscribeRenderer();
+	tool.renderResult?.(result as never, { expanded, isPartial: false } as never, theme, {
+		lastComponent: component,
+		isError,
+		state: { collapsed: true },
+		expanded,
+		invalidate: () => {},
+	} as never);
+	return text;
+}
+
+describe("transcribe compact renderer", () => {
+	it("summarizes inline and written transcripts", () => {
+		const inline = renderTranscribe({
+			content: [{ type: "text", text: "full transcript" }],
+			details: {
+				_type: "transcribeResult",
+				outcome: "success",
+				file: "/recordings/meeting.mp3",
+				model: "dg/nova-3",
+				source: "api",
+				chars: 12_400,
+				truncated: false,
+			},
+		});
+		expect(inline).toContain("✓");
+		expect(inline).toContain("meeting.mp3");
+		expect(inline).toContain("12.4K chars · dg/nova-3");
+
+		const written = renderTranscribe({
+			content: [{ type: "text", text: "Transcribed 12400 chars → /tmp/notes.md" }],
+			details: {
+				_type: "transcribeResult",
+				outcome: "success",
+				file: "/recordings/meeting.mp3",
+				model: "dg/nova-3",
+				source: "api",
+				chars: 12_400,
+				truncated: false,
+				output_path: "/tmp/notes.md",
+			},
+		});
+		expect(written).toContain("12.4K chars · wrote notes.md");
+	});
+
+	it("summarizes write failure and restores both exact blocks when expanded", () => {
+		const result = {
+			content: [
+				{ type: "text", text: "Writing failed: permission denied" },
+				{ type: "text", text: "recovered transcript" },
+			],
+			details: {
+				_type: "transcribeResult",
+				outcome: "error",
+				file: "/recordings/meeting.mp3",
+				model: "dg/nova-3",
+				source: "api",
+				chars: 20,
+				truncated: false,
+				write_error: "permission denied",
+			},
+		};
+		const compact = renderTranscribe(result, false, true);
+		expect(compact).toContain("✗");
+		expect(compact).toContain("write failed · transcript preserved inline");
+
+		const expanded = renderTranscribe(result, true, true);
+		expect(expanded).toContain("Writing failed: permission denied");
+		expect(expanded).toContain("recovered transcript");
 	});
 });

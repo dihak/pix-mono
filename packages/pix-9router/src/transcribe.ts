@@ -19,10 +19,32 @@ import { basename, dirname, extname, isAbsolute, resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { routerBaseUrl } from "./data.js";
+import { makeRenderCall, makeRenderResult } from "./render.js";
 
 const REQUEST_TIMEOUT_MS = 120_000; // audio transcription can take longer
 const CHAT_TRUNCATE_LIMIT = 50_000; // only when no output_file is provided
 const DEFAULT_MODEL = "dg/nova-3";
+
+type TranscribeOutcome = "running" | "success" | "cancelled" | "error";
+
+export interface TranscribeResultDetails {
+	_type: "transcribeResult";
+	outcome: TranscribeOutcome;
+	file: string;
+	model: string;
+	language?: string;
+	source?: "api" | "curl-fallback" | "failed";
+	chars?: number;
+	truncated?: boolean;
+	output_path?: string;
+	write_error?: string;
+}
+
+interface TranscribeResult {
+	content: { type: "text"; text: string }[];
+	details: TranscribeResultDetails;
+	isError?: boolean;
+}
 
 function auth(): string | undefined {
 	return process.env.ROUTER_API_KEY;
@@ -253,15 +275,18 @@ export async function buildTranscriptionResult(
 	model: string,
 	source: "api" | "curl-fallback",
 	outputFile: string | undefined,
-): Promise<{
-	content: { type: "text"; text: string }[];
-	details: Record<string, unknown>;
-	isError?: boolean;
-}> {
-	const details: Record<string, unknown> = {
-		source,
+	file = "audio",
+	language?: string,
+): Promise<TranscribeResult> {
+	const details: TranscribeResultDetails = {
+		_type: "transcribeResult",
+		outcome: "success",
+		file,
 		model,
+		...(language ? { language } : {}),
+		source,
 		chars: text.length,
+		truncated: !outputFile && text.length > CHAT_TRUNCATE_LIMIT,
 	};
 
 	if (outputFile) {
@@ -279,6 +304,8 @@ export async function buildTranscriptionResult(
 			};
 		} catch (writeErr) {
 			const msg = writeErr instanceof Error ? writeErr.message : String(writeErr);
+			details.outcome = "error";
+			details.truncated = text.length > CHAT_TRUNCATE_LIMIT;
 			details.write_error = msg;
 			return {
 				content: [
@@ -300,7 +327,34 @@ export async function buildTranscriptionResult(
 	};
 }
 
+function compactChars(chars: number | undefined): string {
+	const value = chars ?? 0;
+	if (value < 1_000) return String(value);
+	if (value < 1_000_000) return `${(value / 1_000).toFixed(1)}K`;
+	return `${(value / 1_000_000).toFixed(1)}M`;
+}
+
 export default function registerTranscribe(pi: ExtensionAPI): void {
+	const renderTerminal = makeRenderResult<TranscribeResultDetails>({
+		tool: "transcribe",
+		target: (details) => basename(details.file),
+		meta: (details) => {
+			if (details.write_error) return "write failed · transcript preserved inline";
+			if (details.outcome === "error") return "failed";
+			if (details.outcome === "cancelled") return "cancelled";
+			const chars = `${compactChars(details.chars)} chars`;
+			return details.output_path
+				? `${chars} · wrote ${basename(details.output_path)}`
+				: `${chars} · ${details.model}`;
+		},
+		status: (details) =>
+			details.outcome === "error"
+				? "error"
+				: details.outcome === "cancelled"
+					? "warning"
+					: "success",
+	});
+
 	pi.registerTool({
 		name: "transcribe",
 		label: "Transcribe",
@@ -308,6 +362,14 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 			"Convert speech to text. Transcribes an audio file using the 9Router audio transcription API (Deepgram Nova 3). Optionally writes the full text to a file on disk.",
 		promptSnippet:
 			"transcribe(file, output_file?, model?, language?) — Transcribe an audio file to text. Supports mp3, wav, flac, ogg, m4a, webm. Default model: dg/nova-3. If output_file is set, the full text is written to that path (parent dirs created) and only a short path summary is returned to the model.",
+		renderCall: makeRenderCall("transcribe", (args) => basename(String(args.file ?? ""))),
+		renderResult: (result, options, theme, context) =>
+			renderTerminal(result, options, theme, {
+				...context,
+				// Structured transcription failures have safe metadata for a compact
+				// terminal row; expansion still restores the exact returned blocks.
+				isError: context.isError && options.expanded,
+			}),
 		promptGuidelines: [
 			"Use transcribe when you need to convert speech/audio to text.",
 			"The file parameter should be an absolute or relative path to an audio file on disk.",
@@ -348,7 +410,14 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 			let apiMsg = "";
 
 			const run = async (source: "api" | "curl-fallback", raw: string) =>
-				buildTranscriptionResult(parseTranscriptionResponse(raw), model, source, outputFile);
+				buildTranscriptionResult(
+					parseTranscriptionResponse(raw),
+					model,
+					source,
+					outputFile,
+					filePath,
+					params.language,
+				);
 
 			try {
 				onUpdate?.({
@@ -358,7 +427,13 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 							text: `Transcribing: ${filePath} (model: ${model})...`,
 						},
 					],
-					details: undefined,
+					details: {
+						_type: "transcribeResult",
+						outcome: "running",
+						file: filePath,
+						model,
+						...(params.language ? { language: params.language } : {}),
+					},
 				});
 
 				const raw = await apiMultipart(
@@ -408,7 +483,14 @@ export default function registerTranscribe(pi: ExtensionAPI): void {
 							text: `Transcription failed (both API and curl).\nAPI: ${apiMsg}\nCurl: ${curlMsg}`,
 						},
 					],
-					details: { source: "failed" },
+					details: {
+						_type: "transcribeResult",
+						outcome: signal?.aborted ? "cancelled" : "error",
+						file: filePath,
+						model,
+						...(params.language ? { language: params.language } : {}),
+						source: "failed",
+					},
 					isError: true,
 				};
 			}
