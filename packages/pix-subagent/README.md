@@ -52,7 +52,7 @@ resume?          string    Agent ID to continue
 background?      boolean   Default true (non-blocking); false waits for an inline result
 ```
 
-**Background is the default.** Omit `background` (or set it to `true`) to return immediately and receive the result automatically on completion. Set `background: false` only when the parent must block until the result is available inline. The initial task prompt is shown in the tool card, then hidden after the shared `collapse.delaySec` threshold; set `collapse.tools.agent` to `false` to keep it visible.
+**Background is the default.** Omit `background` (or set it to `true`) to return immediately and receive the result automatically on completion. Set `background: false` only when the parent must block until the result is available inline. The initial task prompt is shown in the tool card, then hidden after the shared `collapse.delaySec` threshold; set `collapse.tools.agent` to `false` to keep it visible. Expanding an elapsed card restores the prompt without restarting the timer.
 
 ### Short delegation guidelines
 
@@ -91,6 +91,8 @@ verbose?   bool     true = full conversation; false (default) = latest text
 
 Calling this suppresses the completion notification (result already consumed).
 
+Terminal foreground rows and background notifications are one line by default, with identity, model, work statistics, duration, and outcome. Expanding restores the stored bounded preview or error detail. Utility results also use compact rows, for example `✓ agent_info types · 5 available`, `✓ agent_result abc123 · completed`, and `⚡ agent_result abc123 · still running`; expansion always shows the exact text returned by the tool.
+
 ### `agent_steer` — redirect running agent
 
 ```
@@ -98,7 +100,7 @@ agent_id   string   Running background agent ID
 message    string   Steering message to inject
 ```
 
-Delivered after the agent's current tool execution. If the session isn't ready yet, the message is queued and delivered on session start.
+Delivered after the agent's current tool execution. If the session isn't ready yet, the message is queued and delivered on session start. Steering and stopping outcomes use the same one-line result style, including `✓ agent_steer abc123 · delivered` and `■ agent_stop abc123 · partial output saved`; expansion restores the exact returned diagnostic.
 
 ## Default agent types
 

@@ -8,13 +8,13 @@ Replaces Pi's default `edit` tool with an enhanced version that renders a side-b
 
 ## Auto-collapse
 
-After a configurable delay (default 10 seconds) the diff card automatically collapses. Controlled via the `collapse` section of `~/.pi/agent/pix.json`:
+After a configurable delay (default 10 seconds), a completed diff collapses to a one-line status row. Structured failures use a compact `✗` row after the delay. Expanding restores the existing bounded diff or exact diagnostic without restarting the elapsed timer. This is controlled via the `collapse` section of `~/.pi/agent/pix.json`:
 
 ```jsonc
 {
   "collapse": {
     "enabled": true,
-    "delayMs": 10000,
+    "delaySec": 10,
     "tools": { "edit": true }
   }
 }

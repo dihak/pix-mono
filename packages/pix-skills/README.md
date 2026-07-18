@@ -183,7 +183,8 @@ lookups never run commands. Calls and results identify the operation as `list`,
 at most the first 100 characters, while the full content still reaches the agent.
 Copied-resource results show
 the destination and byte size. Tool results follow Pix's configured auto-collapse
-delay, including `read_skills`.
+delay, including `read_skills`; expanding an elapsed result restores its normal
+preview without clearing or restarting the collapse timer.
 
 ## Usage
 

@@ -17,7 +17,7 @@
     },
     "packages/pix-9router": {
       "name": "@xynogen/pix-9router",
-      "version": "0.3.4",
+      "version": "0.3.5",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.0",
         "@xynogen/pix-pretty": "^1.7.21",
@@ -43,10 +43,10 @@
     },
     "packages/pix-bash": {
       "name": "@xynogen/pix-bash",
-      "version": "0.1.12",
+      "version": "0.1.13",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.0",
-        "@xynogen/pix-pretty": "^1.7.9",
+        "@xynogen/pix-pretty": "^1.7.20",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -64,32 +64,32 @@
     },
     "packages/pix-core": {
       "name": "@xynogen/pix-core",
-      "version": "0.4.34",
+      "version": "0.4.35",
       "dependencies": {
         "@xynogen/pix-ask": "^0.2.7",
-        "@xynogen/pix-bash": "^0.1.11",
+        "@xynogen/pix-bash": "^0.1.13",
         "@xynogen/pix-commands": "^0.2.0",
-        "@xynogen/pix-data": "^0.3.2",
+        "@xynogen/pix-data": "^0.3.3",
         "@xynogen/pix-diagnostics": "^0.1.6",
-        "@xynogen/pix-display": "^0.1.8",
-        "@xynogen/pix-edit": "^0.1.13",
-        "@xynogen/pix-find": "^0.1.13",
+        "@xynogen/pix-display": "^0.1.9",
+        "@xynogen/pix-edit": "^0.1.15",
+        "@xynogen/pix-find": "^0.1.15",
         "@xynogen/pix-footer": "^0.1.16",
         "@xynogen/pix-gate": "^0.1.15",
-        "@xynogen/pix-grep": "^0.1.13",
-        "@xynogen/pix-ls": "^0.1.13",
+        "@xynogen/pix-grep": "^0.1.15",
+        "@xynogen/pix-ls": "^0.1.15",
         "@xynogen/pix-models": "^0.1.19",
         "@xynogen/pix-nudge": "^0.1.9",
         "@xynogen/pix-optimizer": "^1.1.16",
-        "@xynogen/pix-pretty": "^1.7.19",
+        "@xynogen/pix-pretty": "^1.7.21",
         "@xynogen/pix-prompts": "^0.3.1",
-        "@xynogen/pix-read": "^0.1.13",
-        "@xynogen/pix-skills": "^0.6.0",
-        "@xynogen/pix-subagent": "^0.5.4",
-        "@xynogen/pix-todo": "^0.1.13",
+        "@xynogen/pix-read": "^0.1.15",
+        "@xynogen/pix-skills": "^0.6.3",
+        "@xynogen/pix-subagent": "^0.5.5",
+        "@xynogen/pix-todo": "^0.1.15",
         "@xynogen/pix-update": "^0.1.13",
         "@xynogen/pix-welcome": "^0.1.14",
-        "@xynogen/pix-write": "^0.1.12",
+        "@xynogen/pix-write": "^0.1.14",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -98,7 +98,7 @@
     },
     "packages/pix-data": {
       "name": "@xynogen/pix-data",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
       },
@@ -124,10 +124,10 @@
     },
     "packages/pix-edit": {
       "name": "@xynogen/pix-edit",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.0",
-        "@xynogen/pix-pretty": "^1.7.9",
+        "@xynogen/pix-pretty": "^1.7.20",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -136,10 +136,10 @@
     },
     "packages/pix-find": {
       "name": "@xynogen/pix-find",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.0",
-        "@xynogen/pix-pretty": "^1.7.9",
+        "@xynogen/pix-pretty": "^1.7.20",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -171,10 +171,10 @@
     },
     "packages/pix-grep": {
       "name": "@xynogen/pix-grep",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.0",
-        "@xynogen/pix-pretty": "^1.7.9",
+        "@xynogen/pix-pretty": "^1.7.20",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -182,10 +182,10 @@
     },
     "packages/pix-ls": {
       "name": "@xynogen/pix-ls",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.0",
-        "@xynogen/pix-pretty": "^1.7.9",
+        "@xynogen/pix-pretty": "^1.7.20",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -246,10 +246,10 @@
     },
     "packages/pix-read": {
       "name": "@xynogen/pix-read",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.0",
-        "@xynogen/pix-pretty": "^1.7.9",
+        "@xynogen/pix-pretty": "^1.7.20",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -258,11 +258,11 @@
     },
     "packages/pix-skills": {
       "name": "@xynogen/pix-skills",
-      "version": "0.6.2",
+      "version": "0.6.3",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.2",
         "@xynogen/pix-gate": "^0.1.13",
-        "@xynogen/pix-pretty": "^1.7.19",
+        "@xynogen/pix-pretty": "^1.7.20",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
@@ -271,7 +271,7 @@
     },
     "packages/pix-subagent": {
       "name": "@xynogen/pix-subagent",
-      "version": "0.5.4",
+      "version": "0.5.5",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.0",
         "@xynogen/pix-pretty": "^1.7.13",
@@ -285,7 +285,7 @@
     },
     "packages/pix-sudo": {
       "name": "@xynogen/pix-sudo",
-      "version": "0.3.6",
+      "version": "0.3.7",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.2",
         "@xynogen/pix-pretty": "^1.7.18",
@@ -302,7 +302,7 @@
     },
     "packages/pix-todo": {
       "name": "@xynogen/pix-todo",
-      "version": "0.1.14",
+      "version": "0.1.15",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.2",
         "@xynogen/pix-pretty": "^1.7.20",
@@ -348,10 +348,10 @@
     },
     "packages/pix-write": {
       "name": "@xynogen/pix-write",
-      "version": "0.1.13",
+      "version": "0.1.14",
       "dependencies": {
         "@xynogen/pix-data": "^0.3.0",
-        "@xynogen/pix-pretty": "^1.7.9",
+        "@xynogen/pix-pretty": "^1.7.20",
       },
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",

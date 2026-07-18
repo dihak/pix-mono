@@ -25,13 +25,13 @@ The listing layout is configurable via `pretty.lsStyle` in `~/.pi/agent/pix.json
 
 ## Auto-collapse
 
-After a configurable delay (default 10 seconds) the output card automatically collapses. Controlled via the `collapse` section of `~/.pi/agent/pix.json`:
+After a configurable delay (default 10 seconds), completed output collapses to a row such as `✓ ls packages · 29 entries`. Structured failures use a compact `✗` row after the delay. Expanding restores the configured listing or exact diagnostic without restarting the elapsed timer. This is controlled via the `collapse` section of `~/.pi/agent/pix.json`:
 
 ```jsonc
 {
   "collapse": {
     "enabled": true,
-    "delayMs": 10000,
+    "delaySec": 10,
     "tools": { "ls": true }
   }
 }

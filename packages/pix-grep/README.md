@@ -8,13 +8,13 @@ Replaces Pi's default `grep` tool with an enhanced version backed by `pix-pretty
 
 ## Auto-collapse
 
-After a configurable delay (default 10 seconds) the output card automatically collapses. Controlled via the `collapse` section of `~/.pi/agent/pix.json`:
+After a configurable delay (default 10 seconds), completed output collapses to a row such as `✓ grep tickCollapse · 12 matches`. Structured failures use a compact `✗` row after the delay. Expanding restores the existing bounded match preview or exact diagnostic without restarting the elapsed timer. This is controlled via the `collapse` section of `~/.pi/agent/pix.json`:
 
 ```jsonc
 {
   "collapse": {
     "enabled": true,
-    "delayMs": 10000,
+    "delaySec": 10,
     "tools": { "grep": true }
   }
 }

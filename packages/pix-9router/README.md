@@ -37,6 +37,10 @@ export ROUTER_API_KEY="your-key-here"
 - **fetch / search**: POST to `/web/fetch` and `/search` on the router (which proxies to exa). If the router is unreachable, falls back to `curl` (for `fetch`, raw URL fetch; for `search`, the same `/search` endpoint via curl). Tool output is rendered dimmed so fetched web content reads like faded context rather than primary output.
 - **transcribe**: POST to `/audio/transcriptions` (Deepgram Nova 3 by default). Accepts any audio file path; falls back to curl.
 
+## Compact results
+
+Terminal tool results collapse after the shared Pix delay into metadata-driven rows while preserving all model-visible content. Examples include `✓ fetch https://example.com · 12.4K chars · markdown`, `⚡ search “query” · 8 results · curl fallback`, and `✓ transcribe meeting.mp3 · 12.4K chars · dg/nova-3`. Failures use `✗`; cancelled or fallback outcomes use `⚡`. Running and partial updates remain live, and expanding an elapsed row restores the normal dimmed content preview without restarting its timer. Configure the behavior with `collapse.delaySec` and the `fetch`, `search`, or `transcribe` entries under `collapse.tools` in `~/.pi/agent/pix.json`.
+
 ## Full distro
 
 Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)

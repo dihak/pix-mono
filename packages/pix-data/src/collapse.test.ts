@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { type CollapseState, tickCollapse } from "./collapse.ts";
 import { reloadPixConfig } from "./pix-config.ts";
-import { tickCollapse, type CollapseState } from "./collapse.ts";
 
 describe("tickCollapse", () => {
 	const originalHome = process.env.HOME;

@@ -8,13 +8,13 @@ Replaces Pi's default `bash` tool with an enhanced version backed by `pix-pretty
 
 ## Auto-collapse
 
-After a configurable delay (default 10 seconds) the output card automatically collapses to the summary line, keeping the session view compact. The delay and the per-tool toggle are controlled via the `collapse` section of `~/.pi/agent/pix.json`:
+After a configurable delay (default 10 seconds), completed output collapses to one line, for example `✓ bash bun test · exit 0 · 42 lines`. Structured failures remain readable until the same delay, then use a compact `✗` row. Expanding either row restores the normal output or exact diagnostic without restarting the elapsed timer. The delay and per-tool toggle are controlled via the `collapse` section of `~/.pi/agent/pix.json`:
 
 ```jsonc
 {
   "collapse": {
     "enabled": true,
-    "delayMs": 10000,
+    "delaySec": 10,
     "tools": { "bash": true }
   }
 }

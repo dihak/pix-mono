@@ -8,13 +8,13 @@ Registers the `todo` tool, which gives the agent a persistent task checklist tha
 
 ## Auto-collapse
 
-The checklist card uses the shared `@xynogen/pix-data/collapse` state machine and auto-collapses after a configurable delay (default 10 seconds). Expanding an elapsed card restores the colored checklist without restarting its timer. The delay and per-tool toggle are read from `~/.pi/agent/pix.json`:
+The checklist card uses the shared `@xynogen/pix-data/collapse` state machine and auto-collapses after a configurable delay (default 10 seconds) to a row such as `✓ todo #2 release prep · 1/2 done`. Expanding an elapsed card restores the immutable checklist snapshot for that result, with its colored status glyphs, without restarting the timer. Failed actions keep their exact diagnostic instead of rendering a checklist. The delay and per-tool toggle are read from `~/.pi/agent/pix.json`:
 
 ```jsonc
 {
   "collapse": {
     "enabled": true,
-    "delayMs": 10000,
+    "delaySec": 10,
     "tools": { "todo": true }
   }
 }

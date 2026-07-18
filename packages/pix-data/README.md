@@ -123,7 +123,7 @@ place if your priorities differ.
 | `reloadPixConfig` | Force a fresh read of `pix.json` from disk |
 | `shouldCollapse` | `@xynogen/pix-data/collapse` — whether a tool's output card should auto-collapse |
 | `collapseDelayMs` | Configured delay (ms) before a card collapses (default 10 000) |
-| `tickCollapse` | Call in `renderResult` to schedule the timed auto-collapse for a card |
+| `tickCollapse` | Schedule auto-collapse and report whether the current render should use its compact row |
 
 ## Unified config — `~/.pi/agent/pix.json`
 
@@ -138,17 +138,21 @@ pix-data hosts the **single shared config file** consumed by every `pix-*` packa
   // Auto-collapse for tool output cards (pix-bash, pix-read, pix-grep, …)
   "collapse": {
     "enabled": true,          // master switch
-    "delayMs": 10000,         // ms before collapse fires (default 10s)
+    "delaySec": 10,            // seconds before collapse fires (default 10)
     "tools": {
       // per-tool overrides — set false to disable for a specific tool
-      "bash":  true,
-      "read":  true,
-      "grep":  true,
-      "edit":  true,
-      "write": true,
-      "find":  true,
-      "ls":    true,
-      "todo":  true
+      "bash":   true,
+      "read":   true,
+      "grep":   true,
+      "edit":   true,
+      "write":  true,
+      "find":   true,
+      "ls":     true,
+      "todo":   true,
+      "agent":  true,
+      "fetch":  true,
+      "search": true,
+      "sudo":   true
     }
   },
 
@@ -194,15 +198,21 @@ await reloadPixConfig();          // force re-read from disk (e.g. after /config
 ```ts
 import { shouldCollapse, collapseDelayMs, tickCollapse } from "@xynogen/pix-data/collapse";
 
-// In a tool's renderResult:
-if (shouldCollapse("bash")) {
-  tickCollapse(card, collapseDelayMs());  // schedules timed collapse
+// In a terminal tool result renderer:
+const collapsed = tickCollapse(
+  "bash",
+  renderContext.state,
+  renderContext.invalidate,
+  renderContext.expanded,
+);
+if (collapsed) {
+  // Return the tool's one-line compact status row.
 }
 ```
 
 - `shouldCollapse(tool)` — returns `true` when `collapse.enabled` is true and the named tool is not opted out.
-- `collapseDelayMs()` — returns `collapse.delayMs` from config (default `10000`).
-- `tickCollapse(card, delayMs)` — sets a timeout that calls `card.collapse()` after the delay. Safe to call multiple times — only the first registered timeout fires.
+- `collapseDelayMs()` — converts `collapse.delaySec` to milliseconds (default `10000`).
+- `tickCollapse(tool, state, invalidate, expanded?)` — installs at most one timer in the per-card state and returns `true` when the elapsed card should render its compact row. Passing `expanded: true` restores the normal detailed renderer without clearing or restarting the elapsed timer; leaving expanded mode therefore returns immediately to the compact row. Running and partial results should not call this helper.
 
 ## Install
 
