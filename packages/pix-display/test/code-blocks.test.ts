@@ -29,13 +29,13 @@ describe("renderCodeFences", () => {
 		const rendered = renderCodeFences(lines, 72, theme);
 		const text = rendered.map(plain);
 
-		expect(text[0]).toContain("╭─ bash ");
+		expect(text[0]).toStartWith("── bash ");
 		expect(text[1]).toBe("curl -sfL https://get.k3s.io | \\");
 		expect(text[2]).toBe("  K3S_URL=https://192.168.1.20:6443 \\");
 		expect(text[3]).toBe('  K3S_TOKEN="PASTE_TOKEN_HERE" \\');
 		expect(text[4]).toBe("  sh -");
 		expect(text.slice(1, 5).every((line) => !line.includes("│"))).toBe(true);
-		expect(text[5]).toContain("╰─");
+		expect(text[5]).toBe("─".repeat(72));
 		expect(visibleWidth(rendered[0] ?? "")).toBe(72);
 		expect(visibleWidth(rendered[5] ?? "")).toBe(72);
 	});
@@ -55,13 +55,13 @@ describe("renderCodeFences", () => {
 		"custom-language",
 	])("supports and labels the %s fence", (language) => {
 		const rendered = renderCodeFences([`\`\`\`${language}`, "  example  ", "```"], 40, theme);
-		expect(plain(rendered[0] ?? "")).toContain(`╭─ ${language} `);
+		expect(plain(rendered[0] ?? "")).toContain(`── ${language} `);
 		expect(plain(rendered[1] ?? "")).toBe("example");
 	});
 
 	it("uses a generic label for an untagged fence", () => {
 		const rendered = renderCodeFences(["```", "  plain text", "```"], 40, theme);
-		expect(plain(rendered[0] ?? "")).toContain("╭─ code ");
+		expect(plain(rendered[0] ?? "")).toContain("── code ");
 	});
 
 	it("uses the language token from a fence with metadata", () => {
@@ -70,7 +70,7 @@ describe("renderCodeFences", () => {
 			48,
 			theme,
 		);
-		expect(plain(rendered[0] ?? "")).toContain("╭─ python ");
+		expect(plain(rendered[0] ?? "")).toContain("── python ");
 	});
 
 	it("leaves an incomplete fence to the native Markdown renderer", () => {
@@ -85,8 +85,8 @@ describe("renderCodeFences", () => {
 			theme,
 		).map(plain);
 
-		expect(rendered.some((line) => line.includes("╭─ python "))).toBe(true);
-		expect(rendered.some((line) => line.includes("╭─ json "))).toBe(true);
+		expect(rendered.some((line) => line.includes("── python "))).toBe(true);
+		expect(rendered.some((line) => line.includes("── json "))).toBe(true);
 	});
 
 	it("keeps multiline shell commands copyable without border glyphs", () => {

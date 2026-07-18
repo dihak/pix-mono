@@ -66,19 +66,19 @@ function fenceLabel(line: string): string | undefined {
 	return info.split(/\s+/, 1)[0] || DEFAULT_LABEL;
 }
 
-function topBorder(width: number, language: string, theme: CodeFrameTheme): string {
-	const available = Math.max(1, width - 6);
+function topRule(width: number, language: string, theme: CodeFrameTheme): string {
+	const available = Math.max(1, width - 4);
 	const displayLanguage = truncateToWidth(language, available, "…");
 	const label = theme.bold(theme.fg("accent", ` ${displayLanguage} `));
-	const ruleWidth = Math.max(0, width - visibleWidth(label) - 3);
+	const ruleWidth = Math.max(0, width - visibleWidth(label) - 2);
 	return paintFrame(
 		theme,
-		`${theme.fg("borderMuted", "╭─")}${label}${theme.fg("borderMuted", `${"─".repeat(ruleWidth)}╮`)}`,
+		`${theme.fg("borderMuted", "──")}${label}${theme.fg("borderMuted", "─".repeat(ruleWidth))}`,
 	);
 }
 
-function bottomBorder(width: number, theme: CodeFrameTheme): string {
-	return paintFrame(theme, theme.fg("borderMuted", `╰${"─".repeat(Math.max(0, width - 2))}╯`));
+function bottomRule(width: number, theme: CodeFrameTheme): string {
+	return paintFrame(theme, theme.fg("borderMuted", "─".repeat(width)));
 }
 
 function bodyLine(
@@ -111,27 +111,22 @@ export function renderCodeFences(lines: string[], width: number, theme: CodeFram
 		}
 		if (end >= out.length) continue;
 
-		const pad = Math.min(leadingSpaces(out[start] ?? ""), Math.floor((width - 12) / 2));
-		const frameWidth = Math.max(12, width - pad * 2);
+		const frameWidth = width;
 		const body = out.slice(start + 1, end);
 		const bodyIndents = body
 			.map((line) => plainText(line))
 			.filter((line) => line.trim().length > 0)
 			.map((line) => leadingSpaces(line));
 		const bodyIndent = bodyIndents.length > 0 ? Math.min(...bodyIndents) : 0;
-		const left = " ".repeat(pad);
-		const right = " ".repeat(Math.max(0, width - pad - frameWidth));
 		const framed: string[] = [];
 
-		framed.push(
-			`${oscSequences(out[start] ?? "")}${left}${topBorder(frameWidth, language, theme)}${right}`,
-		);
+		framed.push(`${oscSequences(out[start] ?? "")}${topRule(frameWidth, language, theme)}`);
 		for (let index = start + 1; index < end; index++) {
 			framed.push(
 				`${oscSequences(out[index] ?? "")}${bodyLine(out[index] ?? "", width, bodyIndent, theme)}`,
 			);
 		}
-		framed.push(`${oscSequences(out[end] ?? "")}${left}${bottomBorder(frameWidth, theme)}${right}`);
+		framed.push(`${oscSequences(out[end] ?? "")}${bottomRule(frameWidth, theme)}`);
 
 		out.splice(start, end - start + 1, ...framed);
 		start += framed.length - 1;
