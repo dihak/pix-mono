@@ -21,20 +21,21 @@ export interface CollapseState {
  * @param toolName — the tool name (e.g. "bash", "read") for per-tool config
  * @param state    — the render context's `state` bag (mutable, per-card)
  * @param invalidate — `context.invalidate()` to trigger re-render
- * @returns `true` if the card is currently collapsed
+ * @param expanded — whether the host currently requests the detailed view
+ * @returns `true` if the card is currently collapsed and not expanded
  */
 export function tickCollapse(
 	toolName: string,
 	state: CollapseState,
 	invalidate: () => void,
+	expanded = false,
 ): boolean {
 	if (!shouldCollapse(toolName)) return false;
-	if (state.collapsed) return true;
-	if (!state.timer) {
+	if (!state.timer && !state.collapsed) {
 		state.timer = setTimeout(() => {
 			state.collapsed = true;
 			invalidate();
 		}, collapseDelayMs());
 	}
-	return false;
+	return state.collapsed === true && !expanded;
 }
