@@ -208,11 +208,19 @@ type CustomCb<T> = (
 	handleInput: (d: string) => void;
 };
 
+type SudoToolResult = {
+	content: Array<{ type: string; text: string }>;
+	details: Record<string, unknown>;
+	isError?: boolean;
+};
+
+type UpdateFn = (result: SudoToolResult) => void;
+
 type ExecuteFn = (
 	id: string,
 	params: { command: string; reason?: string },
 	signal: AbortSignal | undefined,
-	onUpdate: undefined,
+	onUpdate: UpdateFn | undefined,
 	ctx: {
 		hasUI: boolean;
 		ui: {
@@ -221,26 +229,61 @@ type ExecuteFn = (
 			theme: typeof stubTheme;
 		};
 	},
-) => Promise<{
-	content: Array<{ type: string; text: string }>;
-	details: Record<string, unknown>;
-	isError?: boolean;
-}>;
+) => Promise<SudoToolResult>;
+
+type RenderComponent = {
+	render: (width: number) => string[];
+};
+
+type SudoToolDefinition = {
+	name: string;
+	execute: ExecuteFn;
+	renderCall?: (...args: unknown[]) => RenderComponent;
+	renderResult?: (...args: unknown[]) => RenderComponent;
+};
 
 function makeHost() {
-	let capturedExecute: ExecuteFn | null = null;
+	let captured: SudoToolDefinition | null = null;
 	const pi = {
-		registerTool(def: { name: string; execute: ExecuteFn }) {
-			capturedExecute = def.execute;
+		registerTool(def: SudoToolDefinition) {
+			captured = def;
 		},
 	} as never;
 	registerSudo(pi);
 	return {
 		get execute(): ExecuteFn {
-			if (!capturedExecute) throw new Error("tool not registered");
-			return capturedExecute;
+			if (!captured) throw new Error("tool not registered");
+			return captured.execute;
+		},
+		get renderCall() {
+			if (!captured?.renderCall) throw new Error("renderCall not registered");
+			return captured.renderCall;
+		},
+		get renderResult() {
+			if (!captured?.renderResult) throw new Error("renderResult not registered");
+			return captured.renderResult;
 		},
 	};
+}
+
+function rendered(component: RenderComponent): string {
+	return component.render(120).join("\n");
+}
+
+function renderResult(
+	host: ReturnType<typeof makeHost>,
+	result: SudoToolResult,
+	expanded: boolean,
+	state: Record<string, unknown> = { collapsed: true },
+): string {
+	return rendered(
+		host.renderResult(result, { expanded, isPartial: false }, stubTheme, {
+			expanded,
+			isError: result.isError === true,
+			invalidate: () => {},
+			state,
+		}),
+	);
 }
 
 /**
@@ -520,6 +563,157 @@ describe("sudo_run tool execute()", () => {
 		} finally {
 			ticketMock = false;
 		}
+	});
+
+	test("returns structured outcomes and compact terminal rows", async () => {
+		validationMock = async () => ({ stdout: "", stderr: "", code: 0 });
+
+		const successHost = makeHost();
+		sudoMock = async () => ({
+			stdout: Array.from({ length: 18 }, (_, i) => `installed ${i + 1}`).join("\n"),
+			stderr: "",
+			code: 0,
+		});
+		const success = await successHost.execute(
+			"id",
+			{ command: "apt install ripgrep", reason: "Install ripgrep" },
+			undefined,
+			undefined,
+			makeCtx({ overlayResult: { action: "approved", password: "secret-value" } }),
+		);
+		expect(success.details).toMatchObject({
+			_type: "sudoResult",
+			command: "apt install ripgrep",
+			reason: "Install ripgrep",
+			outcome: "success",
+			exitCode: 0,
+			lineCount: 18,
+			truncated: false,
+		});
+		expect(renderResult(successHost, success, false)).toContain(
+			"✓ sudo apt install ripgrep · exit 0 · 18 lines",
+		);
+
+		const deniedHost = makeHost();
+		const denied = await deniedHost.execute(
+			"id",
+			{ command: "systemctl restart foo" },
+			undefined,
+			undefined,
+			makeCtx({ overlayResult: { action: "denied" } }),
+		);
+		expect(denied.details).toMatchObject({ outcome: "denied", cancellationKind: "denied" });
+		expect(renderResult(deniedHost, denied, false)).toContain(
+			"⚡ sudo systemctl restart foo · denied",
+		);
+
+		const timeoutHost = makeHost();
+		const timedOut = await timeoutHost.execute(
+			"id",
+			{ command: "apt update" },
+			undefined,
+			undefined,
+			makeCtx({ overlayResult: { action: "timeout" } }),
+		);
+		expect(timedOut.details).toMatchObject({ outcome: "timed-out", cancellationKind: "timeout" });
+		expect(renderResult(timeoutHost, timedOut, false)).toContain("⚡ sudo apt update · timed out");
+
+		const failedHost = makeHost();
+		sudoMock = async () => ({
+			stdout: "",
+			stderr: Array.from({ length: 12 }, (_, i) => `error ${i + 1}`).join("\n"),
+			code: 1,
+		});
+		const failed = await failedHost.execute(
+			"id",
+			{ command: "apt update" },
+			undefined,
+			undefined,
+			makeCtx({ overlayResult: { action: "approved", password: "secret-value" } }),
+		);
+		expect(failed.details).toMatchObject({
+			outcome: "error",
+			exitCode: 1,
+			lineCount: 12,
+			errorKind: "exit-code",
+		});
+		expect(renderResult(failedHost, failed, false)).toContain(
+			"✗ sudo apt update · exit 1 · 12 lines",
+		);
+	});
+
+	test("sanitizes multiline commands in compact rows", async () => {
+		validationMock = async () => ({ stdout: "", stderr: "", code: 0 });
+		sudoMock = async () => ({ stdout: "done", stderr: "", code: 0 });
+		const host = makeHost();
+		const result = await host.execute(
+			"id",
+			{ command: "apt update\nprintf injected" },
+			undefined,
+			undefined,
+			makeCtx({ overlayResult: { action: "approved", password: "secret-value" } }),
+		);
+		const compact = renderResult(host, result, false);
+		expect(compact).toContain("sudo apt update printf injected");
+		expect(compact.split("\n")).toHaveLength(1);
+	});
+
+	test("expanded results restore exact output and call rows", async () => {
+		validationMock = async () => ({ stdout: "", stderr: "", code: 0 });
+		sudoMock = async () => ({ stdout: "original stdout", stderr: "original stderr", code: 0 });
+		const host = makeHost();
+		const result = await host.execute(
+			"id",
+			{ command: "printf output", reason: "Verify output rendering" },
+			undefined,
+			undefined,
+			makeCtx({ overlayResult: { action: "approved", password: "do-not-render-me" } }),
+		);
+
+		const state = { collapsed: true };
+		const collapsedCall = rendered(
+			host.renderCall({ command: "printf output", reason: "Verify output rendering" }, stubTheme, {
+				expanded: false,
+				state,
+				invalidate: () => {},
+			}),
+		);
+		const expandedCall = rendered(
+			host.renderCall({ command: "printf output", reason: "Verify output rendering" }, stubTheme, {
+				expanded: true,
+				state,
+				invalidate: () => {},
+			}),
+		);
+
+		expect(collapsedCall).toBe("");
+		expect(expandedCall).toContain("sudo printf output");
+		const expandedResult = renderResult(host, result, true, state);
+		expect(expandedResult).toContain("original stdout");
+		expect(expandedResult).toContain("original stderr");
+		expect(JSON.stringify(result.details)).not.toContain("do-not-render-me");
+		expect(expandedCall).not.toContain("do-not-render-me");
+		expect(expandedResult).not.toContain("do-not-render-me");
+	});
+
+	test("publishes only awaiting-approval and running updates before completion", async () => {
+		validationMock = async () => ({ stdout: "", stderr: "", code: 0 });
+		sudoMock = async () => ({ stdout: "done", stderr: "", code: 0 });
+		const updates: SudoToolResult[] = [];
+		const host = makeHost();
+		await host.execute(
+			"id",
+			{ command: "apt update", reason: "Refresh package indexes" },
+			undefined,
+			(update) => updates.push(update),
+			makeCtx({ overlayResult: { action: "approved", password: "secret-value" } }),
+		);
+
+		expect(updates.map((update) => update.details.outcome)).toEqual([
+			"awaiting-approval",
+			"running",
+		]);
+		expect(JSON.stringify(updates)).not.toContain("secret-value");
 	});
 
 	test("overlay renders the command", async () => {

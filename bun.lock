@@ -287,7 +287,8 @@
       "name": "@xynogen/pix-sudo",
       "version": "0.3.6",
       "dependencies": {
-        "@xynogen/pix-pretty": "^1.7.9",
+        "@xynogen/pix-data": "^0.3.2",
+        "@xynogen/pix-pretty": "^1.7.18",
         "typebox": "^1.1.38",
       },
       "peerDependencies": {

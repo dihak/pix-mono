@@ -35,6 +35,7 @@
 	},
 	"dependencies": {
 		"typebox": "^1.1.38",
+		"@xynogen/pix-data": "^0.3.2",
 		"@xynogen/pix-pretty": "^1.7.18"
 	},
 	"peerDependencies": {

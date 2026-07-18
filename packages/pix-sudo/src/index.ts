@@ -21,8 +21,9 @@
  *   - Output truncated to 50 KB / 2000 lines.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { AgentToolUpdateCallback, ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
+import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
 import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
 import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
 import { showOverlay } from "@xynogen/pix-pretty/gate-overlay";
@@ -31,7 +32,9 @@ import type { RenderContextLike, ThemeLike, ToolResultLike } from "@xynogen/pix-
 import {
 	fillToolBackground,
 	getTextContent,
+	hideCollapsedToolCall,
 	normalizeLineEndings,
+	renderCollapsedToolRow,
 	renderToolError,
 	rule,
 	termW,
@@ -51,6 +54,94 @@ import {
 // first keypress cancels it, so it only fires when the user is truly away.
 const ROOT_PROMPT_TIMEOUT_MS = 60_000;
 const MAX_PASSWORD_ATTEMPTS = 3;
+
+type SudoOutcome =
+	| "awaiting-approval"
+	| "running"
+	| "success"
+	| "denied"
+	| "timed-out"
+	| "cancelled"
+	| "error";
+
+type SudoCancellationKind = "denied" | "timeout" | "missing-password" | "aborted";
+type SudoErrorKind = "no-ui" | "authentication" | "execution" | "no-result" | "exit-code";
+
+export interface SudoResultDetails {
+	_type: "sudoResult";
+	command: string;
+	reason?: string;
+	outcome: SudoOutcome;
+	exitCode?: number;
+	lineCount?: number;
+	truncated?: boolean;
+	cancellationKind?: SudoCancellationKind;
+	errorKind?: SudoErrorKind;
+	_render?: string;
+}
+
+function safeOneLine(value: string): string {
+	return value
+		.replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function makeDetails(
+	command: string,
+	reason: string | undefined,
+	fields: Omit<SudoResultDetails, "_type" | "command" | "reason">,
+): SudoResultDetails {
+	return {
+		_type: "sudoResult",
+		command,
+		...(reason?.trim() ? { reason: reason.trim() } : {}),
+		...fields,
+	};
+}
+
+function outputLineCount(output: string): number {
+	const normalized = normalizeLineEndings(output).replace(/^\n+|\n+$/g, "");
+	return normalized ? normalized.split("\n").length : 0;
+}
+
+function updatePresentation(
+	onUpdate: AgentToolUpdateCallback<SudoResultDetails> | undefined,
+	command: string,
+	reason: string | undefined,
+	outcome: "awaiting-approval" | "running",
+): void {
+	onUpdate?.({
+		content: [
+			{
+				type: "text",
+				text: outcome === "awaiting-approval" ? "Awaiting root approval…" : "Running as root…",
+			},
+		],
+		details: makeDetails(command, reason, { outcome }),
+	});
+}
+
+function terminalMeta(details: SudoResultDetails): string {
+	if (details.outcome === "denied") return "denied";
+	if (details.outcome === "timed-out") return "timed out";
+	if (details.outcome === "cancelled") return "cancelled";
+	if (details.errorKind === "no-ui") return "interactive session required";
+	if (details.errorKind === "authentication") return "authentication failed";
+	if (details.errorKind === "execution" || details.errorKind === "no-result") return "failed";
+
+	const meta: string[] = [];
+	if (typeof details.exitCode === "number") meta.push(`exit ${details.exitCode}`);
+	if (typeof details.lineCount === "number" && details.lineCount > 0) {
+		meta.push(`${details.lineCount} ${details.lineCount === 1 ? "line" : "lines"}`);
+	}
+	if (details.truncated) meta.push("truncated");
+	return meta.join(" · ");
+}
+
+function isTerminal(details: SudoResultDetails): boolean {
+	return details.outcome !== "awaiting-approval" && details.outcome !== "running";
+}
 
 // ── Extension entry point ─────────────────────────────────────────────────────
 
@@ -88,7 +179,7 @@ export default function (pi: ExtensionAPI): void {
 			),
 		}),
 
-		async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+		async execute(_toolCallId, params, signal, onUpdate, ctx) {
 			const { command, reason } = params;
 
 			// ── No UI: block immediately ───────────────────────────────────────
@@ -100,10 +191,15 @@ export default function (pi: ExtensionAPI): void {
 							text: "sudo_run requires an interactive session (no UI available).",
 						},
 					],
-					details: { code: -1, stdout: "", stderr: "" },
+					details: makeDetails(command, reason, {
+						outcome: "error",
+						errorKind: "no-ui",
+					}),
 					isError: true,
 				};
 			}
+
+			updatePresentation(onUpdate, command, reason, "awaiting-approval");
 
 			// A valid PAM ticket lets us skip the password stage (confirm only).
 			const cached = await hasValidTicket();
@@ -168,24 +264,45 @@ export default function (pi: ExtensionAPI): void {
 			// Cached ticket needs no password; otherwise a blank password is a cancel.
 			const missingPassword = !cached && !overlayResult.password?.trim();
 			if (overlayResult.action !== "approved" || missingPassword) {
-				const msg =
+				const cancellationKind: SudoCancellationKind =
 					overlayResult.action === "timeout"
-						? "Timed out — auto-denied."
+						? "timeout"
 						: overlayResult.action === "denied"
+							? "denied"
+							: "missing-password";
+				const outcome: SudoOutcome =
+					cancellationKind === "timeout"
+						? "timed-out"
+						: cancellationKind === "denied"
+							? "denied"
+							: "cancelled";
+				const msg =
+					outcome === "timed-out"
+						? "Timed out — auto-denied."
+						: outcome === "denied"
 							? "Denied by user."
 							: "Cancelled — no password entered.";
 				ctx.ui.notify(`🔐 ${msg}`, "warning");
 				return {
 					content: [{ type: "text", text: `Cancelled — ${msg}` }],
-					details: { code: -1, stdout: "", stderr: "" },
+					details: makeDetails(command, reason, { outcome, cancellationKind }),
 				};
 			}
 
 			if (executionError) {
 				const msg =
 					executionError instanceof Error ? executionError.message : String(executionError);
-				throw new Error(`sudo_run failed: ${msg}`);
+				return {
+					content: [{ type: "text", text: `sudo_run failed: ${msg}` }],
+					details: makeDetails(command, reason, {
+						outcome: "error",
+						errorKind: "authentication",
+					}),
+					isError: true,
+				};
 			}
+
+			updatePresentation(onUpdate, command, reason, "running");
 
 			// Password validation refreshes sudo's PAM ticket with `sudo -v`; the
 			// requested command always runs afterward, outside the checking overlay.
@@ -193,10 +310,29 @@ export default function (pi: ExtensionAPI): void {
 				result = await runWithSudo(command, "", signal);
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
-				throw new Error(`sudo_run failed: ${msg}`);
+				return {
+					content: [{ type: "text", text: `sudo_run failed: ${msg}` }],
+					details: makeDetails(
+						command,
+						reason,
+						signal?.aborted
+							? { outcome: "cancelled", cancellationKind: "aborted" }
+							: { outcome: "error", errorKind: "execution" },
+					),
+					isError: signal?.aborted !== true,
+				};
 			}
 
-			if (!result) throw new Error("sudo_run failed: command produced no result");
+			if (!result) {
+				return {
+					content: [{ type: "text", text: "sudo_run failed: command produced no result" }],
+					details: makeDetails(command, reason, {
+						outcome: "error",
+						errorKind: "no-result",
+					}),
+					isError: true,
+				};
+			}
 
 			if (
 				overlayResult.passwordAttemptsExhausted ||
@@ -213,7 +349,14 @@ export default function (pi: ExtensionAPI): void {
 							text: `sudo authentication failed after ${MAX_PASSWORD_ATTEMPTS} attempts — wrong password.`,
 						},
 					],
-					details: { code: result.code, stdout: "", stderr: result.stderr },
+					details: makeDetails(command, reason, {
+						outcome: "error",
+						exitCode: result.code,
+						lineCount: outputLineCount(result.stderr),
+						truncated: false,
+						errorKind: "authentication",
+						_render: normalizeLineEndings(result.stderr),
+					}),
 					isError: true,
 				};
 			}
@@ -235,6 +378,10 @@ export default function (pi: ExtensionAPI): void {
 			const combinedOut =
 				[result.stdout, result.stderr].filter(Boolean).join("\n") || "(no output)";
 
+			const rendered = normalizeLineEndings(combinedOut)
+				.replace(/\n{3,}/g, "\n\n")
+				.replace(/^\n+|\n+$/g, "");
+
 			return {
 				content: [
 					{
@@ -242,18 +389,39 @@ export default function (pi: ExtensionAPI): void {
 						text: `Exit code: ${result.code}\n\n${truncatedText}${suffix}`,
 					},
 				],
-				details: {
-					code: result.code,
-					stdout: result.stdout,
-					stderr: result.stderr,
+				details: makeDetails(command, reason, {
+					outcome: result.code === 0 ? "success" : "error",
+					exitCode: result.code,
+					lineCount: outputLineCount(rendered),
 					truncated,
-					_render: normalizeLineEndings(combinedOut)
-						.replace(/\n{3,}/g, "\n\n")
-						.replace(/^\n+|\n+$/g, ""),
-				},
+					...(result.code === 0 ? {} : { errorKind: "exit-code" as const }),
+					_render: rendered,
+				}),
 				isError: result.code !== 0,
 			};
 		},
+
+		renderCall: ((
+			args: { command: string; reason?: string },
+			theme: ThemeLike,
+			renderCtx: RenderContextLike,
+		) => {
+			const text = renderCtx.lastComponent ?? new Text("", 0, 0);
+			if (
+				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
+					text.setText(value),
+				)
+			)
+				return text;
+
+			const command = safeOneLine(args.command) || "(empty command)";
+			text.setText(
+				fillToolBackground(
+					`${theme.fg("toolTitle", theme.bold("sudo"))} ${theme.fg("accent", command)}`,
+				),
+			);
+			return text;
+		}) as never,
 
 		renderResult: ((
 			result: ToolResultLike,
@@ -262,17 +430,66 @@ export default function (pi: ExtensionAPI): void {
 			renderCtx: RenderContextLike,
 		) => {
 			const text = renderCtx.lastComponent ?? new Text("", 0, 0);
+			const details = result.details as SudoResultDetails | undefined;
 
-			if (renderCtx.isError && !result.details) {
-				text.setText(renderToolError(getTextContent(result) || "Error", theme));
+			if (details?._type !== "sudoResult") {
+				if (renderCtx.isError) {
+					text.setText(renderToolError(getTextContent(result) || "Error", theme));
+				} else {
+					text.setText(
+						fillToolBackground(`  ${theme.fg("dim", getTextContent(result) || "done")}`),
+					);
+				}
 				return text;
 			}
 
-			const d = result.details as Record<string, unknown> | undefined;
-			const code = typeof d?.code === "number" ? d.code : null;
-			const rendered = typeof d?._render === "string" ? d._render : "";
-			const { summary } = renderBashOutput(rendered, code);
+			if (
+				isTerminal(details) &&
+				tickCollapse(
+					"sudo",
+					renderCtx.state as CollapseState,
+					renderCtx.invalidate,
+					renderCtx.expanded,
+				)
+			) {
+				const status =
+					details.outcome === "success"
+						? "success"
+						: details.outcome === "error"
+							? "error"
+							: "warning";
+				text.setText(
+					renderCollapsedToolRow(
+						theme,
+						"sudo",
+						safeOneLine(details.command),
+						terminalMeta(details),
+						status,
+					),
+				);
+				return text;
+			}
 
+			if (details.outcome === "awaiting-approval" || details.outcome === "running") {
+				text.setText(
+					fillToolBackground(`  ${theme.fg("dim", getTextContent(result) || "working")}`),
+				);
+				return text;
+			}
+
+			if (details.outcome !== "success" && details.errorKind !== "exit-code") {
+				const diagnostic = getTextContent(result) || "Error";
+				text.setText(
+					details.outcome === "error"
+						? renderToolError(diagnostic, theme)
+						: fillToolBackground(`  ${theme.fg("warning", diagnostic)}`),
+				);
+				return text;
+			}
+
+			const code = typeof details.exitCode === "number" ? details.exitCode : null;
+			const rendered = typeof details._render === "string" ? details._render : "";
+			const { summary } = renderBashOutput(rendered, code);
 			const lines = rendered ? rendered.split("\n") : [];
 			const lineCount = lines.length;
 			const lineInfo = lineCount > 1 ? `  ${FG_DIM}(${lineCount} lines)${RST}` : "";
