@@ -106,7 +106,7 @@ export function registerLsTool(
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("ls", cs, renderCtx.invalidate)) {
+			if (tickCollapse("ls", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				const d2 = result.details as Record<string, unknown> | undefined;
 				const summary = d2?._type === "lsResult" ? `${d2.entryCount} entries` : "listed";
 				const target = d2?._type === "lsResult" ? sp(String(d2.path ?? ".")) : ".";

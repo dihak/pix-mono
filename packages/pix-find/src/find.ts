@@ -140,7 +140,7 @@ export function registerFindTool(
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("find", cs, renderCtx.invalidate)) {
+			if (tickCollapse("find", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				const d = result.details;
 				const summary =
 					d?._type === "findResult" && d.matchCount != null ? `${d.matchCount} files` : "found";

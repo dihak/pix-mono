@@ -182,4 +182,56 @@ describe("registerBashTool", () => {
 		expect(result?.getText()).toContain("2 lines · 2.5s");
 		expect(result?.getText()).not.toContain("git diff --check");
 	});
+
+	it("restores full output when an elapsed card is expanded", () => {
+		const registered: { renderResult?: (...args: unknown[]) => MockTextComponent } = {};
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerBashTool(
+			mockPi,
+			() => ({
+				execute: async () => ({ content: [{ type: "text", text: "ok" }], details: undefined }),
+			}),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+		);
+		const theme: ThemeLike = {
+			fg: (_key: string, value: string) => value,
+			bold: (value: string) => value,
+		};
+		const result = registered.renderResult?.(
+			{
+				content: [{ type: "text", text: "one\ntwo" }],
+				details: {
+					_type: "bashResult",
+					text: "one\ntwo",
+					exitCode: 0,
+					command: "printf one",
+					durationMs: 100,
+				},
+			},
+			undefined,
+			theme,
+			{
+				expanded: true,
+				isError: false,
+				invalidate: () => {},
+				state: { collapsed: true },
+			} as unknown as RenderContextLike,
+		);
+
+		expect(result?.getText()).toContain("one");
+		expect(result?.getText()).toContain("two");
+		expect(result?.getText()).not.toContain("✓ bash");
+	});
 });

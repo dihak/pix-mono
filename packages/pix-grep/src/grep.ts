@@ -168,7 +168,7 @@ export function registerGrepTool(
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("grep", cs, renderCtx.invalidate)) {
+			if (tickCollapse("grep", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				const summary =
 					d?._type === "grepResult" ? pluralize(d.matchCount, "match", "matches") : "searched";
 				const target = d?._type === "grepResult" ? `“${d.pattern}”` : "";

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { CursorStore, FffState } from "@xynogen/pix-pretty/fff";
-import type { PiPrettyApi, TextComponentCtor } from "@xynogen/pix-pretty/types";
+import type {
+	PiPrettyApi,
+	RenderContextLike,
+	TextComponentCtor,
+	ThemeLike,
+} from "@xynogen/pix-pretty/types";
 import { applyGrepDefaults, DEFAULT_GREP_LIMIT, registerGrepTool } from "./grep";
 
 class MockTextComponent {
@@ -57,5 +62,58 @@ describe("registerGrepTool", () => {
 			},
 		);
 		expect(tools).toEqual(["grep"]);
+	});
+
+	it("restores matching lines when an elapsed card is expanded", () => {
+		const registered: { renderResult?: (...args: unknown[]) => MockTextComponent } = {};
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerGrepTool(
+			mockPi,
+			() => ({ execute: async () => ({ content: [], details: undefined }) }),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+		);
+		const theme: ThemeLike = {
+			fg: (_key: string, value: string) => value,
+			bold: (value: string) => value,
+		};
+		const output = "src/a.ts:1:TODO one\nsrc/b.ts:2:TODO two";
+		const result = registered.renderResult?.(
+			{
+				content: [{ type: "text", text: output }],
+				details: {
+					_type: "grepResult",
+					text: output,
+					pattern: "TODO",
+					matchCount: 2,
+				},
+			},
+			undefined,
+			theme,
+			{
+				expanded: true,
+				isError: false,
+				invalidate: () => {},
+				state: { collapsed: true },
+			} as unknown as RenderContextLike,
+		);
+
+		const rendered = result?.getText() ?? "";
+		expect(rendered).toContain("src/a.ts:1:");
+		expect(rendered).toContain("TODO");
+		expect(rendered).toContain("one");
+		expect(rendered).toContain("src/b.ts:2:");
+		expect(rendered).not.toContain("✓ grep");
 	});
 });

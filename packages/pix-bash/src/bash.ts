@@ -148,7 +148,7 @@ export function registerBashTool(
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (tickCollapse("bash", cs, renderCtx.invalidate)) {
+			if (tickCollapse("bash", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				if (d?._type === "bashResult") {
 					const normalizedText = normalizeLineEndings(d.text as string)
 						.replace(/\n{3,}/g, "\n\n")
