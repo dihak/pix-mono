@@ -1,7 +1,62 @@
+<!-- markdownlint-disable MD013 MD040 MD060 -->
+
 # pix-mono — Agent Operating Guide
 
 Monorepo of Pi Coding Agent extensions (`@xynogen/pix-*`).
 **Bun** runtime · **Biome** lint/format · **tsc** types · **bun test** tests · all ESM (`"type": "module"`, ES2022).
+
+---
+
+## Product Design Philosophy
+
+Pix is a **transparent, token-efficient, model-flexible** Pi distro. These are product constraints, not optional preferences. Apply them when designing, implementing, or reviewing every feature.
+
+### 1. Minimize token use
+
+- Keep the baseline system prompt and recurring tool schemas small.
+- Load skills, instructions, model catalogs, and volatile metadata only on demand.
+- Prefer targeted reads, bounded previews, compact structured results, and edit formats that reduce retries.
+- Inject prompts only when the current task needs them; avoid passive or always-on context.
+- UI collapse may reduce visual clutter, but the complete result must remain expandable and available to the user and agent.
+- Measure token savings where possible. Do not make unverified efficiency claims.
+- Avoid always-on advisors, reviewers, background loops, verbose orchestration transcripts, and giant all-purpose tool schemas.
+
+### 2. Preserve strong model flexibility
+
+- The user or calling agent chooses the model for each task.
+- Pix may display benchmark scores, context size, price, capabilities, and recommendations, but must not silently pin or route to a model/provider.
+- Subagents inherit the parent model when omitted or use the caller's explicit `model`; an agent type/persona must not override that choice.
+- Any fallback or model change must be visible and report the reason, previous model, replacement model, and relevant cost/capability difference.
+- Prefer provider-neutral interfaces and avoid features that create provider lock-in.
+
+### 3. Keep agent behavior visible
+
+- Every meaningful read, command, edit, delegation, approval, retry, and result must appear in the transcript or live UI.
+- Show subagent identity, selected model, scope, current activity, token/cost information when available, and final output.
+- Show file changes as inspectable diffs and findings with paths/evidence.
+- Users must be able to inspect, expand, steer, stop, approve, reject, or undo work where the operation permits it.
+- Never discard details merely because a card is collapsed; collapsing is presentation, not concealment.
+- Memory, if added, must be explicit and auditable: visible retain/recall operations, provenance, injected-token estimate, and list/edit/delete controls.
+
+### 4. Prefer composability over magic
+
+- Build complex behavior from ordinary, visible tools and subagents.
+- Convenience UI may prepare, organize, or summarize a workflow, but must not conceal its plan, model routing, tool calls, retries, edits, or review steps.
+- Avoid any opaque high-level command, shortcut, trigger, or mode that silently launches planning, routing, tool use, retries, edits, delegation, or background automation. A `/goal`-style command or magic word is only one example of this broader anti-pattern.
+- Reviews must be explicitly invoked and show reviewer models, scopes, token use, evidence, deduplication, and verdict construction; do not run an always-on reviewer by default.
+
+### Feature review checklist
+
+Before accepting a feature, answer:
+
+1. Does it reduce or unnecessarily add baseline/context/output tokens?
+2. Can the user choose the model and provider without a hidden override?
+3. Can the user see what ran, why it ran, what it read or changed, and what it cost?
+4. Can the user inspect, steer, stop, approve, reject, or undo it where applicable?
+5. Is it composed from visible primitives rather than opaque automation?
+6. Is a sensitive, expensive, or setup-heavy capability opt-in instead of bundled by default?
+
+Product promise: **No hidden intent. No silent routing. No blind automation.**
 
 ---
 
