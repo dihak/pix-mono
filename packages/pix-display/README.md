@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD013 -->
+
 # pix-display
 
 Pi core extension — paste chips, thinking blocks, and polished code snippets.
@@ -12,7 +14,7 @@ Three features, always on when installed:
 
 **Code snippets.** Renders every fenced code block in assistant responses inside a themed, language-labeled frame—including Python, TypeScript, JSON, YAML, Rust, Go, SQL, shell, and arbitrary custom language tags. Untagged fences use a `code` label. Pi's native syntax highlighting remains intact for recognized languages, while long lines are safely clipped to the terminal width.
 
-The features are registered at session start. TUI-only display changes are no-ops in JSON/RPC/print modes.
+The features are registered at session start. TUI-only display changes are no-ops in JSON/RPC/print modes. In-process non-TUI child sessions (such as background subagents) do not clear the parent TUI's renderer state.
 
 ## Install
 

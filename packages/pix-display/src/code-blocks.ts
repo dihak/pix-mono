@@ -13,6 +13,7 @@ const OSC_RE = /\x1b\][^\x07]*(?:\x07|\x1b\\)/g;
 const PATCHED = Symbol.for("@xynogen/pix-display:code-block-renderer");
 
 type CodeFrameTheme = Pick<Theme, "bg" | "bold" | "fg" | "getBgAnsi">;
+type RenderMode = "tui" | "rpc" | "json" | "print";
 
 type PatchablePrototype = {
 	[PATCHED]?: boolean;
@@ -20,6 +21,20 @@ type PatchablePrototype = {
 };
 
 let activeTheme: CodeFrameTheme | undefined;
+
+/**
+ * Preserve the main TUI theme when an in-process non-TUI child session starts.
+ * Subagents share this module and the patched prototype with the parent; letting
+ * their print/RPC session clear the theme silently disables code frames in the
+ * still-running parent transcript.
+ */
+export function themeAfterSessionStart(
+	current: CodeFrameTheme | undefined,
+	mode: RenderMode,
+	theme: CodeFrameTheme,
+): CodeFrameTheme | undefined {
+	return mode === "tui" ? theme : current;
+}
 
 function plainText(line: string): string {
 	return line.replace(OSC_RE, "").replace(ANSI_RE, "");
@@ -149,6 +164,6 @@ function patchAssistantRenderer(): void {
 export default function codeBlocksExtension(pi: ExtensionAPI): void {
 	patchAssistantRenderer();
 	pi.on("session_start", (_event, ctx) => {
-		activeTheme = ctx.mode === "tui" ? ctx.ui.theme : undefined;
+		activeTheme = themeAfterSessionStart(activeTheme, ctx.mode, ctx.ui.theme);
 	});
 }

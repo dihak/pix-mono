@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { renderCodeFences } from "../src/code-blocks.js";
+import { renderCodeFences, themeAfterSessionStart } from "../src/code-blocks.js";
 
 const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]/g;
 
@@ -53,10 +53,21 @@ describe("renderCodeFences", () => {
 		"css",
 		"c++",
 		"custom-language",
+		"text",
 	])("supports and labels the %s fence", (language) => {
 		const rendered = renderCodeFences([`\`\`\`${language}`, "  example  ", "```"], 40, theme);
 		expect(plain(rendered[0] ?? "")).toContain(`── ${language} `);
 		expect(plain(rendered[1] ?? "")).toBe("example");
+	});
+
+	it("keeps the parent TUI renderer active when an in-process child session starts", () => {
+		const childTheme = { ...theme };
+
+		expect(themeAfterSessionStart(theme, "print", childTheme)).toBe(theme);
+		expect(themeAfterSessionStart(theme, "json", childTheme)).toBe(theme);
+		expect(themeAfterSessionStart(theme, "rpc", childTheme)).toBe(theme);
+		expect(themeAfterSessionStart(undefined, "print", childTheme)).toBeUndefined();
+		expect(themeAfterSessionStart(undefined, "tui", childTheme)).toBe(childTheme);
 	});
 
 	it("uses a generic label for an untagged fence", () => {
