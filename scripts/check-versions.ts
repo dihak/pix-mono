@@ -1,17 +1,15 @@
 #!/usr/bin/env bun
 /**
- * check-versions.ts — pre-publish guard: ensures every changed package
- * has a version not yet on npm. Run in the publish workflow before
- * `publish-all.ts` to catch forgotten version bumps early.
+ * check-versions.ts — pre-publish guard: verifies at least one package
+ * has a version not yet on npm. `publish-all.ts` skips versions already
+ * published, so unchanged packages must not block a release.
  *
- * Exit 0 = all clear (or nothing changed).
- * Exit 1 = at least one changed package's version is already published.
+ * Exit 0 = at least one package is ready to publish.
+ * Exit 1 = every package version is already published.
  */
 
-import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { $ } from "bun";
-import { lastReleaseTagCommand } from "./release-tag.ts";
 
 const packagesDir = join(import.meta.dir, "..", "packages");
 
@@ -32,48 +30,13 @@ for (const entry of readdirSync(packagesDir)) {
 	pkgs.push({ name: pkg.name, dir: entry, version: pkg.version });
 }
 
-// ── Find last release tag ─────────────────────────────────────────────────────
-
-let lastTag: string | undefined;
-try {
-	const result = await $`git ${lastReleaseTagCommand("HEAD^")}`.quiet();
-	lastTag = result.stdout.toString().trim() || undefined;
-} catch {
-	// No previous release tag — check all packages.
-}
-
-// ── Detect changed packages ───────────────────────────────────────────────────
-
-const changed: typeof pkgs = [];
-for (const pkg of pkgs) {
-	if (!lastTag) {
-		changed.push(pkg);
-		continue;
-	}
-	try {
-		await $`git diff --quiet ${lastTag} -- packages/${pkg.dir}/`.quiet();
-		// exit 0 = no changes — skip
-	} catch {
-		// exit 1 = has changes
-		changed.push(pkg);
-	}
-}
-
-if (changed.length === 0) {
-	console.log("No packages changed since last release — nothing to check.");
-	process.exit(0);
-}
-
-console.log(
-	`Checking ${changed.length} changed package(s) against npm` +
-		(lastTag ? ` (since ${lastTag})` : "") +
-		"...",
-);
+// ponytail: Registry state is publish source of truth; publish-all applies same rule.
+console.log(`Checking ${pkgs.length} package version(s) against npm...`);
 
 // ── Check npm registry in parallel ────────────────────────────────────────────
 
 const results = await Promise.all(
-	changed.map(async ({ name, version }) => {
+	pkgs.map(async ({ name, version }) => {
 		try {
 			const res = await fetch(
 				`https://registry.npmjs.org/${encodeURIComponent(name)}/${version}`,
@@ -87,19 +50,16 @@ const results = await Promise.all(
 	}),
 );
 
-const stale = results.filter((r) => r.exists);
+const published = results.filter((r) => r.exists);
 const fresh = results.filter((r) => !r.exists);
 
 for (const r of fresh) {
-	console.log(`  ✔ ${r.name}@${r.version} — not yet on npm`);
-}
-for (const r of stale) {
-	console.error(`  ✖ ${r.name}@${r.version} — ALREADY on npm! Bump the version.`);
+	console.log(`  ✔ ${r.name}@${r.version} — ready to publish`);
 }
 
-if (stale.length > 0) {
-	console.error(`\n${stale.length} package(s) need a version bump before publishing.`);
+if (fresh.length === 0) {
+	console.error("\nNo unpublished package versions found. Bump changed package versions first.");
 	process.exit(1);
 }
 
-console.log(`\nAll ${changed.length} changed package(s) have fresh versions. Ready to publish.`);
+console.log(`\n${fresh.length} package(s) ready; ${published.length} already published.`);
