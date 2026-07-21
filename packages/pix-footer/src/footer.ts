@@ -502,7 +502,7 @@ export default function (pi: ExtensionAPI) {
 					const tokensPart = tokens ? sep + tokens : "";
 					const costPart = cost ? sep + cost : "";
 					const ctxPart = ctxUsage ? sep + ctxUsage : "";
-					const line = `${modePart}${loc}${markersPart}${ctxPart}${sep}${model}${otherPart}${tokensPart}${costPart}${tpsPart}`;
+					const line = `${modePart}${loc}${markersPart}${ctxPart}${sep}${model}${otherPart}${costPart}${tokensPart}${tpsPart}`;
 					return [truncateToWidth(line, width)];
 				},
 			};
