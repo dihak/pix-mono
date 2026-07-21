@@ -3,7 +3,7 @@
  *
  * Tracks files touched this session via `write`/`edit` tool results and renders
  * a single compact line: the up-to-3 most recently touched file basenames with
- * a `+N more` suffix and a `(/lens-booboo for details)` hint.
+ * a `+N more` suffix.
  *
  * NOTE: it does NOT currently query live LSP diagnostics — `FileRecord.diagnostics`
  * is always empty. The file list is a placeholder for future LSP integration.
@@ -71,13 +71,11 @@ function renderWidget(width: number, theme: Theme): string[] {
 	const w = Math.max(1, width || 80);
 
 	const cyan = (s: string) => theme.fg("accent", s);
-	const dim = (s: string) => theme.fg("muted", s);
 	const green = (s: string) => theme.fg("success", s);
 
 	const lines: string[] = [];
 
 	// Show a compact summary. This widget overrides pi-lens's verbose output.
-	// For detailed diagnostics, users can run /lens-booboo or /lsp-diagnostics.
 	const filesCount = files.size;
 
 	if (filesCount === 0) {
@@ -96,7 +94,7 @@ function renderWidget(width: number, theme: Theme): string[] {
 			? `${green("✓")} ${filesList}`
 			: `${green("✓")} ${filesList} +${filesCount - 3} more`;
 
-	const header = ` ${cyan("pix-lens")}  ${summary}  ${dim("(/lens-booboo for details)")}`;
+	const header = ` ${cyan("pix-lens")}  ${summary}`;
 	lines.push(fitLine(header, w));
 
 	return lines;
