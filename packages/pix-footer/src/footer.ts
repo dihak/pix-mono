@@ -356,6 +356,11 @@ export default function (pi: ExtensionAPI) {
 		s.output > 0 ? s.output : Math.round(s.chars / CHARS_PER_TOKEN);
 	const activeStreams = new Map<string, StreamState>();
 	let tpsTicker: ReturnType<typeof setInterval> | null = null;
+	// Sliding-window rate: (tokens - tokens_windowStart) / span. Averages out the
+	// bursty tool-call JSON stream and decays toward 0 during stalls as old
+	// samples age out. Cumulative avg stuck high; single-tick EMA spiked on bursts.
+	const TPS_WINDOW_MS = 3_000;
+	let tpsSamples: { t: number; tokens: number }[] = [];
 
 	/** Estimated output tokens streamed so far across in-flight messages. */
 	const liveOutput = (): number => {
@@ -365,30 +370,38 @@ export default function (pi: ExtensionAPI) {
 	};
 
 	const recomputeTps = () => {
-		let total = 0;
-		let earliest = Infinity;
-		for (const s of activeStreams.values()) {
-			total += liveTokens(s);
-			if (s.start < earliest) earliest = s.start;
+		if (activeStreams.size === 0) return;
+		const now = Date.now();
+		tpsSamples.push({ t: now, tokens: liveOutput() });
+		// Drop samples older than the window, keeping one just past the edge as anchor.
+		const cutoff = now - TPS_WINDOW_MS;
+		while (tpsSamples.length > 2) {
+			const second = tpsSamples[1];
+			if (!second || second.t >= cutoff) break;
+			tpsSamples.shift();
 		}
-		if (total <= 0 || earliest === Infinity) return;
-		const elapsed = (Date.now() - earliest) / 1000;
-		if (elapsed < 0.1) return;
-		const next = Math.round(total / elapsed);
+		const first = tpsSamples[0];
+		if (!first) return;
+		const span = (now - first.t) / 1000;
+		if (span < 0.2) return; // too short to be meaningful yet
+		const next = Math.round(Math.max(0, liveOutput() - first.tokens) / span);
 		liveTps = next;
-		tw.tps.retarget(next, Date.now());
-		// Re-render every tick while streaming so the live count climbs.
+		tw.tps.retarget(next, now);
 		requestRender?.();
 	};
 
 	const startTpsTicker = () => {
-		if (!tpsTicker) tpsTicker = setInterval(recomputeTps, 100);
+		if (!tpsTicker) {
+			tpsSamples = []; // fresh window each stream
+			tpsTicker = setInterval(recomputeTps, 100);
+		}
 	};
 	const stopTpsTicker = () => {
 		if (tpsTicker) {
 			clearInterval(tpsTicker);
 			tpsTicker = null;
 		}
+		tpsSamples = [];
 	};
 
 	// AssistantMessage.id is not in the published d.ts but exists at runtime;
