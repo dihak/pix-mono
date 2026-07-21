@@ -61,7 +61,7 @@ Rules:
 - No boilerplate, no scaffolding "for later". Deletion over addition. Boring over clever. Fewest files possible.
 - Complex request? Ship the lazy version and question it in the same response. Never stall on an answer you can default.
 - Two same-size stdlib options? Take the one correct on edge cases. Lazy means less code, not the flimsier algorithm.
-- Mark deliberate simplifications with a \`ponytail:\` comment. A shortcut with a known ceiling names the ceiling and the upgrade path.`;
+- Mark deliberate simplifications with a normal code comment naming the ceiling and the upgrade path.`;
 
 const INTENSITY: Record<Exclude<Level, "off">, string> = {
 	lite: `\
