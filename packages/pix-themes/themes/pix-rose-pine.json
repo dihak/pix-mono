@@ -22,7 +22,13 @@
 		"bg3": "#26233a",
 		"bg4": "#403d52",
 		"operator": "#9ccfd8",
-		"punct": "#e0def4"
+		"punct": "#e0def4",
+		"thinkBlue1": "#3d4759",
+		"thinkBlue2": "#4a5d7a",
+		"thinkBlue3": "#547199",
+		"thinkBlue4": "#5f8fc4",
+		"thinkBlue5": "#69a5e0",
+		"thinkBlue6": "#7cc4ff"
 	},
 	"colors": {
 		"accent": "purple",
@@ -69,12 +75,12 @@
 		"syntaxType": "cyan",
 		"syntaxOperator": "operator",
 		"syntaxPunctuation": "punct",
-		"thinkingOff": "dim",
-		"thinkingMinimal": "muted",
-		"thinkingLow": "muted",
-		"thinkingMedium": "purple",
-		"thinkingHigh": "yellow",
-		"thinkingXhigh": "red",
+		"thinkingOff": "thinkBlue1",
+		"thinkingMinimal": "thinkBlue2",
+		"thinkingLow": "thinkBlue3",
+		"thinkingMedium": "thinkBlue4",
+		"thinkingHigh": "thinkBlue5",
+		"thinkingXhigh": "thinkBlue6",
 		"bashMode": "yellow"
 	},
 	"export": {

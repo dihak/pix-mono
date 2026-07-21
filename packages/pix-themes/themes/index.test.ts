@@ -16,13 +16,16 @@ const THEMES = [
 	"pix-rose-pine",
 ] as const;
 
-const THINKING_COLOR_KEYS = [
-	["thinkingOff", "dim"],
-	["thinkingMinimal", "muted"],
-	["thinkingLow", "muted"],
-	["thinkingMedium", "accent"],
-	["thinkingHigh", "warning"],
-	["thinkingXhigh", "error"],
+// Thinking levels use a dedicated 6-step blue brightness ramp (Ramp F),
+// defined per-theme as thinkBlue1..6 vars. Border stays in the blue family
+// at every level; brightness climbs with effort.
+const THINKING_RAMP = [
+	["thinkingOff", "thinkBlue1"],
+	["thinkingMinimal", "thinkBlue2"],
+	["thinkingLow", "thinkBlue3"],
+	["thinkingMedium", "thinkBlue4"],
+	["thinkingHigh", "thinkBlue5"],
+	["thinkingXhigh", "thinkBlue6"],
 ] as const;
 
 function readTheme(name: (typeof THEMES)[number]) {
@@ -51,10 +54,11 @@ describe("pix-themes", () => {
 			expect(theme.name).toBe(name);
 		});
 
-		it(`${name} maps thinking levels to the shared semantic ramp`, () => {
+		it(`${name} maps thinking levels to the blue ramp`, () => {
 			const theme = readTheme(name);
-			for (const [thinkingKey, semanticKey] of THINKING_COLOR_KEYS) {
-				expect(theme.colors[thinkingKey]).toBe(theme.colors[semanticKey]);
+			for (const [thinkingKey, rampVar] of THINKING_RAMP) {
+				expect(theme.colors[thinkingKey]).toBe(rampVar);
+				expect(theme.vars[rampVar]).toMatch(/^#[0-9a-f]{6}$/i);
 			}
 		});
 	}

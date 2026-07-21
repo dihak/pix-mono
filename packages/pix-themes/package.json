@@ -1,6 +1,6 @@
 {
 	"name": "@dihak/pix-themes",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"description": "Theme pack for Pi Coding Agent (7 dark themes)",
 	"type": "module",
 	"scripts": {
