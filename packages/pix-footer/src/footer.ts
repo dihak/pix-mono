@@ -19,6 +19,7 @@ import { icon } from "@dihak/pix-pretty/icon-catalog";
 import type { AssistantMessage, AssistantMessageEvent } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
+import { Tween } from "./tween.ts";
 
 // ─── Pure formatting helpers ─────────────────────────────────────────
 
@@ -153,16 +154,16 @@ function computeSessionTotals(entries: Iterable<unknown>): SessionTotals {
 	return { input, output, cacheRead, cost };
 }
 
-/** Tokens block (in/out). Always returns a string; caller decides visibility. Cost rendered separately (always on). */
-function renderTokens(totals: SessionTotals, theme: Theme, dim = false): string {
-	const s = `${icon("net.in")} ${fmtToken(totals.input)} ${icon("net.out")} ${fmtToken(totals.output)}`;
+/** Tokens block (in/out). Values pre-tweened by caller. Cost rendered separately. */
+function renderTokens(input: number, output: number, theme: Theme, dim = false): string {
+	const s = `${icon("net.in")} ${fmtToken(input)} ${icon("net.out")} ${fmtToken(output)}`;
 	return theme.fg(dim ? "dim" : "muted", s);
 }
 
 /** Cost total — always shown when > 0, independent of token-block decay. */
-function renderCost(totals: SessionTotals, theme: Theme): string {
-	if (totals.cost <= 0) return "";
-	return theme.fg("success", `$${totals.cost.toFixed(3)}`);
+function renderCost(cost: number, theme: Theme): string {
+	if (cost <= 0) return "";
+	return theme.fg("success", `$${cost.toFixed(3)}`);
 }
 
 /** Context usage block: "used/total (pct%)". Always shown when available. */
@@ -307,16 +308,34 @@ function renderStatuses(
 // ─── Extension ────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
-	let liveTps: string | null = null;
-	let tpsTimer: ReturnType<typeof setTimeout> | null = null;
-	// Token visibility state machine: "on" → (4s) → "dim" → (4s) → "off".
-	type TokensState = "on" | "dim" | "off";
-	let tokensState: TokensState = "off";
-	let tokensTimer: ReturnType<typeof setTimeout> | null = null;
+	// Tokens + TPS stay visible for the whole session (no decay/clear).
+	let liveTps: number | null = null;
 	let requestRender: (() => void) | null = null;
 
-	const clearTimer = (t: ReturnType<typeof setTimeout> | null) => {
-		if (t) clearTimeout(t);
+	// Animated counters: displayed values ease-out toward the latest session totals.
+	// Cost is scaled ×1000 into the tween so its duration math matches token units.
+	const tw = { input: new Tween(), output: new Tween(), cost: new Tween(), tps: new Tween() };
+	let animTimer: ReturnType<typeof setInterval> | null = null;
+	const stopAnim = () => {
+		if (animTimer) {
+			clearInterval(animTimer);
+			animTimer = null;
+		}
+	};
+	/** Point the tweens at fresh totals; start the ticker if movement is needed. */
+	const animateTo = (t: SessionTotals) => {
+		const now = Date.now();
+		tw.input.retarget(t.input, now);
+		tw.output.retarget(t.output, now);
+		tw.cost.retarget(t.cost * 1000, now);
+		const settled = tw.input.sample(now) && tw.output.sample(now) && tw.cost.sample(now);
+		if (settled || animTimer) return;
+		animTimer = setInterval(() => {
+			const t2 = Date.now();
+			const done = tw.input.sample(t2) && tw.output.sample(t2) && tw.cost.sample(t2);
+			requestRender?.();
+			if (done) stopAnim();
+		}, 50);
 	};
 
 	let gitStatus: GitStatus | null = null;
@@ -327,26 +346,39 @@ export default function (pi: ExtensionAPI) {
 
 	interface StreamState {
 		start: number;
-		output: number;
+		output: number; // exact token count (only known at message_end)
+		chars: number; // streamed content chars — drives the live estimate
 	}
+	// Rough tokens/char for live estimation before the API reports usage.
+	// ~3.7 chars/token for English+code; snapped to exact count at message_end.
+	const CHARS_PER_TOKEN = 3.7;
+	const liveTokens = (s: StreamState): number =>
+		s.output > 0 ? s.output : Math.round(s.chars / CHARS_PER_TOKEN);
 	const activeStreams = new Map<string, StreamState>();
 	let tpsTicker: ReturnType<typeof setInterval> | null = null;
+
+	/** Estimated output tokens streamed so far across in-flight messages. */
+	const liveOutput = (): number => {
+		let total = 0;
+		for (const s of activeStreams.values()) total += liveTokens(s);
+		return total;
+	};
 
 	const recomputeTps = () => {
 		let total = 0;
 		let earliest = Infinity;
 		for (const s of activeStreams.values()) {
-			total += s.output;
+			total += liveTokens(s);
 			if (s.start < earliest) earliest = s.start;
 		}
 		if (total <= 0 || earliest === Infinity) return;
 		const elapsed = (Date.now() - earliest) / 1000;
 		if (elapsed < 0.1) return;
-		const next = `${Math.round(total / elapsed)} t/s`;
-		if (next !== liveTps) {
-			liveTps = next;
-			requestRender?.();
-		}
+		const next = Math.round(total / elapsed);
+		liveTps = next;
+		tw.tps.retarget(next, Date.now());
+		// Re-render every tick while streaming so the live count climbs.
+		requestRender?.();
 	};
 
 	const startTpsTicker = () => {
@@ -371,14 +403,10 @@ export default function (pi: ExtensionAPI) {
 		activeStreams.set(msg.id, {
 			start: Date.now(),
 			output: 0,
+			chars: 0,
 		});
 		startTpsTicker();
-		clearTimer(tokensTimer);
-		tokensTimer = null;
-		if (tokensState !== "on") {
-			tokensState = "on";
-			requestRender?.();
-		}
+		requestRender?.();
 	});
 
 	pi.on("message_update", async (event) => {
@@ -392,8 +420,12 @@ export default function (pi: ExtensionAPI) {
 		const s = activeStreams.get(id);
 		if (!s) return;
 		const ame = event.assistantMessageEvent as AssistantMessageEvent & {
+			delta?: string;
 			partial?: { usage?: { output?: number } };
 		};
+		// The API sends no token count mid-stream — accumulate content-delta chars
+		// as a live estimate (text/thinking/toolcall deltas all carry `delta`).
+		if (typeof ame.delta === "string") s.chars += ame.delta.length;
 		const out = ame.partial?.usage?.output ?? msg.usage?.output ?? 0;
 		if (out > s.output) s.output = out;
 	});
@@ -414,33 +446,10 @@ export default function (pi: ExtensionAPI) {
 		if (activeStreams.size === 0) stopTpsTicker();
 	});
 
-	const scheduleTpsClear = () => {
-		if (tpsTimer) clearTimeout(tpsTimer);
-		tpsTimer = setTimeout(() => {
-			liveTps = null;
-			tpsTimer = null;
-			requestRender?.();
-		}, 4_000);
-	};
-
-	const scheduleTokensDecay = () => {
-		clearTimer(tokensTimer);
-		tokensTimer = setTimeout(() => {
-			tokensState = "dim";
-			requestRender?.();
-			tokensTimer = setTimeout(() => {
-				tokensState = "off";
-				tokensTimer = null;
-				requestRender?.();
-			}, 4_000);
-		}, 4_000);
-	};
-
 	pi.on("agent_end", () => {
 		stopTpsTicker();
 		activeStreams.clear();
-		scheduleTpsClear();
-		scheduleTokensDecay();
+		// Leave the final tokens + TPS on screen; no decay.
 	});
 
 	// ── Git status polling ───────────────────────────────────────
@@ -484,9 +493,15 @@ export default function (pi: ExtensionAPI) {
 					const sep = theme.fg("muted", " | ");
 
 					const totals = computeSessionTotals(ctx.sessionManager.getBranch());
-					const tokens =
-						tokensState === "off" ? "" : renderTokens(totals, theme, tokensState === "dim");
-					const cost = renderCost(totals, theme);
+					// Fold streamed-but-not-yet-committed output so the number moves live.
+					totals.output += liveOutput();
+					animateTo(totals);
+					const tokens = renderTokens(
+						Math.round(tw.input.value),
+						Math.round(tw.output.value),
+						theme,
+					);
+					const cost = renderCost(tw.cost.value / 1000, theme);
 					const ctxUsage = renderCtxUsage(ctx.getContextUsage?.(), theme);
 					const model = renderModel(ctx.model, pi.getThinkingLevel?.() ?? "", theme);
 					const { branchSeg, markersSeg } = renderBranch(
@@ -505,7 +520,9 @@ export default function (pi: ExtensionAPI) {
 						theme.fg("accent", shortCwd(ctx.cwd)) +
 						branchSeg;
 					const markersPart = markersSeg ? sep + markersSeg : "";
-					const tpsPart = liveTps ? sep + theme.fg("accent", liveTps) : "";
+					tw.tps.sample(Date.now());
+					const tpsPart =
+						liveTps != null ? sep + theme.fg("accent", `${Math.round(tw.tps.value)} t/s`) : "";
 
 					const tokensPart = tokens ? sep + tokens : "";
 					const costPart = cost ? sep + cost : "";
@@ -522,12 +539,7 @@ export default function (pi: ExtensionAPI) {
 			clearInterval(gitTimer);
 			gitTimer = null;
 		}
-		if (tpsTimer) {
-			clearTimeout(tpsTimer);
-			tpsTimer = null;
-		}
-		clearTimer(tokensTimer);
-		tokensTimer = null;
 		stopTpsTicker();
+		stopAnim();
 	});
 }
