@@ -28,7 +28,8 @@
 		"thinkBlue3": "#547199",
 		"thinkBlue4": "#5f8fc4",
 		"thinkBlue5": "#69a5e0",
-		"thinkBlue6": "#7cc4ff"
+		"thinkBlue6": "#7cc4ff",
+		"thinkBlue7": "#a8d9ff"
 	},
 	"colors": {
 		"accent": "purple",
@@ -81,6 +82,7 @@
 		"thinkingMedium": "thinkBlue4",
 		"thinkingHigh": "thinkBlue5",
 		"thinkingXhigh": "thinkBlue6",
+		"thinkingMax": "thinkBlue7",
 		"bashMode": "yellow"
 	},
 	"export": {

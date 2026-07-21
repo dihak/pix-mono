@@ -100,13 +100,13 @@ export function normalizeModelText(s: string): string {
  * list; pi.setThinkingLevel() clamps to what the active model actually supports,
  * so visiting an unsupported rung is harmless (it lands on the nearest allowed).
  */
-export const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"] as const;
+export const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 
 export type ThinkingLevelName = (typeof THINKING_LEVELS)[number];
 
 /**
  * Step the thinking level one notch. `dir` is -1 (←) or +1 (→). Clamps at the
- * ends (no wraparound) so ← at "off" stays "off" and → at "xhigh" stays "xhigh".
+ * ends (no wraparound) so ← at "off" stays "off" and → at "max" stays "max".
  * Unknown input falls back to "medium" as a neutral midpoint.
  */
 export function stepThinkingLevel(current: string, dir: -1 | 1): ThinkingLevelName {
@@ -417,7 +417,7 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 			// where pi.getThinkingLevel() lags or is unavailable inside the overlay.
 			// We seed it from the getter, then advance it in lock-step with each
 			// setThinkingLevel() call and reconcile back to the getter when present.
-			let localLevel = pi.getThinkingLevel?.() ?? "";
+			let localLevel: string = pi.getThinkingLevel?.() ?? "";
 			const thinkLine = () => {
 				const live = pi.getThinkingLevel?.();
 				const resolved = live ?? localLevel;
@@ -471,7 +471,10 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 					if (dir !== 0) {
 						const cur = pi.getThinkingLevel?.() || localLevel || "medium";
 						localLevel = stepEffectiveThinkingLevel(cur, dir, (candidate) => {
-							pi.setThinkingLevel(candidate);
+							// Host runtime accepts "max" (see host CHANGELOG) but the bundled
+							// ExtensionAPI types still cap at "xhigh"; drop the cast once the
+							// pi-coding-agent types ship "max".
+							pi.setThinkingLevel(candidate as Parameters<typeof pi.setThinkingLevel>[0]);
 							return pi.getThinkingLevel();
 						});
 						// setThinkingLevel doesn't repaint this overlay, so force a render

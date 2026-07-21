@@ -25,19 +25,20 @@ describe("stepThinkingLevel", () => {
 		expect(stepThinkingLevel("off", -1)).toBe("off");
 	});
 	it("clamps at the high end (no wrap)", () => {
-		expect(stepThinkingLevel("xhigh", 1)).toBe("xhigh");
+		expect(stepThinkingLevel("xhigh", 1)).toBe("max");
+		expect(stepThinkingLevel("max", 1)).toBe("max");
 	});
 	it("falls back to a medium-anchored step for unknown input", () => {
 		expect(stepThinkingLevel("bogus", 1)).toBe("high");
 		expect(stepThinkingLevel("", -1)).toBe("low");
 	});
-	it("exposes the six canonical levels ascending", () => {
-		expect(THINKING_LEVELS).toEqual(["off", "minimal", "low", "medium", "high", "xhigh"]);
+	it("exposes the seven canonical levels ascending", () => {
+		expect(THINKING_LEVELS).toEqual(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
 	});
 	it("can walk the full ladder up and back down", () => {
 		let lvl: string = "off";
 		for (let i = 0; i < 10; i++) lvl = stepThinkingLevel(lvl, 1);
-		expect(lvl).toBe("xhigh");
+		expect(lvl).toBe("max");
 		for (let i = 0; i < 10; i++) lvl = stepThinkingLevel(lvl, -1);
 		expect(lvl).toBe("off");
 	});

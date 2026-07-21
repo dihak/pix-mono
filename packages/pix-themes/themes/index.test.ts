@@ -16,8 +16,8 @@ const THEMES = [
 	"pix-rose-pine",
 ] as const;
 
-// Thinking levels use a dedicated 6-step blue brightness ramp (Ramp F),
-// defined per-theme as thinkBlue1..6 vars. Border stays in the blue family
+// Thinking levels use a dedicated 7-step blue brightness ramp (Ramp F),
+// defined per-theme as thinkBlue1..7 vars. Border stays in the blue family
 // at every level; brightness climbs with effort.
 const THINKING_RAMP = [
 	["thinkingOff", "thinkBlue1"],
@@ -26,6 +26,7 @@ const THINKING_RAMP = [
 	["thinkingMedium", "thinkBlue4"],
 	["thinkingHigh", "thinkBlue5"],
 	["thinkingXhigh", "thinkBlue6"],
+	["thinkingMax", "thinkBlue7"],
 ] as const;
 
 function readTheme(name: (typeof THEMES)[number]) {

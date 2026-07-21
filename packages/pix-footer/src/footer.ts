@@ -22,14 +22,22 @@ import { truncateToWidth } from "@earendil-works/pi-tui";
 
 // ─── Pure formatting helpers ─────────────────────────────────────────
 
-type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
 type Theme = {
 	fg(color: string, text: string): string;
 	getThinkingBorderColor(level: ThinkingLevel): (text: string) => string;
 };
 
-const THINKING_LEVELS = new Set<string>(["off", "minimal", "low", "medium", "high", "xhigh"]);
+const THINKING_LEVELS = new Set<string>([
+	"off",
+	"minimal",
+	"low",
+	"medium",
+	"high",
+	"xhigh",
+	"max",
+]);
 
 export function renderThinkingLevel(theme: Theme, level: string, text: string): string {
 	if (!THINKING_LEVELS.has(level)) return theme.fg("muted", text);
