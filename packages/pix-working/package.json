@@ -1,0 +1,46 @@
+{
+	"name": "@dihak/pix-working",
+	"version": "0.1.2",
+	"description": "Pi core extension — elapsed-time counter on the streaming Working indicator",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"src/extension.ts"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"pix",
+		"working",
+		"timer",
+		"elapsed"
+	],
+	"author": "dihak",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
+		"directory": "packages/pix-working"
+	},
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-working#readme",
+	"bugs": {
+		"url": "https://github.com/dihak/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*"
+	}
+}

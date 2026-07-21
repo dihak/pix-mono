@@ -35,6 +35,7 @@ import registerTodo from "@dihak/pix-todo/src/index.ts";
 import registerTodoAuto from "@dihak/pix-todo-auto/src/index.ts";
 import registerUpdate from "@dihak/pix-update/src/extension.ts";
 import registerWelcome from "@dihak/pix-welcome/src/extension.ts";
+import registerWorking from "@dihak/pix-working/src/extension.ts";
 import registerWrite from "@dihak/pix-write/src/extension.ts";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
@@ -52,6 +53,7 @@ const MEMBERS: Factory[] = [
 	registerPretty,
 	registerWelcome,
 	registerFooter,
+	registerWorking,
 	registerModels,
 	registerUpdate,
 	registerCommands,
