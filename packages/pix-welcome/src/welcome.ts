@@ -9,7 +9,7 @@
  *   · models       — count of loaded models
  *   · tools        — count of active tools
  *   · skills       — count of loaded skills
- *   · gitignore    — auto-ignore Pi emissions (.pi/, .pi-lens/) in git repos
+ *   · ignore       — auto-ignore Pi emissions (.pi/, .pi-lens/) via .git/info/exclude
  *
  * Each check updates the banner live as results arrive.
  * Banner auto-dismisses on the first user turn (turn_start).
@@ -75,7 +75,6 @@ export const shortCwd = (cwd: string, home?: string): string => {
 };
 
 export const PI_IGNORE_RULES = [".pi/", ".pi-lens/"];
-const PI_IGNORE_SECTION_HEADER = "# Pix Agent";
 
 // ─── Individual checks ────────────────────────────────────────────────────────
 
@@ -111,14 +110,21 @@ async function checkPiIgnore(pi: ExtensionAPI, cwd: string): Promise<CheckResult
 		if (exitCode(rootRes) !== 0) {
 			return { label: "Ignore", status: "ok", detail: "not git" };
 		}
-		const repoRoot = rootRes.stdout.trim();
-		if (!repoRoot) return { label: "Ignore", status: "ok", detail: "not git" };
+		if (!rootRes.stdout.trim()) return { label: "Ignore", status: "ok", detail: "not git" };
 
-		// Read .gitignore in-process — shelling out to grep/node was fragile
-		// (CRLF, trailing whitespace, grep exit-code 2, or grep/node off PATH all
-		// silently degraded to "missing", so the panel rewrote every session).
-		const gitignorePath = `${repoRoot}/.gitignore`;
-		const existing = existsSync(gitignorePath) ? readFileSync(gitignorePath, "utf8") : "";
+		// Write to .git/info/exclude (repo-local, untracked) instead of .gitignore.
+		// --git-path resolves correctly for worktrees/submodules.
+		const pathRes = await pi.exec(
+			"git",
+			["rev-parse", "--git-path", "info/exclude"],
+			execOpts(cwd, 2_000),
+		);
+		const rel = pathRes.stdout.trim();
+		if (exitCode(pathRes) !== 0 || !rel) {
+			return { label: "Ignore", status: "warn", detail: "check failed" };
+		}
+		const excludePath = rel.startsWith("/") ? rel : `${cwd}/${rel}`;
+		const existing = existsSync(excludePath) ? readFileSync(excludePath, "utf8") : "";
 
 		// Whitespace-tolerant whole-line match (handles CRLF + trailing spaces).
 		const presentLines = new Set(existing.split(/\r?\n/).map((line) => line.trim()));
@@ -128,18 +134,11 @@ async function checkPiIgnore(pi: ExtensionAPI, cwd: string): Promise<CheckResult
 			return { label: "Ignore", status: "ok", detail: "up to date" };
 		}
 
-		// Rewrite .gitignore — strip any existing Pix Agent section, then append
-		// a clean block with all rules under a single header.
-		const stripped = existing.replace(/(?:^|\n)# Pix Agent\n(?:[^\n]*\n)*/g, "\n").trimEnd();
-		const block = [PI_IGNORE_SECTION_HEADER, ...PI_IGNORE_RULES].join("\n");
-		const content = `${stripped ? `${stripped}\n\n` : ""}${block}\n`;
-		writeFileSync(gitignorePath, content, "utf8");
+		// Append missing rules — exclude is untracked, so no shared-header cleanup needed.
+		const content = `${existing.trimEnd()}${existing.trim() ? "\n" : ""}${missing.join("\n")}\n`;
+		writeFileSync(excludePath, content, "utf8");
 
-		return {
-			label: "Ignore",
-			status: "ok",
-			detail: `${missing.length} added`,
-		};
+		return { label: "Ignore", status: "ok", detail: `${missing.length} added` };
 	} catch {
 		return { label: "Ignore", status: "warn", detail: "check failed" };
 	}
