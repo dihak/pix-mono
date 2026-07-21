@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-update",
+	"name": "@dihak/pix-update",
 	"version": "0.1.13",
 	"description": "Pi extension — /update self-update command",
 	"type": "module",
@@ -23,22 +23,22 @@
 		"pi-extension",
 		"pix"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-update"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-update#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-update#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-pretty": "^1.7.9"
+		"@dihak/pix-pretty": "^1.7.9"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

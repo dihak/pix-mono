@@ -13,12 +13,12 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import type { ModelsDevModel } from "@dihak/pix-data";
+import { benchScoreColor, lookupBenchmark, lookupModelsDev } from "@dihak/pix-data";
+import { icon } from "@dihak/pix-pretty/icon-catalog";
 import type { AssistantMessage, AssistantMessageEvent } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
 import { truncateToWidth } from "@earendil-works/pi-tui";
-import type { ModelsDevModel } from "@xynogen/pix-data";
-import { benchScoreColor, lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
-import { icon } from "@xynogen/pix-pretty/icon-catalog";
 
 // ─── Pure formatting helpers ─────────────────────────────────────────
 

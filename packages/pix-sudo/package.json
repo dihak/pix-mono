@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-sudo",
+	"name": "@dihak/pix-sudo",
 	"version": "0.3.7",
 	"description": "Pi tool — sudo_run with interactive PAM password prompt (PAM via sudo -S)",
 	"type": "module",
@@ -23,11 +23,11 @@
 		"pi-extension",
 		"sudo"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-sudo"
 	},
 	"publishConfig": {
@@ -35,8 +35,8 @@
 	},
 	"dependencies": {
 		"typebox": "^1.1.38",
-		"@xynogen/pix-data": "^0.3.2",
-		"@xynogen/pix-pretty": "^1.7.18"
+		"@dihak/pix-data": "^0.3.2",
+		"@dihak/pix-pretty": "^1.7.18"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

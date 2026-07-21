@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-pretty",
+	"name": "@dihak/pix-pretty",
 	"version": "1.7.21",
 	"description": "Enhanced tool output rendering with syntax highlighting, file icons, tree views, diff rendering, and FFF search",
 	"type": "module",
@@ -43,22 +43,22 @@
 		"paste-chips",
 		"tool-rendering"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-pretty"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-pretty#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-pretty#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-data": "^0.3.0",
+		"@dihak/pix-data": "^0.3.0",
 		"cli-highlight": "^2.1.11",
 		"@ff-labs/fff-node": "^0.5.2",
 		"diff": "^7.0.0"

@@ -114,7 +114,7 @@ function packageFromPath(path: string | null | undefined): string | undefined {
 }
 
 function packageFromModule(moduleName: string, sourceFile: string, repoRoot: string): string | undefined {
-	const pixPackage = moduleName.match(/^@xynogen\/([^/]+)/)?.[1];
+	const pixPackage = moduleName.match(/^@dihak\/([^/]+)/)?.[1];
 	if (pixPackage) return pixPackage;
 	if (!moduleName.startsWith(".")) return undefined;
 	return packageFromPath(normalizePath(resolve(repoRoot, sourceFile, "..", moduleName), repoRoot));

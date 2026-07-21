@@ -15,6 +15,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { frameLines, modalWidth } from "@dihak/pix-pretty/modal-frame";
 import type {
 	ExtensionAPI,
 	ExtensionContext,
@@ -34,7 +35,6 @@ import {
 	type TUI,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
-import { frameLines, modalWidth } from "@xynogen/pix-pretty/modal-frame";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 

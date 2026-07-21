@@ -13,7 +13,7 @@
 #   scripts/dev-link.sh --unlink           # restore the real npm-installed copies
 #   scripts/dev-link.sh --unlink pix-bash  # restore only the named package(s)
 #
-# Package names match with or without the @xynogen/ scope (pix-bash == @xynogen/pix-bash).
+# Package names match with or without the @dihak/ scope (pix-bash == @dihak/pix-bash).
 #
 # After (un)linking, restart your Pi session so the extension host reloads.
 #
@@ -23,7 +23,7 @@ set -euo pipefail
 
 # Where Pi installs npm extensions. Override with PI_NPM_DIR if non-default.
 PI_NPM_DIR="${PI_NPM_DIR:-$HOME/.pi/agent/npm}"
-TARGET_DIR="${PI_NPM_DIR}/node_modules/@xynogen"
+TARGET_DIR="${PI_NPM_DIR}/node_modules/@dihak"
 SETTINGS_FILE="${HOME}/.pi/agent/settings.json"
 
 repo_root=$(cd "$(dirname "$0")/.." && pwd)
@@ -38,14 +38,14 @@ fi
 unlink=false
 [ "${1:-}" = "--unlink" ] && { unlink=true; shift; }
 
-# Remaining args = explicit package filter (bare or @xynogen/-scoped names).
+# Remaining args = explicit package filter (bare or @dihak/-scoped names).
 # Empty filter ($# == 0) means "all packages".
 want_pkgs=("$@")
 wants() {
 	[ ${#want_pkgs[@]} -eq 0 ] && return 0
-	local name="$1" short="${1#@xynogen/}"
+	local name="$1" short="${1#@dihak/}"
 	for w in "${want_pkgs[@]}"; do
-		[ "$w" = "$name" ] || [ "$w" = "$short" ] || [ "@xynogen/$w" = "$name" ] && return 0
+		[ "$w" = "$name" ] || [ "$w" = "$short" ] || [ "@dihak/$w" = "$name" ] && return 0
 	done
 	return 1
 }
@@ -57,7 +57,7 @@ unregistered=0
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-# Resolve pix-core's full transitive @xynogen/* dependency closure (members +
+# Resolve pix-core's full transitive @dihak/* dependency closure (members +
 # shared libs like pix-pretty/pix-data they pull in). These are all booted in
 # process by pix-core's aggregator, so none may be registered independently —
 # doing so double-registers their tools/extensions and triggers Pi conflicts.
@@ -69,18 +69,18 @@ const fs = require('fs');
 const path = require('path');
 const pkgDir = '${packages_dir}';
 const readDeps = (name) => {
-  const short = name.replace(/^@xynogen\//, '');
+  const short = name.replace(/^@dihak\//, '');
   const pj = path.join(pkgDir, short, 'package.json');
   try { return Object.keys(JSON.parse(fs.readFileSync(pj, 'utf8')).dependencies || {}); }
   catch { return []; }
 };
 const seen = new Set();
-const stack = readDeps('@xynogen/pix-core').filter((d) => d.startsWith('@xynogen/'));
+const stack = readDeps('@dihak/pix-core').filter((d) => d.startsWith('@dihak/'));
 while (stack.length) {
   const d = stack.pop();
   if (seen.has(d)) continue;
   seen.add(d);
-  for (const next of readDeps(d)) if (next.startsWith('@xynogen/')) stack.push(next);
+  for (const next of readDeps(d)) if (next.startsWith('@dihak/')) stack.push(next);
 }
 process.stdout.write([...seen].join('\n'));
 " 2>/dev/null)
@@ -143,12 +143,12 @@ process.exit(1);
 
 # ── main loop ─────────────────────────────────────────────────────────────────
 
-# Also symlink packages into the repo's own node_modules/@xynogen so that
-# Node can resolve @xynogen/* imports when traversing up from a symlink target
+# Also symlink packages into the repo's own node_modules/@dihak so that
+# Node can resolve @dihak/* imports when traversing up from a symlink target
 # (packages/<pkg>/src/). Without this, cross-package imports like
-# @xynogen/pix-pretty/ansi fail at runtime because Node follows the real path
+# @dihak/pix-pretty/ansi fail at runtime because Node follows the real path
 # of a symlink when walking node_modules ancestors.
-REPO_NM_DIR="${repo_root}/node_modules/@xynogen"
+REPO_NM_DIR="${repo_root}/node_modules/@dihak"
 mkdir -p "$REPO_NM_DIR"
 
 compute_core_closure
@@ -159,8 +159,8 @@ for dir in "$packages_dir"/*/; do
 
 	name=$(node -p "require('${pkg_json}').name")
 	wants "$name" || continue
-	# Strip the @xynogen/ scope to get the dir name under @xynogen.
-	short="${name#@xynogen/}"
+	# Strip the @dihak/ scope to get the dir name under @dihak.
+	short="${name#@dihak/}"
 	dest="${TARGET_DIR}/${short}"
 	needs_registration=false
 	has_pi_extensions "$pkg_json" && needs_registration=true
@@ -187,7 +187,7 @@ for dir in "$packages_dir"/*/; do
 	# Remove the existing npm copy (or stale link) and point at the repo.
 	rm -rf "$dest"
 	ln -s "${dir%/}" "$dest"
-	# Also symlink into repo node_modules so Node traversal resolves @xynogen/*.
+	# Also symlink into repo node_modules so Node traversal resolves @dihak/*.
 	rm -rf "${REPO_NM_DIR}/${short}"
 	ln -s "${dir%/}" "${REPO_NM_DIR}/${short}"
 	echo "→ linked ${name} → ${dir%/}"

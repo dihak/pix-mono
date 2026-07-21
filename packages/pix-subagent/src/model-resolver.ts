@@ -2,8 +2,8 @@
  * Model resolution: exact match ("provider/modelId") with fuzzy fallback.
  */
 
+import { lookupBenchmark, lookupModelsDev } from "@dihak/pix-data";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import { lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
 
 export interface ModelEntry {
 	id: string;

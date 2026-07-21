@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-ask",
+	"name": "@dihak/pix-ask",
 	"version": "0.2.7",
 	"description": "Pi tool — structured questionnaire UI (ask_user)",
 	"type": "module",
@@ -23,11 +23,11 @@
 		"pi-extension",
 		"ask"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-ask"
 	},
 	"publishConfig": {
@@ -35,7 +35,7 @@
 	},
 	"dependencies": {
 		"typebox": "^1.1.38",
-		"@xynogen/pix-pretty": "^1.7.9"
+		"@dihak/pix-pretty": "^1.7.9"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

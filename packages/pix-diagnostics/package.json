@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-diagnostics",
+	"name": "@dihak/pix-diagnostics",
 	"version": "0.1.6",
 	"description": "Pi extension — compact session-touched-files widget (overrides pi-lens)",
 	"type": "module",
@@ -23,16 +23,16 @@
 		"pi-extension",
 		"pix"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-diagnostics"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-diagnostics#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-diagnostics#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"

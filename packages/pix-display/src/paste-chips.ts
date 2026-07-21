@@ -13,12 +13,12 @@
  * The display rewrite is purely visual (render layer); buffer is untouched.
  */
 
+import { BOLD, FG_BLUE, FG_DIM, FG_GREEN, RST } from "@dihak/pix-pretty/ansi";
+import { icon } from "@dihak/pix-pretty/icon-catalog";
 import type { ExtensionAPI, KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import { CustomEditor } from "@earendil-works/pi-coding-agent";
 import type { EditorTheme, TUI } from "@earendil-works/pi-tui";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { BOLD, FG_BLUE, FG_DIM, FG_GREEN, RST } from "@xynogen/pix-pretty/ansi";
-import { icon } from "@xynogen/pix-pretty/icon-catalog";
 
 // Upstream stopped re-exporting `EditorFactory` from the package entry point,
 // so we reconstruct its signature locally from the still-exported primitives.

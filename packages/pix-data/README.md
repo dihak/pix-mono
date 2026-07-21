@@ -119,9 +119,9 @@ place if your priorities differ.
 | `lookupModelsDev` | Sync lookup by id from in-memory cache (joined on slug) |
 | `lookupBenchmark` | Sync lookup a model by id — returns score + rank + pricing |
 | `benchScoreColor` | Map a 0–100 score to a `success`/`warning`/`error`/`muted` token |
-| `pixConfig` | `@xynogen/pix-data/pix-config` — load/access the unified `pix.json` config |
+| `pixConfig` | `@dihak/pix-data/pix-config` — load/access the unified `pix.json` config |
 | `reloadPixConfig` | Force a fresh read of `pix.json` from disk |
-| `shouldCollapse` | `@xynogen/pix-data/collapse` — whether a tool's output card should auto-collapse |
+| `shouldCollapse` | `@dihak/pix-data/collapse` — whether a tool's output card should auto-collapse |
 | `collapseDelayMs` | Configured delay (ms) before a card collapses (default 10 000) |
 | `tickCollapse` | Schedule auto-collapse and report whether the current render should use its compact row |
 
@@ -184,19 +184,19 @@ pix-data hosts the **single shared config file** consumed by every `pix-*` packa
 
 All sections are optional — missing keys fall back to the defaults shown above. Environment variables (e.g. `PRETTY_THEME`) still take precedence over `pix.json` values.
 
-### API — `@xynogen/pix-data/pix-config`
+### API — `@dihak/pix-data/pix-config`
 
 ```ts
-import { pixConfig, reloadPixConfig } from "@xynogen/pix-data/pix-config";
+import { pixConfig, reloadPixConfig } from "@dihak/pix-data/pix-config";
 
 const cfg = pixConfig();          // returns cached PixConfig (loaded once per session)
 await reloadPixConfig();          // force re-read from disk (e.g. after /config reload)
 ```
 
-### API — `@xynogen/pix-data/collapse`
+### API — `@dihak/pix-data/collapse`
 
 ```ts
-import { shouldCollapse, collapseDelayMs, tickCollapse } from "@xynogen/pix-data/collapse";
+import { shouldCollapse, collapseDelayMs, tickCollapse } from "@dihak/pix-data/collapse";
 
 // In a terminal tool result renderer:
 const collapsed = tickCollapse(
@@ -217,7 +217,7 @@ if (collapsed) {
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-data
+pi install npm:@dihak/pix-data
 ```
 
 ## How it works
@@ -230,12 +230,12 @@ automatically.
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

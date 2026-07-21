@@ -28,7 +28,7 @@ function fixtureRoot(): string {
 		join(root, "packages/a/src/main.ts"),
 		[
 			'import { readFile } from "node:fs/promises";',
-			'import { icon } from "@xynogen/b/icon";',
+			'import { icon } from "@dihak/b/icon";',
 			"export async function load() {",
 			'\tawait readFile("input.txt");',
 			'\ticon("model");',

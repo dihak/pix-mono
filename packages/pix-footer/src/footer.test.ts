@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { icon } from "@xynogen/pix-pretty/icon-catalog";
+import { icon } from "@dihak/pix-pretty/icon-catalog";
 import { compactStatus, renderThinkingLevel } from "./footer.ts";
 
 const theme = {

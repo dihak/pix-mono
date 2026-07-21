@@ -19,23 +19,23 @@ The features are registered at session start. TUI-only display changes are no-op
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-display
+pi install npm:@dihak/pix-display
 ```
 
-> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
+> Also included in [`@dihak/pix-core`](https://www.npmjs.com/package/@dihak/pix-core):
 >
 > ```bash
-> pi install npm:@xynogen/pix-core
+> pi install npm:@dihak/pix-core
 > ```
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

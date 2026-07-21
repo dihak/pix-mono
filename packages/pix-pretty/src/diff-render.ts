@@ -8,7 +8,7 @@
 // technique below works unchanged — diff backgrounds layer underneath and
 // persist through fg switches.
 
-import { pixConfig } from "@xynogen/pix-data/pix-config";
+import { pixConfig } from "@dihak/pix-data/pix-config";
 import * as Diff from "diff";
 import { BG_BASE, BOLD, FG_DIM, FG_LNUM, FG_RULE, RST } from "./ansi.js";
 import { MAX_HL_CHARS, MAX_RENDER_LINES, WORD_DIFF_MIN_SIM } from "./config.js";

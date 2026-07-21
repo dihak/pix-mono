@@ -11,8 +11,8 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { pixConfig } from "@dihak/pix-data/pix-config";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
-import { pixConfig } from "@xynogen/pix-data/pix-config";
 import type { OptimizerTool } from "./status.ts";
 
 type OptimizerFileConfig = Partial<Record<OptimizerTool, string>>;

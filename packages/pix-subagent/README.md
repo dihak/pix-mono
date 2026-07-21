@@ -1,17 +1,17 @@
-# @xynogen/pix-subagent
+# @dihak/pix-subagent
 
 Pi extension — planner-driven sub-agents with 4 tools, live widget (model always visible), and explicit work-splitting.
 
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-subagent
+pi install npm:@dihak/pix-subagent
 ```
 
-> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
+> Also included in [`@dihak/pix-core`](https://www.npmjs.com/package/@dihak/pix-core):
 >
 > ```bash
-> pi install npm:@xynogen/pix-core
+> pi install npm:@dihak/pix-core
 > ```
 
 ## What it does

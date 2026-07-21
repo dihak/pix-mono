@@ -1,15 +1,8 @@
-import type {
-	AgentToolUpdateCallback,
-	BashToolInput,
-	ExtensionContext,
-} from "@earendil-works/pi-coding-agent";
-
-import { truncateToWidth } from "@earendil-works/pi-tui";
-import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
-import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
-import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
-import { renderBashOutput } from "@xynogen/pix-pretty/renderers";
+import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
+import { FG_DIM, RST } from "@dihak/pix-pretty/ansi";
+import { MAX_PREVIEW_LINES } from "@dihak/pix-pretty/config";
+import type { ToolContext } from "@dihak/pix-pretty/context";
+import { renderBashOutput } from "@dihak/pix-pretty/renderers";
 import type {
 	BashParams,
 	PiPrettyApi,
@@ -17,7 +10,7 @@ import type {
 	ThemeLike,
 	ToolFactory,
 	ToolResultLike,
-} from "@xynogen/pix-pretty/types";
+} from "@dihak/pix-pretty/types";
 import {
 	fillToolBackground,
 	getTextContent,
@@ -29,7 +22,13 @@ import {
 	rule,
 	setResultDetails,
 	termW,
-} from "@xynogen/pix-pretty/utils";
+} from "@dihak/pix-pretty/utils";
+import type {
+	AgentToolUpdateCallback,
+	BashToolInput,
+	ExtensionContext,
+} from "@earendil-works/pi-coding-agent";
+import { truncateToWidth } from "@earendil-works/pi-tui";
 
 export function summarizeBashCommand(command: string): string {
 	const lines = command

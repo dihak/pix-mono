@@ -4,13 +4,13 @@
  * startup safety check in pix-welcome.
  *
  * A `!`cmd`` directive embeds live command output into a skill at load time.
- * Safety policy (shared with the bash gate via @xynogen/pix-gate):
+ * Safety policy (shared with the bash gate via @dihak/pix-gate):
  *   - shell metacharacters → unsafe (chaining/expansion)
  *   - matches any pix-gate rule (critical/dangerous/risky) → unsafe
  *   - otherwise → safe to run
  */
 
-import { buildRules, classify, loadUserConfig } from "@xynogen/pix-gate/lib";
+import { buildRules, classify, loadUserConfig } from "@dihak/pix-gate/lib";
 
 export interface CommandDirective {
 	start: number;

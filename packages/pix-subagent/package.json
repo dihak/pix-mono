@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-subagent",
+	"name": "@dihak/pix-subagent",
 	"version": "0.5.6",
 	"description": "Pi tool — planner-driven sub-agents: spawn, fetch, steer scoped child agents",
 	"type": "module",
@@ -25,11 +25,11 @@
 		"agent",
 		"autonomous"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-subagent"
 	},
 	"publishConfig": {
@@ -37,8 +37,8 @@
 	},
 	"dependencies": {
 		"typebox": "^1.1.38",
-		"@xynogen/pix-data": "^0.3.0",
-		"@xynogen/pix-pretty": "^1.7.13"
+		"@dihak/pix-data": "^0.3.0",
+		"@dihak/pix-pretty": "^1.7.13"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

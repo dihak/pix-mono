@@ -34,8 +34,8 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
+import { icon } from "@dihak/pix-pretty/icon-catalog";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { icon } from "@xynogen/pix-pretty/icon-catalog";
 
 // ─── Theme shim (same pattern as footer.ts) ───────────────────────────────────
 

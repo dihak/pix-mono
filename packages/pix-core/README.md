@@ -2,7 +2,7 @@
 
 Pi coding agent extension — core UI/UX meta-package.
 
-Installing `pix-core` pulls in all of the packages below as npm dependencies **and activates them**. A single `pi install npm:@xynogen/pix-core` boots every core extension — you do not need to install the members individually.
+Installing `pix-core` pulls in all of the packages below as npm dependencies **and activates them**. A single `pi install npm:@dihak/pix-core` boots every core extension — you do not need to install the members individually.
 
 ## How it works
 
@@ -51,19 +51,19 @@ Pi activates extensions per installed package via each package's `pi.extensions`
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-core
+pi install npm:@dihak/pix-core
 ```
 
 > Installs and activates the core pix UI/UX extensions in one command. Members are deduped if also installed directly.
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

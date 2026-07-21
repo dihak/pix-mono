@@ -21,14 +21,12 @@
  *   - Output truncated to 50 KB / 2000 lines.
  */
 
-import type { AgentToolUpdateCallback, ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
-import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
-import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
-import { MAX_PREVIEW_LINES } from "@xynogen/pix-pretty/config";
-import { showOverlay } from "@xynogen/pix-pretty/gate-overlay";
-import { renderBashOutput } from "@xynogen/pix-pretty/renderers";
-import type { RenderContextLike, ThemeLike, ToolResultLike } from "@xynogen/pix-pretty/types";
+import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
+import { FG_DIM, RST } from "@dihak/pix-pretty/ansi";
+import { MAX_PREVIEW_LINES } from "@dihak/pix-pretty/config";
+import { showOverlay } from "@dihak/pix-pretty/gate-overlay";
+import { renderBashOutput } from "@dihak/pix-pretty/renderers";
+import type { RenderContextLike, ThemeLike, ToolResultLike } from "@dihak/pix-pretty/types";
 import {
 	fillToolBackground,
 	getTextContent,
@@ -38,7 +36,9 @@ import {
 	renderToolError,
 	rule,
 	termW,
-} from "@xynogen/pix-pretty/utils";
+} from "@dihak/pix-pretty/utils";
+import type { AgentToolUpdateCallback, ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
 	detectAuthFailure,

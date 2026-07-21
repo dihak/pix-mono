@@ -1,11 +1,11 @@
+import { CursorStore, fffState } from "@dihak/pix-pretty/fff";
+import type { PiPrettyApi, TextComponentCtor, ToolFactory } from "@dihak/pix-pretty/types";
+import { shortPath } from "@dihak/pix-pretty/utils";
 import {
 	createLsToolDefinition,
 	createLsTool as createLsToolFallback,
 	type LsToolInput,
 } from "@earendil-works/pi-coding-agent";
-import { CursorStore, fffState } from "@xynogen/pix-pretty/fff";
-import type { PiPrettyApi, TextComponentCtor, ToolFactory } from "@xynogen/pix-pretty/types";
-import { shortPath } from "@xynogen/pix-pretty/utils";
 import { registerLsTool } from "./ls.js";
 import { once } from "./once.ts";
 

@@ -12,12 +12,12 @@
  *   all off:       all four dim
  */
 
+import { type IconKey, icon, onIconModeChange } from "@dihak/pix-pretty/icon-catalog";
 import type {
 	ExtensionCommandContext,
 	ExtensionContext,
 	ThemeColor,
 } from "@earendil-works/pi-coding-agent";
-import { type IconKey, icon, onIconModeChange } from "@xynogen/pix-pretty/icon-catalog";
 
 /**
  * Each optimizer tool (caveman/rtk/toon/ponytail) exposes a handle so the

@@ -5,8 +5,8 @@
  *   - routerBaseUrl()  — resolved API base URL from env
  *   - routerModels     — DataSource<RouterModel[]>, cached 30m at ~/.cache/pi/9router.json
  *
- * models.dev + BenchLM data is provided by @xynogen/pix-data
- * (github.com/xynogen/pix-mono/tree/main/packages/pix-data), which shares the
+ * models.dev + BenchLM data is provided by @dihak/pix-data
+ * (github.com/dihak/pix-mono/tree/main/packages/pix-data), which shares the
  * same ~/.cache/pi/ cache directory. The DataSource implementation and the
  * models.dev index helpers live there — imported here, not duplicated.
  *
@@ -75,5 +75,5 @@ export const routerModels = new DataSource<RouterModel[]>({
 
 // ── models.dev index (read from pix-data shared cache) ────────────────────────
 // fetchModelsDevIndex / buildModelsDevIndex / lookupInIndex are re-exported
-// above directly from @xynogen/pix-data — they read the same shared
+// above directly from @dihak/pix-data — they read the same shared
 // ~/.cache/pi/models.json cache that pix-data warms.

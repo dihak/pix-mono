@@ -1,11 +1,11 @@
+import { CursorStore, fffState } from "@dihak/pix-pretty/fff";
+import type { PiPrettyApi, TextComponentCtor, ToolFactory } from "@dihak/pix-pretty/types";
+import { shortPath } from "@dihak/pix-pretty/utils";
 import {
 	createReadToolDefinition,
 	createReadTool as createReadToolFallback,
 	type ReadToolInput,
 } from "@earendil-works/pi-coding-agent";
-import { CursorStore, fffState } from "@xynogen/pix-pretty/fff";
-import type { PiPrettyApi, TextComponentCtor, ToolFactory } from "@xynogen/pix-pretty/types";
-import { shortPath } from "@xynogen/pix-pretty/utils";
 
 import { once } from "./once.ts";
 import { registerReadTool } from "./read.js";

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { icon } from "@xynogen/pix-pretty/icon-catalog";
+import { icon } from "@dihak/pix-pretty/icon-catalog";
 import { registerAgents } from "../src/agent-types.ts";
 import type { ModelRegistry } from "../src/model-resolver.ts";
 import {

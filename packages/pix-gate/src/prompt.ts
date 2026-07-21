@@ -2,11 +2,11 @@
  * pix-gate — prompt.ts
  *
  * Thin adapter: maps gate severity/rule → showOverlay (pix-pretty).
- * All dialog logic lives in @xynogen/pix-pretty/gate-overlay.
+ * All dialog logic lives in @dihak/pix-pretty/gate-overlay.
  */
 
+import { type OverlayResult, showOverlay } from "@dihak/pix-pretty/gate-overlay";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { type OverlayResult, showOverlay } from "@xynogen/pix-pretty/gate-overlay";
 import type { PathRule, Rule } from "./lib.ts";
 
 export interface GateDecision {

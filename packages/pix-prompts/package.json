@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-prompts",
+	"name": "@dihak/pix-prompts",
 	"version": "0.3.1",
 	"description": "Pi extension — system-prompt injection (SOP.md + repo directives)",
 	"type": "module",
@@ -24,16 +24,16 @@
 		"pi-extension",
 		"pix"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-prompts"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-prompts#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-prompts#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"

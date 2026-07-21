@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-nudge",
+	"name": "@dihak/pix-nudge",
 	"version": "0.1.9",
 	"description": "Pi extension — model-steering nudges (tools + capability)",
 	"type": "module",
@@ -23,16 +23,16 @@
 		"pi-extension",
 		"pix"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-nudge"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-nudge#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-nudge#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"

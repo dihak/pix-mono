@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-edit",
+	"name": "@dihak/pix-edit",
 	"version": "0.1.16",
 	"description": "Pi tool — precise text replacement edit with diff rendering",
 	"type": "module",
@@ -23,19 +23,19 @@
 		"pi-extension",
 		"edit"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-edit"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-pretty": "^1.7.20",
-		"@xynogen/pix-data": "^0.3.0"
+		"@dihak/pix-pretty": "^1.7.20",
+		"@dihak/pix-data": "^0.3.0"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

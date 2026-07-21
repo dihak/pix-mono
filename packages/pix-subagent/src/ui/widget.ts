@@ -8,8 +8,8 @@
  * Ported from tintinweb/pi-subagents (MIT), adapted for pix-mono.
  */
 
+import { icon } from "@dihak/pix-pretty/icon-catalog";
 import { truncateToWidth } from "@earendil-works/pi-tui";
-import { icon } from "@xynogen/pix-pretty/icon-catalog";
 import type { AgentManager } from "../agent-manager.ts";
 import { getConfig } from "../agent-types.ts";
 import type { AgentActivity, AgentDetails, Theme } from "../tools.ts";

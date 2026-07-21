@@ -4,7 +4,7 @@ Pi tool — enhanced directory listing.
 
 ## What it does
 
-Replaces Pi's default `ls` tool with an enhanced version backed by `pix-pretty`. Output is rendered with file/directory icons and a total entry-count header. Call labels show the target path inline. Depends on `@xynogen/pix-pretty`, installed automatically as a dependency.
+Replaces Pi's default `ls` tool with an enhanced version backed by `pix-pretty`. Output is rendered with file/directory icons and a total entry-count header. Call labels show the target path inline. Depends on `@dihak/pix-pretty`, installed automatically as a dependency.
 
 ## Display style
 
@@ -37,28 +37,28 @@ After a configurable delay (default 10 seconds), completed output collapses to a
 }
 ```
 
-Set `collapse.tools.ls: false` to disable for this tool only. See `@xynogen/pix-data/collapse` for the full API.
+Set `collapse.tools.ls: false` to disable for this tool only. See `@dihak/pix-data/collapse` for the full API.
 
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-ls
+pi install npm:@dihak/pix-ls
 ```
 
-> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
+> Also included in [`@dihak/pix-core`](https://www.npmjs.com/package/@dihak/pix-core):
 >
 > ```bash
-> pi install npm:@xynogen/pix-core
+> pi install npm:@dihak/pix-core
 > ```
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

@@ -1,23 +1,16 @@
 import { existsSync, readFileSync } from "node:fs";
-import type {
-	AgentToolUpdateCallback,
-	ExtensionContext,
-	ToolRenderResultOptions,
-	WriteToolInput,
-} from "@earendil-works/pi-coding-agent";
-
-import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
-import { MAX_RENDER_LINES } from "@xynogen/pix-pretty/config";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
-import { parseDiff } from "@xynogen/pix-pretty/diff";
+import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
+import { MAX_RENDER_LINES } from "@dihak/pix-pretty/config";
+import type { ToolContext } from "@dihak/pix-pretty/context";
+import { parseDiff } from "@dihak/pix-pretty/diff";
 import {
 	diffThemeCacheKey,
 	renderSplit,
 	resolveDiffColors,
 	summarize,
-} from "@xynogen/pix-pretty/diff-render";
-import { hlBlock } from "@xynogen/pix-pretty/highlight";
-import { lang } from "@xynogen/pix-pretty/lang";
+} from "@dihak/pix-pretty/diff-render";
+import { hlBlock } from "@dihak/pix-pretty/highlight";
+import { lang } from "@dihak/pix-pretty/lang";
 import type {
 	PiPrettyApi,
 	RenderContextLike,
@@ -26,7 +19,7 @@ import type {
 	ToolResultLike,
 	WriteParams,
 	WriteRenderState,
-} from "@xynogen/pix-pretty/types";
+} from "@dihak/pix-pretty/types";
 import {
 	fillToolBackground,
 	getTextContent,
@@ -36,7 +29,13 @@ import {
 	renderToolError,
 	setResultDetails,
 	termW,
-} from "@xynogen/pix-pretty/utils";
+} from "@dihak/pix-pretty/utils";
+import type {
+	AgentToolUpdateCallback,
+	ExtensionContext,
+	ToolRenderResultOptions,
+	WriteToolInput,
+} from "@earendil-works/pi-coding-agent";
 
 export function registerWriteTool(
 	pi: PiPrettyApi,

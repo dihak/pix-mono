@@ -16,10 +16,10 @@ import { copyFile, mkdir, readFile, realpath, rename, rm, stat } from "node:fs/p
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
+import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
+import { formatCollapsedToolRow, hideCollapsedToolCall } from "@dihak/pix-pretty/utils";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
-import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
-import { formatCollapsedToolRow, hideCollapsedToolCall } from "@xynogen/pix-pretty/utils";
 import { Type } from "typebox";
 import {
 	directiveBlockReason,

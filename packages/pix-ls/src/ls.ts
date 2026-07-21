@@ -1,12 +1,7 @@
-import type {
-	AgentToolUpdateCallback,
-	ExtensionContext,
-	LsToolInput,
-} from "@earendil-works/pi-coding-agent";
-import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
-import { FG_DIM, RST } from "@xynogen/pix-pretty/ansi";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
-import { renderTree } from "@xynogen/pix-pretty/renderers";
+import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
+import { FG_DIM, RST } from "@dihak/pix-pretty/ansi";
+import type { ToolContext } from "@dihak/pix-pretty/context";
+import { renderTree } from "@dihak/pix-pretty/renderers";
 import type {
 	LsParams,
 	PiPrettyApi,
@@ -14,7 +9,7 @@ import type {
 	ThemeLike,
 	ToolFactory,
 	ToolResultLike,
-} from "@xynogen/pix-pretty/types";
+} from "@dihak/pix-pretty/types";
 import {
 	fillToolBackground,
 	getTextContent,
@@ -22,7 +17,12 @@ import {
 	renderCollapsedToolRow,
 	renderToolError,
 	setResultDetails,
-} from "@xynogen/pix-pretty/utils";
+} from "@dihak/pix-pretty/utils";
+import type {
+	AgentToolUpdateCallback,
+	ExtensionContext,
+	LsToolInput,
+} from "@earendil-works/pi-coding-agent";
 
 export const DEFAULT_LS_LIMIT = 200;
 

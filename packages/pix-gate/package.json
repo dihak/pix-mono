@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-gate",
+	"name": "@dihak/pix-gate",
 	"version": "0.1.15",
 	"description": "Pi extension — permission gate for dangerous bash commands (confirm/block with TUI dialog)",
 	"type": "module",
@@ -31,19 +31,19 @@
 		"permission",
 		"gate"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-gate"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-pretty": "^1.7.9",
-		"@xynogen/pix-data": "^0.3.0"
+		"@dihak/pix-pretty": "^1.7.9",
+		"@dihak/pix-data": "^0.3.0"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

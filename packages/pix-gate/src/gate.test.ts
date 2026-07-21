@@ -25,9 +25,7 @@ describe("isSudoCommand", () => {
 	});
 
 	test("does NOT match pix-sudo-run in a path", () => {
-		expect(isSudoCommand("grep foo ~/.pi/node_modules/@xynogen/pix-sudo-run/src/lib.ts")).toBe(
-			false,
-		);
+		expect(isSudoCommand("grep foo ~/.pi/node_modules/@dihak/pix-sudo-run/src/lib.ts")).toBe(false);
 	});
 
 	test("does NOT match sudoer or pseudo", () => {

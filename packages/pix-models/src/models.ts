@@ -8,6 +8,9 @@
  * Sorted by benchlm rank when available (best first), then alphabetical.
  */
 
+import { benchScoreColor, lookupBenchmark, lookupModelsDev } from "@dihak/pix-data";
+import { icon } from "@dihak/pix-pretty/icon-catalog";
+import { frameLines, modalWidth } from "@dihak/pix-pretty/modal-frame";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	fuzzyFilter,
@@ -18,9 +21,6 @@ import {
 	SelectList,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
-import { benchScoreColor, lookupBenchmark, lookupModelsDev } from "@xynogen/pix-data";
-import { icon } from "@xynogen/pix-pretty/icon-catalog";
-import { frameLines, modalWidth } from "@xynogen/pix-pretty/modal-frame";
 import { patchOutBuiltinModelCommand } from "./patch-builtin";
 
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────

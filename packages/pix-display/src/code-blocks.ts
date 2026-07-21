@@ -10,7 +10,7 @@ const CLOSING_FENCE_RE = /^```\s*$/;
 const DEFAULT_LABEL = "code";
 const ANSI_RE = /\x1b\[[0-?]*[ -/]*[@-~]/g;
 const OSC_RE = /\x1b\][^\x07]*(?:\x07|\x1b\\)/g;
-const PATCHED = Symbol.for("@xynogen/pix-display:code-block-renderer");
+const PATCHED = Symbol.for("@dihak/pix-display:code-block-renderer");
 
 type CodeFrameTheme = Pick<Theme, "bg" | "bold" | "fg" | "getBgAnsi">;
 type RenderMode = "tui" | "rpc" | "json" | "print";

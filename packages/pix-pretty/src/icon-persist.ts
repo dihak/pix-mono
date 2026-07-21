@@ -9,7 +9,7 @@
  * Precedence: env PRETTY_ICONS → pix.json pretty.icons → default ("nerd")
  */
 
-import { onPixConfigChange, pixConfig, savePixConfig } from "@xynogen/pix-data/pix-config";
+import { onPixConfigChange, pixConfig, savePixConfig } from "@dihak/pix-data/pix-config";
 import { ICON_MODES, type IconMode, setIconMode } from "./icon-catalog.js";
 
 function isIconMode(m: string): m is IconMode {

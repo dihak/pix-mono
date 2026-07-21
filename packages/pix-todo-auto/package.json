@@ -1,7 +1,7 @@
 {
-	"name": "@dihak/pix-toolbox",
-	"version": "0.1.8",
-	"description": "Pi tool — gated tool toggle UI (/toolbox)",
+	"name": "@dihak/pix-todo-auto",
+	"version": "0.1.0",
+	"description": "Pi extension — auto-continue the agent while pix-todo items remain unfinished",
 	"type": "module",
 	"main": "src/index.ts",
 	"scripts": {
@@ -21,23 +21,23 @@
 		"pi",
 		"pi-package",
 		"pi-extension",
-		"toolbox"
+		"todo",
+		"auto-continue"
 	],
 	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/dihak/pix-mono.git",
-		"directory": "packages/pix-toolbox"
+		"directory": "packages/pix-todo-auto"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@dihak/pix-pretty": "^1.7.9"
+		"@dihak/pix-todo": "^0.1.16"
 	},
 	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*",
-		"@earendil-works/pi-tui": "*"
+		"@earendil-works/pi-coding-agent": "*"
 	}
 }

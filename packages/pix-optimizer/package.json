@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-optimizer",
+	"name": "@dihak/pix-optimizer",
 	"version": "1.1.17",
 	"description": "Performance optimization suite for Pi Coding Agent - caveman mode + RTK tool rewriting + jq/TOON JSON compression + ponytail lazy-dev mode",
 	"type": "module",
@@ -33,23 +33,23 @@
 		"ponytail",
 		"performance"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-optimizer"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-optimizer#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-optimizer#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-pretty": "^1.7.9",
-		"@xynogen/pix-data": "^0.3.0"
+		"@dihak/pix-pretty": "^1.7.9",
+		"@dihak/pix-data": "^0.3.0"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

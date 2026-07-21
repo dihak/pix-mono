@@ -9,13 +9,13 @@ Intercepts every `bash` tool call and classifies the command against a set of se
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-gate
+pi install npm:@dihak/pix-gate
 ```
 
-> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
+> Also included in [`@dihak/pix-core`](https://www.npmjs.com/package/@dihak/pix-core):
 >
 > ```bash
-> pi install npm:@xynogen/pix-core
+> pi install npm:@dihak/pix-core
 > ```
 
 ## Reusable exports
@@ -23,11 +23,11 @@ pi install npm:@xynogen/pix-gate
 The gate is split into a pure rule engine and the interactive prompt, so the
 classification logic can be reused without the TUI:
 
-- `@xynogen/pix-gate/lib` — pure rules: `DEFAULT_RULES`, `buildRules`,
+- `@dihak/pix-gate/lib` — pure rules: `DEFAULT_RULES`, `buildRules`,
   `classify`, `loadUserConfig`, `isSudoCommand`. No Pi/TUI dependency.
-- `@xynogen/pix-gate/prompt` — `promptGateDecision()`, the confirm/deny dialog
+- `@dihak/pix-gate/prompt` — `promptGateDecision()`, the confirm/deny dialog
   (depends on `pi-tui`). This is now a thin adapter over the shared
-  `@xynogen/pix-pretty/gate-overlay` component, so the gate and `sudo_run`
+  `@dihak/pix-pretty/gate-overlay` component, so the gate and `sudo_run`
   dialogs share one implementation.
 
 `pix-skills` imports `./lib` to gate skill `` !`cmd` `` directives with the same
@@ -55,12 +55,12 @@ The schema is identical to the old `pix-gate.json` — move your existing config
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

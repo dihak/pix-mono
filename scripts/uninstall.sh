@@ -2,11 +2,11 @@
 #
 # Uninstall the pix-mono distro from Pi Coding Agent.
 #
-# Removes every @xynogen/pix-* package that the install script registers.
+# Removes every @dihak/pix-* package that the install script registers.
 # Safe to re-run — skips packages that are already absent.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/uninstall.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/uninstall.sh | sh
 #   # or, from a local checkout:
 #   sh scripts/uninstall.sh   # or: bun run distro:uninstall
 set -eu
@@ -28,38 +28,38 @@ set -eu
 # updater is never removed mid-flow. It is refreshed only via
 # `pi update --extensions`, never via this uninstall+reinstall sweep.
 CORE_PACKAGES="
-npm:@xynogen/pix-data
-npm:@xynogen/pix-core
-npm:@xynogen/pix-welcome
-npm:@xynogen/pix-footer
-npm:@xynogen/pix-commands
-npm:@xynogen/pix-nudge
-npm:@xynogen/pix-diagnostics
-npm:@xynogen/pix-display
-npm:@xynogen/pix-prompts
-npm:@xynogen/pix-skills
-npm:@xynogen/pix-models
-npm:@xynogen/pix-subagent
+npm:@dihak/pix-data
+npm:@dihak/pix-core
+npm:@dihak/pix-welcome
+npm:@dihak/pix-footer
+npm:@dihak/pix-commands
+npm:@dihak/pix-nudge
+npm:@dihak/pix-diagnostics
+npm:@dihak/pix-display
+npm:@dihak/pix-prompts
+npm:@dihak/pix-skills
+npm:@dihak/pix-models
+npm:@dihak/pix-subagent
 "
 
 # EXTENSION module — standalone extension + tool packages.
 EXTENSION_PACKAGES="
-npm:@xynogen/pix-themes
-npm:@xynogen/pix-optimizer
-npm:@xynogen/pix-9router
-npm:@xynogen/pix-pretty
-npm:@xynogen/pix-bash
-npm:@xynogen/pix-read
-npm:@xynogen/pix-write
-npm:@xynogen/pix-edit
-npm:@xynogen/pix-find
-npm:@xynogen/pix-grep
-npm:@xynogen/pix-ls
-npm:@xynogen/pix-sudo
-npm:@xynogen/pix-todo
-npm:@xynogen/pix-ask
-npm:@xynogen/pix-toolbox
-npm:@xynogen/pix-gate
+npm:@dihak/pix-themes
+npm:@dihak/pix-optimizer
+npm:@dihak/pix-9router
+npm:@dihak/pix-pretty
+npm:@dihak/pix-bash
+npm:@dihak/pix-read
+npm:@dihak/pix-write
+npm:@dihak/pix-edit
+npm:@dihak/pix-find
+npm:@dihak/pix-grep
+npm:@dihak/pix-ls
+npm:@dihak/pix-sudo
+npm:@dihak/pix-todo
+npm:@dihak/pix-ask
+npm:@dihak/pix-toolbox
+npm:@dihak/pix-gate
 "
 
 info() { printf '\033[0;34m›\033[0m %s\n' "$*"; }

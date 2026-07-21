@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-todo",
+	"name": "@dihak/pix-todo",
 	"version": "0.1.16",
 	"description": "Pi tool — durable execution checklist (todo)",
 	"type": "module",
@@ -23,19 +23,19 @@
 		"pi-extension",
 		"todo"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-todo"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-data": "^0.3.2",
-		"@xynogen/pix-pretty": "^1.7.20",
+		"@dihak/pix-data": "^0.3.2",
+		"@dihak/pix-pretty": "^1.7.20",
 		"typebox": "^1.1.38"
 	},
 	"peerDependencies": {

@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-commands",
+	"name": "@dihak/pix-commands",
 	"version": "0.2.0",
 	"description": "Pi extension — slash commands for cache clearing and isolated side questions",
 	"type": "module",
@@ -25,16 +25,16 @@
 		"side-question",
 		"concurrent"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-commands"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-commands#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-commands#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"

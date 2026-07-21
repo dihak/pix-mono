@@ -2,7 +2,7 @@
 
 # pix-mono — Agent Operating Guide
 
-Monorepo of Pi Coding Agent extensions (`@xynogen/pix-*`).
+Monorepo of Pi Coding Agent extensions (`@dihak/pix-*`).
 **Bun** runtime · **Biome** lint/format · **tsc** types · **bun test** tests · all ESM (`"type": "module"`, ES2022).
 
 ---
@@ -166,12 +166,12 @@ The publish workflow re-runs CI, checks each `name@version` against npm, publish
 
 ## Dependency Versioning
 
-**All `@xynogen/` deps must use caret ranges (`^x.y.z`).** Never `workspace:*` or bare `"*"` — these break npm publish and end-user installs.
+**All `@dihak/` deps must use caret ranges (`^x.y.z`).** Never `workspace:*` or bare `"*"` — these break npm publish and end-user installs.
 
 - Set range to `^<current version>` of the target package.
 - After a **minor bump** of a shared 0.x package, update the caret range in **all consumers** (e.g. `pix-data` 0.3→0.4 means `"^0.3.0"` → `"^0.4.0"` everywhere). Patch bumps within the same minor need no consumer edits (`^0.3.0` already matches `0.3.1`). Consumers whose dep range changed also need a patch bump + republish.
 - `publish-all.ts` aborts if `workspace:` ranges survive.
-- CI enforces via `scripts/deps.test.ts`: no `workspace:`, no bare `*`, all `@xynogen/` deps use `^`.
+- CI enforces via `scripts/deps.test.ts`: no `workspace:`, no bare `*`, all `@dihak/` deps use `^`.
 
 ---
 
@@ -180,7 +180,7 @@ The publish workflow re-runs CI, checks each `name@version` against npm, publish
 **Never hardcode Nerd Font glyph codepoints** (terminals without Nerd Fonts render them as tofu). Use the semantic catalog in `pix-pretty`:
 
 ```ts
-import { icon } from "@xynogen/pix-pretty/icon-catalog";
+import { icon } from "@dihak/pix-pretty/icon-catalog";
 icon("cwd")           // resolves glyph for active mode (nerd/unicode/ascii)
 ```
 
@@ -201,7 +201,7 @@ Auto-created with defaults on first session. Sections:
 | `optimizer` | pix-optimizer (caveman/rtk/toon/ponytail state) |
 | `gate` | pix-gate (rules, auto-approve patterns) |
 
-Loader: `@xynogen/pix-data/pix-config` · Collapse: `@xynogen/pix-data/collapse`. Full schema in `packages/pix-data/README.md`.
+Loader: `@dihak/pix-data/pix-config` · Collapse: `@dihak/pix-data/collapse`. Full schema in `packages/pix-data/README.md`.
 
 ---
 

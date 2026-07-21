@@ -197,7 +197,7 @@ describe("withSpinner", () => {
 
 describe("constants", () => {
 	it("PIX_INSTALL_URL points to pix-mono main branch", () => {
-		expect(PIX_INSTALL_URL).toContain("xynogen/pix-mono");
+		expect(PIX_INSTALL_URL).toContain("dihak/pix-mono");
 		expect(PIX_INSTALL_URL).toContain("install.sh");
 	});
 

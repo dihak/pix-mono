@@ -14,7 +14,7 @@ Pi coding agent extension — **9Router provider** + **fetch**, **search**, and 
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-9router
+pi install npm:@dihak/pix-9router
 ```
 
 ## Environment
@@ -33,7 +33,7 @@ export ROUTER_API_KEY="your-key-here"
 
 ## How it works
 
-- **Provider**: on load, fetches `/models` from the router and registers them with Pi. The [modelgrep](https://modelgrep.com) catalog (via [`@xynogen/pix-data`](https://github.com/xynogen/pix-mono/tree/main/packages/pix-data)'s shared cache) is used internally to fill missing context window / modality fields where the router response omits them. Model list is cached at `~/.cache/pi/9router.json` (TTL 30 min).
+- **Provider**: on load, fetches `/models` from the router and registers them with Pi. The [modelgrep](https://modelgrep.com) catalog (via [`@dihak/pix-data`](https://github.com/dihak/pix-mono/tree/main/packages/pix-data)'s shared cache) is used internally to fill missing context window / modality fields where the router response omits them. Model list is cached at `~/.cache/pi/9router.json` (TTL 30 min).
 - **fetch / search**: POST to `/web/fetch` and `/search` on the router (which proxies to exa). If the router is unreachable, falls back to `curl` (for `fetch`, raw URL fetch; for `search`, the same `/search` endpoint via curl). Tool output is rendered dimmed so fetched web content reads like faded context rather than primary output.
 - **transcribe**: POST to `/audio/transcriptions` (Deepgram Nova 3 by default). Accepts any audio file path; falls back to curl.
 
@@ -43,12 +43,12 @@ Terminal tool results collapse after the shared Pix delay into metadata-driven r
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

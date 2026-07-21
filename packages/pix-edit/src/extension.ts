@@ -1,12 +1,12 @@
+import { CursorStore, fffState } from "@dihak/pix-pretty/fff";
+import { attachResizeListener, trackInvalidator } from "@dihak/pix-pretty/resize";
+import type { PiPrettyApi, TextComponentCtor, ToolFactory } from "@dihak/pix-pretty/types";
+import { shortPath } from "@dihak/pix-pretty/utils";
 import {
 	createEditToolDefinition,
 	createEditTool as createEditToolFallback,
 	type EditToolInput,
 } from "@earendil-works/pi-coding-agent";
-import { CursorStore, fffState } from "@xynogen/pix-pretty/fff";
-import { attachResizeListener, trackInvalidator } from "@xynogen/pix-pretty/resize";
-import type { PiPrettyApi, TextComponentCtor, ToolFactory } from "@xynogen/pix-pretty/types";
-import { shortPath } from "@xynogen/pix-pretty/utils";
 import { registerEditTool } from "./edit.js";
 import { once } from "./once.ts";
 

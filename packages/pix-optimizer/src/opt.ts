@@ -14,8 +14,8 @@
  * shared status cell. There is no text-arg form — the overlay is the only UI.
  */
 
+import { frameLines } from "@dihak/pix-pretty/modal-frame";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { frameLines } from "@xynogen/pix-pretty/modal-frame";
 import type { OptimizerHandle, OptimizerStatus, OptimizerTool } from "./status.ts";
 import { toolIcon } from "./status.ts";
 

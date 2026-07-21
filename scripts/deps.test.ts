@@ -55,14 +55,14 @@ describe("dependency hygiene", () => {
 		expect(violations).toEqual([]);
 	});
 
-	test("no bare * ranges for @xynogen/ deps in any published package", () => {
+	test("no bare * ranges for @dihak/ deps in any published package", () => {
 		const violations: string[] = [];
 		for (const { name, pkg } of pkgs) {
 			for (const field of DEP_FIELDS) {
 				const deps = pkg[field];
 				if (!deps) continue;
 				for (const [dep, range] of Object.entries(deps)) {
-					if (dep.startsWith("@xynogen/") && range === "*") {
+					if (dep.startsWith("@dihak/") && range === "*") {
 						violations.push(`${name} → ${field}.${dep}: "*"`);
 					}
 				}
@@ -71,14 +71,14 @@ describe("dependency hygiene", () => {
 		expect(violations).toEqual([]);
 	});
 
-	test("all @xynogen/ deps use caret ranges", () => {
+	test("all @dihak/ deps use caret ranges", () => {
 		const violations: string[] = [];
 		for (const { name, pkg } of pkgs) {
 			for (const field of DEP_FIELDS) {
 				const deps = pkg[field];
 				if (!deps) continue;
 				for (const [dep, range] of Object.entries(deps)) {
-					if (dep.startsWith("@xynogen/") && !range.startsWith("^")) {
+					if (dep.startsWith("@dihak/") && !range.startsWith("^")) {
 						violations.push(`${name} → ${field}.${dep}: "${range}" (expected ^x.y.z)`);
 					}
 				}
@@ -88,14 +88,14 @@ describe("dependency hygiene", () => {
 	});
 
 	test("pix-core dependency pins match each package's actual version", () => {
-		const corePkg = pkgs.find((p) => p.name === "@xynogen/pix-core");
+		const corePkg = pkgs.find((p) => p.name === "@dihak/pix-core");
 		if (!corePkg) throw new Error("pix-core not found in packages/");
 		const coreDeps = corePkg.pkg.dependencies ?? {};
 		const violations: string[] = [];
 
 		for (const [dep, range] of Object.entries(coreDeps)) {
-			if (!dep.startsWith("@xynogen/")) continue;
-			const pkgName = dep.replace("@xynogen/", "");
+			if (!dep.startsWith("@dihak/")) continue;
+			const pkgName = dep.replace("@dihak/", "");
 			const target = pkgs.find((p) => p.dir === pkgName);
 			if (!target) {
 				violations.push(`${dep}: package not found in packages/`);

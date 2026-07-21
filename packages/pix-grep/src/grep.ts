@@ -1,11 +1,6 @@
-import type {
-	ExtensionContext,
-	GrepToolInput,
-	ToolRenderResultOptions,
-} from "@earendil-works/pi-coding-agent";
-import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
-import { fffFormatGrepText } from "@xynogen/pix-pretty/fff";
+import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
+import type { ToolContext } from "@dihak/pix-pretty/context";
+import { fffFormatGrepText } from "@dihak/pix-pretty/fff";
 import type {
 	GrepParams,
 	GrepResultDetails,
@@ -14,7 +9,7 @@ import type {
 	ThemeLike,
 	ToolFactory,
 	ToolResultLike,
-} from "@xynogen/pix-pretty/types";
+} from "@dihak/pix-pretty/types";
 import {
 	appendNotices,
 	countRipgrepMatches,
@@ -29,7 +24,12 @@ import {
 	renderDimPreview,
 	renderToolError,
 	setResultDetails,
-} from "@xynogen/pix-pretty/utils";
+} from "@dihak/pix-pretty/utils";
+import type {
+	ExtensionContext,
+	GrepToolInput,
+	ToolRenderResultOptions,
+} from "@earendil-works/pi-coding-agent";
 
 export const DEFAULT_GREP_LIMIT = 30;
 

@@ -110,7 +110,7 @@ async function publishOne(pkg: PkgInfo): Promise<void> {
 		}
 		if (out.includes("EOTP") || out.includes("one-time password") || out.includes("E401") || out.includes("Unauthorized")) {
 			console.error(`\n✖ Auth error: npm requires an automation token to publish with 2FA enabled.`);
-			console.error(`\nCreate one at: https://www.npmjs.com/settings/xynogen/tokens`);
+			console.error(`\nCreate one at: https://www.npmjs.com/settings/dihak/tokens`);
 			console.error(`  1. Generate New Token → Granular Access Token (or Classic → Automation)`);
 			console.error(`  2. Set it:  npm set //registry.npmjs.org/:_authToken YOUR_TOKEN`);
 			console.error(`  3. Re-run:  bun run publish:all\n`);

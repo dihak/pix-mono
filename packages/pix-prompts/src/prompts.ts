@@ -47,7 +47,7 @@ interface PromptSource {
 function resolveOwnSopMd(): string | null {
 	try {
 		const require = createRequire(import.meta.url);
-		const pkgJson = require.resolve("@xynogen/pix-prompts/package.json");
+		const pkgJson = require.resolve("@dihak/pix-prompts/package.json");
 		return resolve(pkgJson, "..", "SOP.md");
 	} catch {
 		// Fallback: resolve relative to this file's location at runtime.

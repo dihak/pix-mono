@@ -29,8 +29,8 @@ preserved in the reimplementation:
 
 ## What moved out
 
-- **Paste chip formatting** → [`@xynogen/pix-display`](../pix-display)
+- **Paste chip formatting** → [`@dihak/pix-display`](../pix-display)
 - **Reasoning tag (`<think>`/`<thinking>`) rendering** →
-  [`@xynogen/pix-display`](../pix-display)
+  [`@dihak/pix-display`](../pix-display)
 
 See the package-level README for the current export map.

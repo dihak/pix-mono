@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-9router",
+	"name": "@dihak/pix-9router",
 	"version": "0.3.6",
 	"description": "Pi extension — 9Router provider + fetch/search tools via router API",
 	"type": "module",
@@ -23,16 +23,16 @@
 		"pi-extension",
 		"9router"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-9router"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-9router#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-9router#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -43,8 +43,8 @@
 		"@earendil-works/pi-tui": "*"
 	},
 	"dependencies": {
-		"@xynogen/pix-data": "^0.3.0",
-		"@xynogen/pix-pretty": "^1.7.21",
+		"@dihak/pix-data": "^0.3.0",
+		"@dihak/pix-pretty": "^1.7.21",
 		"typebox": "^1.1.38"
 	}
 }

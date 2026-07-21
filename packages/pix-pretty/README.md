@@ -57,14 +57,14 @@ paste chip rendering and reasoning-tag (`<think>`/`<thinking>`) → native
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-pretty
+pi install npm:@dihak/pix-pretty
 ```
 
 ## Configuration
 
-Configuration is read from **`~/.pi/agent/pix.json`** (the unified config file hosted by `@xynogen/pix-data/pix-config`). The `pretty` section of that file sets the defaults for theme, icon mode, and preview lines. Environment variables still override `pix.json` values.
+Configuration is read from **`~/.pi/agent/pix.json`** (the unified config file hosted by `@dihak/pix-data/pix-config`). The `pretty` section of that file sets the defaults for theme, icon mode, and preview lines. Environment variables still override `pix.json` values.
 
-> **Note:** `pix-config.ts` and `collapse.ts` previously shipped with `pix-pretty` — they have moved to `pix-data` (`@xynogen/pix-data/pix-config` and `@xynogen/pix-data/collapse`). Update any direct imports.
+> **Note:** `pix-config.ts` and `collapse.ts` previously shipped with `pix-pretty` — they have moved to `pix-data` (`@dihak/pix-data/pix-config` and `@dihak/pix-data/collapse`). Update any direct imports.
 
 ### `pix.json` — `pretty` section
 
@@ -97,36 +97,36 @@ Configuration is read from **`~/.pi/agent/pix.json`** (the unified config file h
 The package exposes its sub-modules via `exports`:
 
 ```
-@xynogen/pix-pretty            (default — extension entry)
-@xynogen/pix-pretty/ansi
-@xynogen/pix-pretty/confirm
-@xynogen/pix-pretty/progress
-@xynogen/pix-pretty/config
-@xynogen/pix-pretty/diff
-@xynogen/pix-pretty/diff-render
-@xynogen/pix-pretty/highlight
-@xynogen/pix-pretty/lang
-@xynogen/pix-pretty/icons
-@xynogen/pix-pretty/icon-catalog
-@xynogen/pix-pretty/icon-persist
-@xynogen/pix-pretty/renderers
-@xynogen/pix-pretty/fff
-@xynogen/pix-pretty/types
-@xynogen/pix-pretty/utils
-@xynogen/pix-pretty/resize
-@xynogen/pix-pretty/context
-@xynogen/pix-pretty/gate-overlay
-@xynogen/pix-pretty/modal-frame
+@dihak/pix-pretty            (default — extension entry)
+@dihak/pix-pretty/ansi
+@dihak/pix-pretty/confirm
+@dihak/pix-pretty/progress
+@dihak/pix-pretty/config
+@dihak/pix-pretty/diff
+@dihak/pix-pretty/diff-render
+@dihak/pix-pretty/highlight
+@dihak/pix-pretty/lang
+@dihak/pix-pretty/icons
+@dihak/pix-pretty/icon-catalog
+@dihak/pix-pretty/icon-persist
+@dihak/pix-pretty/renderers
+@dihak/pix-pretty/fff
+@dihak/pix-pretty/types
+@dihak/pix-pretty/utils
+@dihak/pix-pretty/resize
+@dihak/pix-pretty/context
+@dihak/pix-pretty/gate-overlay
+@dihak/pix-pretty/modal-frame
 ```
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

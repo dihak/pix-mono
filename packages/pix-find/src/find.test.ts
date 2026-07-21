@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import type { CursorStore, FffState } from "@xynogen/pix-pretty/fff";
+import type { CursorStore, FffState } from "@dihak/pix-pretty/fff";
 import type {
 	PiPrettyApi,
 	RenderContextLike,
 	TextComponentCtor,
 	ThemeLike,
-} from "@xynogen/pix-pretty/types";
+} from "@dihak/pix-pretty/types";
 import { applyFindDefaults, DEFAULT_FIND_LIMIT, registerFindTool } from "./find";
 
 class MockTextComponent {

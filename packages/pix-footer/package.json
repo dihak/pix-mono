@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-footer",
+	"name": "@dihak/pix-footer",
 	"version": "0.1.16",
 	"description": "Pi extension — status bar footer (model, tokens, git, TPS)",
 	"type": "module",
@@ -23,23 +23,23 @@
 		"pi-extension",
 		"pix"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-footer"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-footer#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-footer#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"
 	},
 	"dependencies": {
-		"@xynogen/pix-data": "^0.3.0",
-		"@xynogen/pix-pretty": "^1.7.9"
+		"@dihak/pix-data": "^0.3.0",
+		"@dihak/pix-pretty": "^1.7.9"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

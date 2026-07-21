@@ -161,7 +161,7 @@ context (e.g. `git status`).
 ### Security — pix-gate is the policy (no prompt)
 
 Directive commands are gated by the **same rule engine** as the `bash` tool
-(`@xynogen/pix-gate`), but with **no confirmation dialog**:
+(`@dihak/pix-gate`), but with **no confirmation dialog**:
 
 - **Auto-deny on any rule match.** If a command matches any pix-gate rule
   (critical / dangerous / risky), it is **not run** — the directive is replaced
@@ -212,7 +212,7 @@ read_skills(
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-skills
+pi install npm:@dihak/pix-skills
 ```
 
 Or from the monorepo:
@@ -221,20 +221,20 @@ Or from the monorepo:
 pi install ./packages/pix-skills
 ```
 
-> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
+> Also included in [`@dihak/pix-core`](https://www.npmjs.com/package/@dihak/pix-core):
 >
 > ```bash
-> pi install npm:@xynogen/pix-core
+> pi install npm:@dihak/pix-core
 > ```
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

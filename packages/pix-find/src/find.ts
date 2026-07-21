@@ -1,10 +1,5 @@
-import type {
-	ExtensionContext,
-	FindToolInput,
-	ToolRenderResultOptions,
-} from "@earendil-works/pi-coding-agent";
-import { type CollapseState, tickCollapse } from "@xynogen/pix-data/collapse";
-import type { ToolContext } from "@xynogen/pix-pretty/context";
+import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
+import type { ToolContext } from "@dihak/pix-pretty/context";
 import type {
 	FindParams,
 	FindResultDetails,
@@ -13,7 +8,7 @@ import type {
 	ThemeLike,
 	ToolFactory,
 	ToolResultLike,
-} from "@xynogen/pix-pretty/types";
+} from "@dihak/pix-pretty/types";
 import {
 	appendNotices,
 	fillToolBackground,
@@ -24,7 +19,12 @@ import {
 	renderDimPreview,
 	renderToolError,
 	setResultDetails,
-} from "@xynogen/pix-pretty/utils";
+} from "@dihak/pix-pretty/utils";
+import type {
+	ExtensionContext,
+	FindToolInput,
+	ToolRenderResultOptions,
+} from "@earendil-works/pi-coding-agent";
 
 export const DEFAULT_FIND_LIMIT = 200;
 

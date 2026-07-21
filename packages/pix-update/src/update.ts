@@ -1,17 +1,17 @@
+import { type ConfirmUI, confirmOverlay } from "@dihak/pix-pretty/confirm";
+import { openProgress, type ProgressHandle, type ProgressUI } from "@dihak/pix-pretty/progress";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { type ConfirmUI, confirmOverlay } from "@xynogen/pix-pretty/confirm";
-import { openProgress, type ProgressHandle, type ProgressUI } from "@xynogen/pix-pretty/progress";
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────
 
 export const PACKAGE_NAME = "@earendil-works/pi-coding-agent";
 
 // Canonical pix-mono installer. Re-running it is idempotent (Pi install + opt-in
 // prompts), so it doubles as the extension updater: it refreshes every
-// @xynogen/pix-* package from npm.
+// @dihak/pix-* package from npm.
 export const PIX_INSTALL_URL =
-	"https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh";
+	"https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh";
 export const PIX_UNINSTALL_URL =
-	"https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/uninstall.sh";
+	"https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/uninstall.sh";
 // README upgrade path: uninstall then reinstall, so stale/renamed packages from
 // breaking changes are cleared before the fresh install.
 export const PIX_INSTALL_COMMAND = `curl -fsSL ${PIX_UNINSTALL_URL} | sh && curl -fsSL ${PIX_INSTALL_URL} | sh`;

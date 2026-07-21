@@ -1,5 +1,5 @@
 {
-	"name": "@xynogen/pix-welcome",
+	"name": "@dihak/pix-welcome",
 	"version": "0.1.14",
 	"description": "Pi extension — welcome banner with startup health checks",
 	"type": "module",
@@ -23,16 +23,16 @@
 		"pi-extension",
 		"pix"
 	],
-	"author": "xynogen",
+	"author": "dihak",
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/xynogen/pix-mono.git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
 		"directory": "packages/pix-welcome"
 	},
-	"homepage": "https://github.com/xynogen/pix-mono/tree/main/packages/pix-welcome#readme",
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-welcome#readme",
 	"bugs": {
-		"url": "https://github.com/xynogen/pix-mono/issues"
+		"url": "https://github.com/dihak/pix-mono/issues"
 	},
 	"publishConfig": {
 		"access": "public"
@@ -42,6 +42,6 @@
 		"@earendil-works/pi-tui": "*"
 	},
 	"dependencies": {
-		"@xynogen/pix-pretty": "^1.7.9"
+		"@dihak/pix-pretty": "^1.7.9"
 	}
 }

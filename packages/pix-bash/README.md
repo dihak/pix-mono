@@ -4,7 +4,7 @@ Pi tool — bash shell execution with pretty output.
 
 ## What it does
 
-Replaces Pi's default `bash` tool with an enhanced version backed by `pix-pretty`. Output is rendered in a full-width framed block showing an exit-code summary, line count, and truncation notice. Call labels display the command inline; multi-line commands collapse to the first line with `… (+N lines)` until expanded. In expanded mode the full output is shown; collapsed mode caps the preview to a configurable line limit. Depends on `@xynogen/pix-pretty`, which is installed automatically as a dependency.
+Replaces Pi's default `bash` tool with an enhanced version backed by `pix-pretty`. Output is rendered in a full-width framed block showing an exit-code summary, line count, and truncation notice. Call labels display the command inline; multi-line commands collapse to the first line with `… (+N lines)` until expanded. In expanded mode the full output is shown; collapsed mode caps the preview to a configurable line limit. Depends on `@dihak/pix-pretty`, which is installed automatically as a dependency.
 
 ## Auto-collapse
 
@@ -20,28 +20,28 @@ After a configurable delay (default 10 seconds), completed output collapses to o
 }
 ```
 
-Set `collapse.tools.bash: false` (or `collapse.enabled: false`) to disable. See `@xynogen/pix-data/collapse` for the full API.
+Set `collapse.tools.bash: false` (or `collapse.enabled: false`) to disable. See `@dihak/pix-data/collapse` for the full API.
 
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-bash
+pi install npm:@dihak/pix-bash
 ```
 
-> Also included in [`@xynogen/pix-core`](https://www.npmjs.com/package/@xynogen/pix-core):
+> Also included in [`@dihak/pix-core`](https://www.npmjs.com/package/@dihak/pix-core):
 >
 > ```bash
-> pi install npm:@xynogen/pix-core
+> pi install npm:@dihak/pix-core
 > ```
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

@@ -1,4 +1,4 @@
-import { pixConfig } from "@xynogen/pix-data/pix-config";
+import { pixConfig } from "@dihak/pix-data/pix-config";
 
 export function envInt(name: string, fallback: number): number {
 	const v = Number.parseInt(process.env[name] ?? "", 10);

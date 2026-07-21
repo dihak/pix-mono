@@ -1,5 +1,5 @@
+import { getLsStyle } from "@dihak/pix-data/pix-config";
 import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { getLsStyle } from "@xynogen/pix-data/pix-config";
 
 import { BOLD, FG_BLUE, FG_DIM, FG_GREEN, FG_RED, FG_RULE, FG_YELLOW, RST } from "./ansi.js";
 import { MAX_PREVIEW_LINES } from "./config.js";

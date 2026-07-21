@@ -9,17 +9,17 @@ Registers a `/toolbox` slash command that opens a TUI fuzzy-search picker listin
 ## Install
 
 ```bash
-pi install npm:@xynogen/pix-toolbox
+pi install npm:@dihak/pix-toolbox
 ```
 
 ## Full distro
 
-Source: [github.com/xynogen/pix-mono](https://github.com/xynogen/pix-mono)
+Source: [github.com/dihak/pix-mono](https://github.com/dihak/pix-mono)
 
 To install the complete pix suite (all packages + Pi itself):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 ```
 
 ## License

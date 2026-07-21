@@ -1,6 +1,19 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-
+import {
+	CursorStore,
+	fffDestroy,
+	fffEnsureFinder,
+	fffState,
+	getPiPrettyFffDir,
+} from "@dihak/pix-pretty/fff";
+import type {
+	OptionalFffModule,
+	PiPrettyApi,
+	TextComponentCtor,
+	ToolFactory,
+} from "@dihak/pix-pretty/types";
+import { getErrorMessage, shortPath } from "@dihak/pix-pretty/utils";
 import {
 	createGrepToolDefinition,
 	createGrepTool as createGrepToolFallback,
@@ -8,20 +21,6 @@ import {
 	type GrepToolInput,
 	getAgentDir,
 } from "@earendil-works/pi-coding-agent";
-import {
-	CursorStore,
-	fffDestroy,
-	fffEnsureFinder,
-	fffState,
-	getPiPrettyFffDir,
-} from "@xynogen/pix-pretty/fff";
-import type {
-	OptionalFffModule,
-	PiPrettyApi,
-	TextComponentCtor,
-	ToolFactory,
-} from "@xynogen/pix-pretty/types";
-import { getErrorMessage, shortPath } from "@xynogen/pix-pretty/utils";
 import { registerGrepTool } from "./grep.js";
 import { once } from "./once.ts";
 

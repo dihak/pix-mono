@@ -3,10 +3,10 @@
 # Install the pix-mono distro into Pi Coding Agent.
 #
 # Self-contained + POSIX sh: installs Pi itself (via Bun), then installs
-# every @xynogen/pix-* package from npm. Safe to re-run.
+# every @dihak/pix-* package from npm. Safe to re-run.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/xynogen/pix-mono/main/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/dihak/pix-mono/main/scripts/install.sh | sh
 #   # or, from a local checkout:
 #   sh scripts/install.sh
 #
@@ -34,7 +34,7 @@ set -eu
 #                        One Dark Pro). Not bundled by pix-core but installed
 #                        unconditionally (it carries the distro's default look,
 #                        pix-tokyo-night, not an opt-in capability).
-#   OPTIN_PIX_PACKAGES  — standalone @xynogen/pix-* extensions NOT bundled by
+#   OPTIN_PIX_PACKAGES  — standalone @dihak/pix-* extensions NOT bundled by
 #                        pix-core, each carrying a setup cost or sensitive
 #                        capability (API key, root execution, power-user UI).
 #   OPTIN_COMMUNITY_PACKAGES — third-party packages (not part of the pix
@@ -42,8 +42,8 @@ set -eu
 #                        Both opt-in lists default to NO when the installer
 #                        cannot prompt (non-interactive `curl | sh`), keeping
 #                        the default distro lean.
-CORE_PACKAGE="npm:@xynogen/pix-core"
-THEME_PACKAGE="npm:@xynogen/pix-themes"
+CORE_PACKAGE="npm:@dihak/pix-core"
+THEME_PACKAGE="npm:@dihak/pix-themes"
 
 # Recommended community packages — installed unless declined.
 # Format: "<spec>|<description>"
@@ -55,9 +55,9 @@ npm:pi-mcp-adapter|MCP gateway — connect to MCP servers and call their tools f
 # Opt-in Pix extensions — each carries a setup cost or sensitive capability.
 # Format: "<spec>|<why it's opt-in>"
 OPTIN_PIX_PACKAGES="
-npm:@xynogen/pix-9router|9Router LLM provider + fetch/search tools — needs a 9Router API key, so only useful if you route through 9Router.
-npm:@xynogen/pix-sudo|sudo_run — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode).
-npm:@xynogen/pix-toolbox|/toolbox — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use.
+npm:@dihak/pix-9router|9Router LLM provider + fetch/search tools — needs a 9Router API key, so only useful if you route through 9Router.
+npm:@dihak/pix-sudo|sudo_run — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode).
+npm:@dihak/pix-toolbox|/toolbox — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use.
 "
 
 # Opt-in community extensions — third-party packages, not part of the pix distro.
@@ -201,7 +201,7 @@ for entry in $OPTIN_PIX_PACKAGES; do
 	[ -z "$entry" ] && continue
 	spec=$(entry_spec "$entry")
 	reason=$(entry_reason "$entry")
-	if ask_yes_no "Install ${spec#npm:@xynogen/}?" "$reason"; then
+	if ask_yes_no "Install ${spec#npm:@dihak/}?" "$reason"; then
 		install_pi_pkg "$spec"
 	else
 		info "Skipped: $spec"
