@@ -9,17 +9,27 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { reloadPixConfig } from "@dihak/pix-data/pix-config";
 import { loadOptValue, saveOptValue } from "./persist.ts";
 
 let tmpAgentDir: string;
+let prevHome: string | undefined;
 
 beforeAll(() => {
 	tmpAgentDir = mkdtempSync(join(tmpdir(), "optimizer-persist-test-"));
 	process.env.PI_CODING_AGENT_DIR = tmpAgentDir;
+	// Isolate HOME too: loadOptValue falls back to pixConfig() which reads
+	// ~/.pi/agent/pix.json via HOME. Without this the real config leaks in.
+	prevHome = process.env.HOME;
+	process.env.HOME = tmpAgentDir;
+	reloadPixConfig();
 });
 
 afterAll(() => {
 	delete process.env.PI_CODING_AGENT_DIR;
+	if (prevHome === undefined) delete process.env.HOME;
+	else process.env.HOME = prevHome;
+	reloadPixConfig();
 	try {
 		rmSync(tmpAgentDir, { recursive: true });
 	} catch {
