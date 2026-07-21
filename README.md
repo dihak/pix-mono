@@ -65,6 +65,7 @@ Bundled by `pix-core`. Drop-in replacements for the tools Pi exposes to the mode
 | [`@dihak/pix-ls`](packages/pix-ls) | `ls` — directory listing as an indented icon tree |
 | [`@dihak/pix-ask`](packages/pix-ask) | `ask_user` — structured TUI questionnaire (multi-choice, multi-select, previews) |
 | [`@dihak/pix-todo`](packages/pix-todo) | `todo` — durable execution checklist, survives context compaction |
+| [`@dihak/pix-todo-auto`](packages/pix-todo-auto) | auto-continues the agent while `todo` items remain unfinished (`/todo-auto`) |
 
 ### Standalone extensions (opt-in)
 
