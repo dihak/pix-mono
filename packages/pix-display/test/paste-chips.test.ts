@@ -71,6 +71,18 @@ describe("paste-chips restyleMarkers", () => {
 		it("returns empty string unchanged", () => {
 			expect(restyleMarkers("", new Set())).toBe("");
 		});
+
+		it("preserves the editor cursor's inverse-video block on a non-marker line", () => {
+			// The TUI draws the input cursor as \x1b[7m<char>\x1b[27m. A marker-free
+			// line must pass through untouched so the cursor stays visible.
+			const line = "hello \x1b[7m \x1b[27mworld";
+			expect(restyleMarkers(line, new Set())).toBe(line);
+		});
+
+		it("preserves an end-of-line cursor block (empty input)", () => {
+			const line = "\x1b[7m \x1b[27m";
+			expect(restyleMarkers(line, new Set())).toBe(line);
+		});
 	});
 
 	describe("ANSI-styled markers", () => {
