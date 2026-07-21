@@ -149,11 +149,20 @@ export function replaceImagePaths(
  *
  * Width-preserving is not required — Pi re-wraps each render call.
  */
+// A `[...]` span that starts with `paste #` and may carry interleaved cursor
+// SGR codes (e.g. `[paste #1 \x1b[7m5\x1b[0m8 chars]`). We strip ANSI from the
+// matched span only, never the whole line, so the editor cursor's own
+// inverse-video block outside any marker survives.
+const MARKER_SPAN_RE =
+	/(?:\x1b\[[0-9;]*m)*\[(?:\x1b\[[0-9;]*m)*paste #(?:[^\]]|\x1b\[[0-9;]*m)*\]/g;
+
 export function restyleMarkers(line: string, imageIds: Set<number>): string {
-	// Strip cursor inversion codes the TUI embeds when the cursor
-	// intersects a marker — plain MARKER_RE handles the rest.
-	const clean = line.includes("\x1b") ? line.replace(CURSOR_RE, "") : line;
-	return clean.replace(MARKER_RE, (_full, idStr, _g2, _g3, linesStr, charsStr) => {
+	return line.replace(MARKER_SPAN_RE, (span) => {
+		const clean = span.includes("\x1b") ? span.replace(CURSOR_RE, "") : span;
+		MARKER_RE.lastIndex = 0;
+		const m = MARKER_RE.exec(clean);
+		if (!m?.[1]) return span;
+		const [, idStr, , , linesStr, charsStr] = m;
 		const id = Number.parseInt(idStr, 10);
 		if (imageIds.has(id)) {
 			return chip(FG_BLUE, icon("paste.image"), "image", `#${id}`);
