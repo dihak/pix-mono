@@ -2,13 +2,10 @@ import { describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { stripBuiltinModelCommand, unreserveModelSelect } from "./patch-builtin.ts";
+import { redirectModelSelectAction, stripBuiltinModelCommand } from "./patch-builtin.ts";
 
-const RESERVED = `const RESERVED_KEYBINDINGS_FOR_EXTENSION_CONFLICTS = [
-    "app.thinking.cycle",
-    "app.model.select",
-    "app.tools.expand",
-];
+const MODEL_ACTION = `        this.defaultEditor.onAction("app.model.select", () => this.showModelSelector());
+        this.defaultEditor.onAction("app.tools.expand", () => this.toggleToolOutputExpansion());
 `;
 
 const UNPATCHED = `export const BUILTIN_SLASH_COMMANDS = [
@@ -96,21 +93,22 @@ export const BUILTIN_SLASH_COMMANDS = [
 	});
 });
 
-describe("patch-builtin app.model.select unreserve", () => {
-	it("removes the reserved entry, keeps neighbors", () => {
-		const out = unreserveModelSelect(RESERVED);
-		expect(out).not.toContain("app.model.select");
-		expect(out).toContain("app.thinking.cycle");
-		expect(out).toContain("app.tools.expand");
+describe("patch-builtin app.model.select redirect", () => {
+	it("redirects the action to run /models, keeps neighbors", () => {
+		const out = redirectModelSelectAction(MODEL_ACTION);
+		expect(out).toContain('this.session.prompt("/models")');
+		expect(out).not.toContain("showModelSelector()");
+		expect(out).toContain("toggleToolOutputExpansion()");
+		expect(out).toContain('onAction("app.model.select"');
 	});
 
 	it("is idempotent", () => {
-		const once = unreserveModelSelect(RESERVED);
-		expect(unreserveModelSelect(once)).toBe(once);
+		const once = redirectModelSelectAction(MODEL_ACTION);
+		expect(redirectModelSelectAction(once)).toBe(once);
 	});
 
-	it("is a no-op when already absent", () => {
-		const clean = `const X = [\n    "app.tools.expand",\n];\n`;
-		expect(unreserveModelSelect(clean)).toBe(clean);
+	it("is a no-op when the action is absent", () => {
+		const clean = `        this.defaultEditor.onAction("app.tools.expand", () => this.x());\n`;
+		expect(redirectModelSelectAction(clean)).toBe(clean);
 	});
 });

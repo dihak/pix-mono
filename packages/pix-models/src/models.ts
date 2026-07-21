@@ -17,7 +17,6 @@ import {
 	getKeybindings,
 	Input,
 	Key,
-	type KeybindingsManager,
 	matchesKey,
 	type SelectItem,
 	SelectList,
@@ -530,24 +529,9 @@ export default function modelPickerExtension(pi: ExtensionAPI) {
 		handler,
 	});
 
-	// Route the model-select shortcut to the enhanced picker. patchOutBuiltin
-	// only removes the /model slash command, not the keybinding, so the shortcut
-	// would otherwise open Pi's stock selector. Resolve the actual bound keys
-	// (default ctrl+l) from the user's keybindings so a remap is honored.
-	//
-	// getKeys can return [] when extensions load before the host seeds app
-	// keybindings; fall back to the built-in default so the shortcut still binds.
-	let keys = ["ctrl+l"] as ReturnType<KeybindingsManager["getKeys"]>;
-	try {
-		const resolved = getKeybindings().getKeys("app.model.select");
-		if (resolved.length > 0) keys = resolved;
-	} catch {
-		// keybindings manager not initialized yet — keep the ctrl+l default
-	}
-	for (const key of keys) {
-		pi.registerShortcut(key, {
-			description: "Open enhanced model picker",
-			handler: (ctx) => showEnhancedPicker(pi, ctx),
-		});
-	}
+	// The `app.model.select` key (default ctrl+l) is routed by patchOutBuiltin
+	// to run `/models` instead of Pi's stock selector. We deliberately do NOT
+	// registerShortcut here: ctrl+l is a built-in key, so an extension shortcut
+	// on it triggers the host's "conflict" diagnostic. Patching the host action
+	// keeps the key working, honors any remap, and shows no warning.
 }

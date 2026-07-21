@@ -26,12 +26,14 @@ const BUILTIN_COMMANDS_ARRAY = /export\s+const\s+BUILTIN_SLASH_COMMANDS[^=]*=\s*
 const BUILTIN_MODEL_COMMAND =
 	/^[ \t]*\{(?=[^{}]*\bname\s*:\s*["']model["'])[^{}]*\},?[ \t]*(?:\r?\n|$)/gm;
 
-// The host marks `app.model.select` (default ctrl+l) as a RESERVED keybinding,
-// so its extension-shortcut runner (runner.js) drops any extension shortcut
-// bound to that key before it reaches the editor. Removing the entry lets our
-// registerShortcut on the resolved model-select key win — the editor checks
-// onExtensionShortcut first. Matches the array element on its own line.
-const RESERVED_MODEL_SELECT = /^[ \t]*["']app\.model\.select["'],?[ \t]*\r?\n/gm;
+// The host binds `app.model.select` (default ctrl+l) to its own stock model
+// selector via an editor action. We rewrite that action to run our `/models`
+// command instead. This keeps the key (and any user remap) working, avoids
+// registering an extension shortcut on a built-in key (which would trigger the
+// host's conflict diagnostic), and leaves other actions on that key untouched.
+// session.prompt("/models") dispatches our registered command handler.
+const MODEL_SELECT_ACTION =
+	/(this\.defaultEditor\.onAction\("app\.model\.select",\s*\(\)\s*=>\s*)this\.showModelSelector\(\)(\);)/;
 
 /**
  * Candidate paths for a host dist file, most-specific first.
@@ -110,22 +112,24 @@ function patchHostFile(rel: string, transform: (src: string) => string): void {
 /**
  * Patch Pi's compiled host so the enhanced picker fully replaces the built-in:
  *   1. Remove the `/model` slash command (slash-commands.js).
- *   2. Un-reserve `app.model.select` (runner.js) so our ctrl+l extension
- *      shortcut is honored instead of being dropped as a reserved conflict.
+ *   2. Redirect the `app.model.select` action (default ctrl+l) to run our
+ *      `/models` command instead of the stock selector (interactive-mode.js).
  * Idempotent and self-healing: safe to run on every load.
  */
 export function patchOutBuiltinModelCommand(): void {
 	patchHostFile("core/slash-commands.js", stripBuiltinModelCommand);
-	patchHostFile("core/extensions/runner.js", unreserveModelSelect);
+	patchHostFile("modes/interactive/interactive-mode.js", redirectModelSelectAction);
 }
 
 /**
- * Drop `app.model.select` from the host's reserved-keybindings array so an
- * extension shortcut bound to that key wins. The array is a flat list of string
- * literals; matching one line tolerates surrounding entries changing.
+ * Rewrite the host's `app.model.select` editor action to run `/models` (our
+ * enhanced picker) instead of `showModelSelector()` (the stock selector).
+ * The key and any user remap keep working; no extension shortcut is registered,
+ * so the host emits no conflict diagnostic. Idempotent: the replaced form no
+ * longer contains `showModelSelector()`, so a second pass is a no-op.
  */
-export function unreserveModelSelect(source: string): string {
-	return source.replace(RESERVED_MODEL_SELECT, "");
+export function redirectModelSelectAction(source: string): string {
+	return source.replace(MODEL_SELECT_ACTION, '$1this.session.prompt("/models")$2');
 }
 
 /**
