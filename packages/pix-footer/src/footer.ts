@@ -145,11 +145,16 @@ function computeSessionTotals(entries: Iterable<unknown>): SessionTotals {
 	return { input, output, cacheRead, cost };
 }
 
-/** Tokens block (in/out + cache/cost). Always returns a string; caller decides visibility. */
+/** Tokens block (in/out). Always returns a string; caller decides visibility. Cost rendered separately (always on). */
 function renderTokens(totals: SessionTotals, theme: Theme, dim = false): string {
-	let s = `${icon("net.in")} ${fmtToken(totals.input)} ${icon("net.out")} ${fmtToken(totals.output)}`;
-	if (totals.cost > 0) s += ` $${totals.cost.toFixed(3)}`;
+	const s = `${icon("net.in")} ${fmtToken(totals.input)} ${icon("net.out")} ${fmtToken(totals.output)}`;
 	return theme.fg(dim ? "dim" : "muted", s);
+}
+
+/** Cost total — always shown when > 0, independent of token-block decay. */
+function renderCost(totals: SessionTotals, theme: Theme): string {
+	if (totals.cost <= 0) return "";
+	return theme.fg("success", `$${totals.cost.toFixed(3)}`);
 }
 
 /** Context usage block: "used/total (pct%)". Always shown when available. */
@@ -473,6 +478,7 @@ export default function (pi: ExtensionAPI) {
 					const totals = computeSessionTotals(ctx.sessionManager.getBranch());
 					const tokens =
 						tokensState === "off" ? "" : renderTokens(totals, theme, tokensState === "dim");
+					const cost = renderCost(totals, theme);
 					const ctxUsage = renderCtxUsage(ctx.getContextUsage?.(), theme);
 					const model = renderModel(ctx.model, pi.getThinkingLevel?.() ?? "", theme);
 					const { branchSeg, markersSeg } = renderBranch(
@@ -494,8 +500,9 @@ export default function (pi: ExtensionAPI) {
 					const tpsPart = liveTps ? sep + theme.fg("accent", liveTps) : "";
 
 					const tokensPart = tokens ? sep + tokens : "";
+					const costPart = cost ? sep + cost : "";
 					const ctxPart = ctxUsage ? sep + ctxUsage : "";
-					const line = `${modePart}${loc}${markersPart}${ctxPart}${sep}${model}${otherPart}${tokensPart}${tpsPart}`;
+					const line = `${modePart}${loc}${markersPart}${ctxPart}${sep}${model}${otherPart}${tokensPart}${costPart}${tpsPart}`;
 					return [truncateToWidth(line, width)];
 				},
 			};
