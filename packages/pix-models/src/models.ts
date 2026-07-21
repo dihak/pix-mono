@@ -14,8 +14,10 @@ import { frameLines, modalWidth } from "@dihak/pix-pretty/modal-frame";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import {
 	fuzzyFilter,
+	getKeybindings,
 	Input,
 	Key,
+	type KeybindingsManager,
 	matchesKey,
 	type SelectItem,
 	SelectList,
@@ -461,7 +463,11 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 					// Detect keys via pi-tui's own parser — the same recognition
 					// SelectList uses. Arrows arrive as named keys ("up"/"down"),
 					// not raw escape sequences, so string-equality checks fail.
-					const isNav = matchesKey(data, "up") || matchesKey(data, "down");
+					// Honor user keybindings.json (e.g. ctrl+p/ctrl+n remapped onto
+					// tui.select.up/down). matchesKey against literal "up"/"down" would
+					// ignore those remaps and let the keys fall through to search.
+					const kb = getKeybindings();
+					const isNav = kb.matches(data, "tui.select.up") || kb.matches(data, "tui.select.down");
 					// Shift+←/→ tunes the ACTIVE session model's thinking level without
 					// stealing plain ←/→ cursor movement from search. setThinkingLevel clamps
 					// to model capability, so unsupported rungs land on the nearest allowed.
@@ -523,4 +529,25 @@ export default function modelPickerExtension(pi: ExtensionAPI) {
 		description: "Enhanced model picker — shows benchlm rank + score",
 		handler,
 	});
+
+	// Route the model-select shortcut to the enhanced picker. patchOutBuiltin
+	// only removes the /model slash command, not the keybinding, so the shortcut
+	// would otherwise open Pi's stock selector. Resolve the actual bound keys
+	// (default ctrl+l) from the user's keybindings so a remap is honored.
+	//
+	// getKeys can return [] when extensions load before the host seeds app
+	// keybindings; fall back to the built-in default so the shortcut still binds.
+	let keys = ["ctrl+l"] as ReturnType<KeybindingsManager["getKeys"]>;
+	try {
+		const resolved = getKeybindings().getKeys("app.model.select");
+		if (resolved.length > 0) keys = resolved;
+	} catch {
+		// keybindings manager not initialized yet — keep the ctrl+l default
+	}
+	for (const key of keys) {
+		pi.registerShortcut(key, {
+			description: "Open enhanced model picker",
+			handler: (ctx) => showEnhancedPicker(pi, ctx),
+		});
+	}
 }

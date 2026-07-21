@@ -2,7 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { stripBuiltinModelCommand } from "./patch-builtin.ts";
+import { stripBuiltinModelCommand, unreserveModelSelect } from "./patch-builtin.ts";
+
+const RESERVED = `const RESERVED_KEYBINDINGS_FOR_EXTENSION_CONFLICTS = [
+    "app.thinking.cycle",
+    "app.model.select",
+    "app.tools.expand",
+];
+`;
 
 const UNPATCHED = `export const BUILTIN_SLASH_COMMANDS = [
     { name: "settings", description: "Open settings menu" },
@@ -86,5 +93,24 @@ export const BUILTIN_SLASH_COMMANDS = [
 		writeFileSync(file, CURRENT_PI, "utf8");
 		writeFileSync(file, stripBuiltinModelCommand(readFileSync(file, "utf8")), "utf8");
 		expect(readFileSync(file, "utf8")).not.toContain('name: "model"');
+	});
+});
+
+describe("patch-builtin app.model.select unreserve", () => {
+	it("removes the reserved entry, keeps neighbors", () => {
+		const out = unreserveModelSelect(RESERVED);
+		expect(out).not.toContain("app.model.select");
+		expect(out).toContain("app.thinking.cycle");
+		expect(out).toContain("app.tools.expand");
+	});
+
+	it("is idempotent", () => {
+		const once = unreserveModelSelect(RESERVED);
+		expect(unreserveModelSelect(once)).toBe(once);
+	});
+
+	it("is a no-op when already absent", () => {
+		const clean = `const X = [\n    "app.tools.expand",\n];\n`;
+		expect(unreserveModelSelect(clean)).toBe(clean);
 	});
 });

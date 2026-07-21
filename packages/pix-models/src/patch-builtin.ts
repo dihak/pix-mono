@@ -26,8 +26,19 @@ const BUILTIN_COMMANDS_ARRAY = /export\s+const\s+BUILTIN_SLASH_COMMANDS[^=]*=\s*
 const BUILTIN_MODEL_COMMAND =
 	/^[ \t]*\{(?=[^{}]*\bname\s*:\s*["']model["'])[^{}]*\},?[ \t]*(?:\r?\n|$)/gm;
 
-/** Candidate slash-commands.js paths, most-specific first. */
-function candidatePaths(): string[] {
+// The host marks `app.model.select` (default ctrl+l) as a RESERVED keybinding,
+// so its extension-shortcut runner (runner.js) drops any extension shortcut
+// bound to that key before it reaches the editor. Removing the entry lets our
+// registerShortcut on the resolved model-select key win — the editor checks
+// onExtensionShortcut first. Matches the array element on its own line.
+const RESERVED_MODEL_SELECT = /^[ \t]*["']app\.model\.select["'],?[ \t]*\r?\n/gm;
+
+/**
+ * Candidate paths for a host dist file, most-specific first.
+ * `rel` is relative to the host's `dist/` dir, e.g. "core/slash-commands.js".
+ */
+function candidatePaths(rel: string): string[] {
+	const segs = rel.split("/");
 	const paths: string[] = [];
 
 	// 1. Resolve via the running `pi` binary → its realpath gives the dist dir.
@@ -37,9 +48,9 @@ function candidatePaths(): string[] {
 			stdio: ["pipe", "pipe", "pipe"],
 		}).trim();
 		if (piReal) {
-			// piReal = /.../pi-coding-agent/dist/cli.js → dist/ → ../dist/core/
-			const distCore = resolve(dirname(piReal), "core");
-			paths.push(join(distCore, "slash-commands.js"));
+			// piReal = /.../pi-coding-agent/dist/cli.js → dist/
+			const dist = dirname(piReal);
+			paths.push(join(dist, ...segs));
 		}
 	} catch {
 		// `pi` not on PATH or `which`/`realpath` unavailable — skip
@@ -54,16 +65,14 @@ function candidatePaths(): string[] {
 		"/usr/lib/node_modules",
 	];
 	for (const root of globalRoots) {
-		paths.push(
-			join(root, "@earendil-works", "pi-coding-agent", "dist", "core", "slash-commands.js"),
-		);
+		paths.push(join(root, "@earendil-works", "pi-coding-agent", "dist", ...segs));
 	}
 
 	// 3. Fallback: createRequire from this file (works when extension is co-installed).
 	try {
 		const require = createRequire(import.meta.url);
 		const entry = require.resolve("@earendil-works/pi-coding-agent");
-		paths.push(resolve(dirname(entry), "core", "slash-commands.js"));
+		paths.push(resolve(dirname(entry), ...segs));
 	} catch {
 		// local resolution failed — skip
 	}
@@ -71,37 +80,52 @@ function candidatePaths(): string[] {
 	return paths;
 }
 
-/** Locate the host's compiled slash-commands.js, or null if not found. */
-function findSlashCommandsFile(): string | null {
-	for (const p of candidatePaths()) {
+/** Locate a host dist file by its dist-relative path, or null if not found. */
+function findHostFile(rel: string): string | null {
+	for (const p of candidatePaths(rel)) {
 		if (existsSync(p)) return p;
 	}
 	return null;
 }
 
-/**
- * Remove the built-in /model command line from Pi's slash-commands.js.
- * Idempotent: returns silently if the file is missing or already patched.
- */
-export function patchOutBuiltinModelCommand(): void {
-	const file = findSlashCommandsFile();
+/** Apply an idempotent transform to a host dist file. No-op if unchanged. */
+function patchHostFile(rel: string, transform: (src: string) => string): void {
+	const file = findHostFile(rel);
 	if (!file) return;
-
 	let source: string;
 	try {
 		source = readFileSync(file, "utf8");
 	} catch {
 		return;
 	}
-
-	const patched = stripBuiltinModelCommand(source);
+	const patched = transform(source);
 	if (patched === source) return; // already patched, or host format is unknown
-
 	try {
 		writeFileSync(file, patched, "utf8");
 	} catch {
-		// Read-only install — leave /model in place rather than crash.
+		// Read-only install — leave the host untouched rather than crash.
 	}
+}
+
+/**
+ * Patch Pi's compiled host so the enhanced picker fully replaces the built-in:
+ *   1. Remove the `/model` slash command (slash-commands.js).
+ *   2. Un-reserve `app.model.select` (runner.js) so our ctrl+l extension
+ *      shortcut is honored instead of being dropped as a reserved conflict.
+ * Idempotent and self-healing: safe to run on every load.
+ */
+export function patchOutBuiltinModelCommand(): void {
+	patchHostFile("core/slash-commands.js", stripBuiltinModelCommand);
+	patchHostFile("core/extensions/runner.js", unreserveModelSelect);
+}
+
+/**
+ * Drop `app.model.select` from the host's reserved-keybindings array so an
+ * extension shortcut bound to that key wins. The array is a flat list of string
+ * literals; matching one line tolerates surrounding entries changing.
+ */
+export function unreserveModelSelect(source: string): string {
+	return source.replace(RESERVED_MODEL_SELECT, "");
 }
 
 /**
@@ -126,4 +150,4 @@ export function stripBuiltinModelCommand(source: string): string {
 }
 
 // Export for tests
-export { candidatePaths, findSlashCommandsFile };
+export { candidatePaths, findHostFile };
