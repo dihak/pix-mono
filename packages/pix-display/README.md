@@ -2,11 +2,13 @@
 
 # pix-display
 
-Pi core extension — paste chips, thinking blocks, and polished code snippets.
+Pi core extension — paste chips, autocomplete Tab cycle, thinking blocks, and polished code snippets.
 
 ## What it does
 
-Three features, always on when installed:
+Four features, always on when installed:
+
+**Autocomplete Tab cycle.** With the suggestion list open, `Tab` moves to the next item and `Shift+Tab` to the previous. `Enter` accepts (Pi default). `Tab` with the menu closed still opens completion. Composes with paste chips via editor-factory wrap.
 
 **Paste chips.** Replaces Pi's paste markers (`[paste #1 2232 chars]`) with styled icon chips: `image #1` for image pastes (blue), `text +N lines` / `text Nk chars` for text pastes (green). Collapses pasted image paths into markers in the buffer while showing human-readable labels on screen. The display rewrite is purely visual — the buffer keeps the real path for the model. Expansion wraps each paste in `<paste>…</paste>` so adjacent pastes don't merge into one wall in the model-facing text.
 
