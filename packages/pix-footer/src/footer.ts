@@ -5,7 +5,7 @@
  *   [MODE] | ~/cwd (branch *±⇡n⇣n) | ⇡in ⇣out [Rcache] [ctx%/ctxk] [$cost] | model [· thinking] [· ctxK · $in/$out] [| status…] [| N t/s]
  *
  * - Branch shown with zsh-style dirty/ahead/behind markers.
- * - TPS: live during stream, holds 5s after turn ends, then clears.
+ * - TPS: live during stream; decays to 0 while waiting on tools; freezes on agent_end.
  * - Model spec (ctx · cost) sourced from ~/.cache/pi/models-dev.json.
  * - Extension statuses surfaced via footerData.getExtensionStatuses();
  *   "plan" is rendered as the leftmost segment, others appended after model.
@@ -305,6 +305,56 @@ function renderStatuses(
 	};
 }
 
+// ─── TPS: instantaneous rate + EMA ────────────────────────────────────
+// Single-layer smoothing (replaces the old sliding-window + tween stack that
+// double-filtered the rate and made the number lag/stick). Each tick computes
+// the instantaneous Δtokens/Δt and folds it into one exponential moving
+// average — a real-time speedometer with a single tunable knob.
+
+export const TPS_TICK_MS = 100;
+// alpha ∈ (0,1]: higher = snappier (twitchy on bursty tool-JSON), lower =
+// smoother (more lag). At a 100ms tick, 0.25 → ~63% converge in ~0.5s,
+// ~95% in ~1.2s. Flat cursor (tool wait) glides the EMA to 0, no freeze.
+export const TPS_EMA_ALPHA = 0.25;
+
+export type TpsState = { lastT: number | null; lastTokens: number; ema: number | null };
+
+export const newTpsState = (): TpsState => ({ lastT: null, lastTokens: 0, ema: null });
+
+/**
+ * Feed the monotonic token cursor; return the smoothed rate (tokens/s).
+ * Returns null on the priming tick (no prior sample to diff against). Flat
+ * token totals (stall / tool wait) push inst=0, decaying the EMA toward 0.
+ */
+export function stepTps(
+	state: TpsState,
+	now: number,
+	tokens: number,
+	alpha: number = TPS_EMA_ALPHA,
+): { state: TpsState; tps: number | null } {
+	if (state.lastT == null) {
+		return { state: { lastT: now, lastTokens: tokens, ema: state.ema }, tps: null };
+	}
+	const dt = (now - state.lastT) / 1000;
+	if (dt <= 0) {
+		return { state, tps: state.ema == null ? null : Math.round(state.ema) };
+	}
+	const inst = Math.max(0, (tokens - state.lastTokens) / dt);
+	const ema = state.ema == null ? inst : state.ema + alpha * (inst - state.ema);
+	return { state: { lastT: now, lastTokens: tokens, ema }, tps: Math.round(ema) };
+}
+
+/**
+ * Rebase the baseline to a corrected cursor without emitting a rate.
+ * Used at message_end, where the live char-estimate cursor snaps to the
+ * exact API token count — that step is a measurement correction, not
+ * throughput, so folding it as Δtokens/Δt would fire a huge false spike.
+ * Keeps the EMA; the next real tick diffs from the corrected baseline.
+ */
+export function rebaseTps(state: TpsState, now: number, tokens: number): TpsState {
+	return { lastT: now, lastTokens: tokens, ema: state.ema };
+}
+
 // ─── Extension ────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
@@ -314,7 +364,7 @@ export default function (pi: ExtensionAPI) {
 
 	// Animated counters: displayed values ease-out toward the latest session totals.
 	// Cost is scaled ×1000 into the tween so its duration math matches token units.
-	const tw = { input: new Tween(), output: new Tween(), cost: new Tween(), tps: new Tween() };
+	const tw = { input: new Tween(), output: new Tween(), cost: new Tween() };
 	let animTimer: ReturnType<typeof setInterval> | null = null;
 	const stopAnim = () => {
 		if (animTimer) {
@@ -356,44 +406,44 @@ export default function (pi: ExtensionAPI) {
 		s.output > 0 ? s.output : Math.round(s.chars / CHARS_PER_TOKEN);
 	const activeStreams = new Map<string, StreamState>();
 	let tpsTicker: ReturnType<typeof setInterval> | null = null;
-	// Sliding-window rate: (tokens - tokens_windowStart) / span. Averages out the
-	// bursty tool-call JSON stream and decays toward 0 during stalls as old
-	// samples age out. Cumulative avg stuck high; single-tick EMA spiked on bursts.
-	const TPS_WINDOW_MS = 3_000;
-	let tpsSamples: { t: number; tokens: number }[] = [];
+	// EMA rate via stepTps. Smooths bursty tool-call JSON and decays to 0 during
+	// stalls / tool wait. Ticker stays up across message_end; agent_end freezes
+	// the last displayed value.
+	let tpsState = newTpsState();
+	// Tokens from assistant messages already ended this agent turn. Keeps the TPS
+	// sample series flat during tool wait (rate → 0) without zeroing the cursor
+	// (which would look like a negative spike). Not folded into session totals.
+	let completedStreamTokens = 0;
 
-	/** Estimated output tokens streamed so far across in-flight messages. */
+	/** In-flight estimate only — folded into footer token totals. */
 	const liveOutput = (): number => {
 		let total = 0;
 		for (const s of activeStreams.values()) total += liveTokens(s);
 		return total;
 	};
 
+	/** Monotonic stream progress for TPS (completed + in-flight). */
+	const tpsTokenCursor = (): number => completedStreamTokens + liveOutput();
+
 	const recomputeTps = () => {
-		if (activeStreams.size === 0) return;
 		const now = Date.now();
-		tpsSamples.push({ t: now, tokens: liveOutput() });
-		// Drop samples older than the window, keeping one just past the edge as anchor.
-		const cutoff = now - TPS_WINDOW_MS;
-		while (tpsSamples.length > 2) {
-			const second = tpsSamples[1];
-			if (!second || second.t >= cutoff) break;
-			tpsSamples.shift();
-		}
-		const first = tpsSamples[0];
-		if (!first) return;
-		const span = (now - first.t) / 1000;
-		if (span < 0.2) return; // too short to be meaningful yet
-		const next = Math.round(Math.max(0, liveOutput() - first.tokens) / span);
-		liveTps = next;
-		tw.tps.retarget(next, now);
-		requestRender?.();
+		// Tool wait / stall: cursor flat → inst=0 → EMA glides to 0 (not frozen).
+		const stepped = stepTps(tpsState, now, tpsTokenCursor());
+		tpsState = stepped.state;
+		if (stepped.tps == null) return;
+		const changed = liveTps !== stepped.tps;
+		liveTps = stepped.tps;
+		// No tween → paint only when the displayed rate actually moves.
+		if (changed) requestRender?.();
 	};
 
 	const startTpsTicker = () => {
 		if (!tpsTicker) {
-			tpsSamples = []; // fresh window each stream
-			tpsTicker = setInterval(recomputeTps, 100);
+			// Fresh baseline only when ticker was stopped (agent_end). Mid-turn
+			// restarts (next assistant message after tools) reset lastT so the
+			// first tick re-primes, but the EMA carries over for continuity.
+			tpsState = { ...newTpsState(), ema: tpsState.ema };
+			tpsTicker = setInterval(recomputeTps, TPS_TICK_MS);
 		}
 	};
 	const stopTpsTicker = () => {
@@ -401,7 +451,7 @@ export default function (pi: ExtensionAPI) {
 			clearInterval(tpsTicker);
 			tpsTicker = null;
 		}
-		tpsSamples = [];
+		tpsState = newTpsState();
 	};
 
 	// AssistantMessage.id is not in the published d.ts but exists at runtime;
@@ -454,15 +504,24 @@ export default function (pi: ExtensionAPI) {
 		const s = activeStreams.get(id);
 		const finalOut = msg.usage?.output ?? 0;
 		if (s && finalOut > s.output) s.output = finalOut;
-		recomputeTps();
+		// Move this message's tokens into the completed floor before dropping it so
+		// tpsTokenCursor stays continuous (flat during tool wait → rate decays to 0).
+		const endedTokens = s ? liveTokens(s) : finalOut;
 		activeStreams.delete(id);
-		if (activeStreams.size === 0) stopTpsTicker();
+		completedStreamTokens += endedTokens;
+		// The cursor just jumped from the live char-estimate to the exact API
+		// count. Rebase the TPS baseline to that corrected value instead of
+		// feeding it as Δtokens/Δt — otherwise the correction (est → exact) over a
+		// few-ms tick fires a false multi-thousand t/s spike at end of message.
+		tpsState = rebaseTps(tpsState, Date.now(), tpsTokenCursor());
+		// Ticker keeps running until agent_end so tool-wait samples still tick.
 	});
 
 	pi.on("agent_end", () => {
 		stopTpsTicker();
 		activeStreams.clear();
-		// Leave the final tokens + TPS on screen; no decay.
+		completedStreamTokens = 0;
+		// Leave the final tokens + TPS on screen; no further decay.
 	});
 
 	// ── Git status polling ───────────────────────────────────────
@@ -533,9 +592,7 @@ export default function (pi: ExtensionAPI) {
 						theme.fg("accent", shortCwd(ctx.cwd)) +
 						branchSeg;
 					const markersPart = markersSeg ? sep + markersSeg : "";
-					tw.tps.sample(Date.now());
-					const tpsPart =
-						liveTps != null ? sep + theme.fg("accent", `${Math.round(tw.tps.value)} t/s`) : "";
+					const tpsPart = liveTps != null ? sep + theme.fg("accent", `${liveTps} t/s`) : "";
 
 					const tokensPart = tokens ? sep + tokens : "";
 					const costPart = cost ? sep + cost : "";
