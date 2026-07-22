@@ -22,6 +22,7 @@ import registerFind from "@dihak/pix-find/src/extension.ts";
 import registerFooter from "@dihak/pix-footer/src/extension.ts";
 import registerGate from "@dihak/pix-gate/src/index.ts";
 import registerGrep from "@dihak/pix-grep/src/extension.ts";
+import registerHotkeys from "@dihak/pix-hotkeys/src/extension.ts";
 import registerLs from "@dihak/pix-ls/src/extension.ts";
 import registerModels from "@dihak/pix-models/src/extension.ts";
 import registerNudge from "@dihak/pix-nudge/src/extension.ts";
@@ -55,6 +56,7 @@ const MEMBERS: Factory[] = [
 	registerFooter,
 	registerWorking,
 	registerModels,
+	registerHotkeys,
 	registerUpdate,
 	registerCommands,
 	registerNudge,

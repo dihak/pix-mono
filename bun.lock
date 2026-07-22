@@ -64,21 +64,22 @@
     },
     "packages/pix-core": {
       "name": "@dihak/pix-core",
-      "version": "0.4.43",
+      "version": "0.4.49",
       "dependencies": {
         "@dihak/pix-ask": "^0.2.7",
         "@dihak/pix-bash": "^0.1.13",
         "@dihak/pix-commands": "^0.2.0",
         "@dihak/pix-data": "^0.3.3",
         "@dihak/pix-diagnostics": "^0.1.7",
-        "@dihak/pix-display": "^0.1.11",
+        "@dihak/pix-display": "^0.1.12",
         "@dihak/pix-edit": "^0.1.16",
         "@dihak/pix-find": "^0.1.15",
-        "@dihak/pix-footer": "^0.1.19",
+        "@dihak/pix-footer": "^0.2.2",
         "@dihak/pix-gate": "^0.1.15",
         "@dihak/pix-grep": "^0.1.15",
+        "@dihak/pix-hotkeys": "^0.1.0",
         "@dihak/pix-ls": "^0.1.15",
-        "@dihak/pix-models": "^0.1.21",
+        "@dihak/pix-models": "^0.1.22",
         "@dihak/pix-nudge": "^0.1.9",
         "@dihak/pix-optimizer": "^1.1.17",
         "@dihak/pix-pretty": "^1.7.21",
@@ -90,7 +91,7 @@
         "@dihak/pix-todo-auto": "^0.1.0",
         "@dihak/pix-update": "^0.1.13",
         "@dihak/pix-welcome": "^0.1.14",
-        "@dihak/pix-working": "^0.1.0",
+        "@dihak/pix-working": "^0.1.2",
         "@dihak/pix-write": "^0.1.14",
       },
       "peerDependencies": {
@@ -115,7 +116,7 @@
     },
     "packages/pix-display": {
       "name": "@dihak/pix-display",
-      "version": "0.1.11",
+      "version": "0.1.12",
       "dependencies": {
         "@dihak/pix-pretty": "^1.7.9",
       },
@@ -149,7 +150,7 @@
     },
     "packages/pix-footer": {
       "name": "@dihak/pix-footer",
-      "version": "0.1.19",
+      "version": "0.2.2",
       "dependencies": {
         "@dihak/pix-data": "^0.3.0",
         "@dihak/pix-pretty": "^1.7.9",
@@ -182,6 +183,17 @@
         "@earendil-works/pi-coding-agent": "*",
       },
     },
+    "packages/pix-hotkeys": {
+      "name": "@dihak/pix-hotkeys",
+      "version": "0.1.0",
+      "dependencies": {
+        "@dihak/pix-pretty": "^1.7.22",
+      },
+      "peerDependencies": {
+        "@earendil-works/pi-coding-agent": "*",
+        "@earendil-works/pi-tui": "*",
+      },
+    },
     "packages/pix-ls": {
       "name": "@dihak/pix-ls",
       "version": "0.1.15",
@@ -196,7 +208,7 @@
     },
     "packages/pix-models": {
       "name": "@dihak/pix-models",
-      "version": "0.1.21",
+      "version": "0.1.22",
       "dependencies": {
         "@dihak/pix-data": "^0.3.0",
         "@dihak/pix-pretty": "^1.7.9",
@@ -227,7 +239,7 @@
     },
     "packages/pix-pretty": {
       "name": "@dihak/pix-pretty",
-      "version": "1.7.21",
+      "version": "1.7.22",
       "dependencies": {
         "@dihak/pix-data": "^0.3.0",
         "@ff-labs/fff-node": "^0.5.2",
@@ -360,7 +372,7 @@
     },
     "packages/pix-working": {
       "name": "@dihak/pix-working",
-      "version": "0.1.0",
+      "version": "0.1.2",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
       },
@@ -474,6 +486,8 @@
     "@dihak/pix-gate": ["@dihak/pix-gate@workspace:packages/pix-gate"],
 
     "@dihak/pix-grep": ["@dihak/pix-grep@workspace:packages/pix-grep"],
+
+    "@dihak/pix-hotkeys": ["@dihak/pix-hotkeys@workspace:packages/pix-hotkeys"],
 
     "@dihak/pix-ls": ["@dihak/pix-ls@workspace:packages/pix-ls"],
 
