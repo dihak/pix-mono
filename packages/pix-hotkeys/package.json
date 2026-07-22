@@ -1,0 +1,47 @@
+{
+	"name": "@dihak/pix-hotkeys",
+	"version": "0.1.0",
+	"description": "Pi extension — enhanced /hotkeys overlay with a grouped, scrollable modal",
+	"type": "module",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "bun test"
+	},
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"src/extension.ts"
+		]
+	},
+	"keywords": [
+		"pi",
+		"pi-package",
+		"pi-extension",
+		"pix"
+	],
+	"author": "dihak",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/dihak/pix-mono.git",
+		"directory": "packages/pix-hotkeys"
+	},
+	"homepage": "https://github.com/dihak/pix-mono/tree/main/packages/pix-hotkeys#readme",
+	"bugs": {
+		"url": "https://github.com/dihak/pix-mono/issues"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	},
+	"dependencies": {
+		"@dihak/pix-pretty": "^1.7.22"
+	}
+}

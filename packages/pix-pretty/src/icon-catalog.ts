@@ -68,6 +68,9 @@ const CATALOG = {
 	// ── model picker (pix-models) ─────────────────────────────────────────
 	"picker.model": { nerd: "\u{F0229}", unicode: `\u25C8${VS}`, ascii: "M" },
 
+	// ── hotkeys overlay (pix-hotkeys) ─────────────────────────────────────
+	"picker.hotkeys": { nerd: "\u{F030C}", unicode: `\u2328${VS}`, ascii: "K" },
+
 	// ── optimizer suite (pix-optimizer) ───────────────────────────────────
 	"opt.caveman": { nerd: "\u{F0710}", unicode: `\u2664${VS}`, ascii: "Cv" },
 	"opt.rtk": { nerd: "\u{F04E5}", unicode: `\u2661${VS}`, ascii: "Rk" },
