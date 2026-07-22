@@ -26,6 +26,14 @@ import { patchOutBuiltinModelCommand } from "./patch-builtin";
 
 // ─── Pure logic (exported for tests) ─────────────────────────────────────────
 
+export const MODEL_SELECTION_NEXT_KEY = "\x1b[B";
+export const MODEL_SELECTION_PREVIOUS_KEY = "\x1b[A";
+
+/** Map Tab-cycle direction to CSI arrows SelectList already recognizes. */
+export function modelSelectionCycleKey(direction: "next" | "previous"): string {
+	return direction === "next" ? MODEL_SELECTION_NEXT_KEY : MODEL_SELECTION_PREVIOUS_KEY;
+}
+
 export function fmtCtx(n: number): string {
 	if (!n || n < 1_000) return `${n}`;
 	if (n >= 1_000_000) {
@@ -444,7 +452,7 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 						...list.render(inner),
 						theme.fg(
 							"dim",
-							"fuzzy search · ↑↓ navigate · shift+←/→ thinking · enter select · esc cancel",
+							"fuzzy search · ↑↓/tab navigate · shift+←/→ thinking · enter select · esc cancel",
 						),
 					];
 					return frameLines({
@@ -466,7 +474,18 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 					// tui.select.up/down). matchesKey against literal "up"/"down" would
 					// ignore those remaps and let the keys fall through to search.
 					const kb = getKeybindings();
-					const isNav = kb.matches(data, "tui.select.up") || kb.matches(data, "tui.select.down");
+					const cyclesNext = kb.matches(data, "tui.input.tab");
+					const cyclesPrevious = matchesKey(data, "shift+tab");
+					const listInput = cyclesNext
+						? modelSelectionCycleKey("next")
+						: cyclesPrevious
+							? modelSelectionCycleKey("previous")
+							: data;
+					const isNav =
+						cyclesNext ||
+						cyclesPrevious ||
+						kb.matches(data, "tui.select.up") ||
+						kb.matches(data, "tui.select.down");
 					// Shift+←/→ tunes the ACTIVE session model's thinking level without
 					// stealing plain ←/→ cursor movement from search. setThinkingLevel clamps
 					// to model capability, so unsupported rungs land on the nearest allowed.
@@ -487,7 +506,7 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 						tui.requestRender();
 						return;
 					} else if (isNav || matchesKey(data, "enter")) {
-						list.handleInput?.(data);
+						list.handleInput?.(listInput);
 					} else if (matchesKey(data, "escape")) {
 						done(null);
 					} else {

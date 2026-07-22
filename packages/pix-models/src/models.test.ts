@@ -4,13 +4,28 @@ import {
 	filterModelItems,
 	fmtCost,
 	fmtCtx,
+	MODEL_SELECTION_NEXT_KEY,
+	MODEL_SELECTION_PREVIOUS_KEY,
 	type ModelSearchLookup,
+	modelSelectionCycleKey,
 	normalizeModelText,
 	sortModels,
 	stepEffectiveThinkingLevel,
 	stepThinkingLevel,
 	THINKING_LEVELS,
 } from "./models.ts";
+
+describe("modelSelectionCycleKey", () => {
+	it("maps Tab to next selection", () => {
+		expect(modelSelectionCycleKey("next")).toBe(MODEL_SELECTION_NEXT_KEY);
+		expect(MODEL_SELECTION_NEXT_KEY).toBe("\x1b[B");
+	});
+
+	it("maps Shift+Tab to previous selection", () => {
+		expect(modelSelectionCycleKey("previous")).toBe(MODEL_SELECTION_PREVIOUS_KEY);
+		expect(MODEL_SELECTION_PREVIOUS_KEY).toBe("\x1b[A");
+	});
+});
 
 describe("stepThinkingLevel", () => {
 	it("steps up one notch", () => {
