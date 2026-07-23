@@ -6,7 +6,8 @@
  *
  * - Branch shown with zsh-style dirty/ahead/behind markers.
  * - TPS: live during stream; decays to 0 while waiting on tools; freezes on agent_end.
- * - Model spec (ctx · cost) sourced from ~/.cache/pi/models-dev.json.
+ * - Model spec (ctx · cost) from modelgrep via pix-data, with registered
+ *   Pi model cost/context as fallback for private / gateway models.
  * - Extension statuses surfaced via footerData.getExtensionStatuses();
  *   "plan" is rendered as the leftmost segment, others appended after model.
  */
@@ -14,7 +15,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ModelsDevModel } from "@dihak/pix-data";
-import { benchScoreColor, lookupBenchmark, lookupModelsDev } from "@dihak/pix-data";
+import { benchScoreColor, lookupBenchmark, resolveModelsDev } from "@dihak/pix-data";
 import { icon } from "@dihak/pix-pretty/icon-catalog";
 import type { AssistantMessage, AssistantMessageEvent } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
@@ -205,7 +206,19 @@ function renderBranch(
 
 /** "<modelId> [· thinking] [· ctxK · $in/$out]" */
 function renderModel(
-	model: { id?: string; provider?: string; name?: string } | undefined,
+	model:
+		| {
+				id?: string;
+				provider?: string;
+				name?: string;
+				contextWindow?: number;
+				maxTokens?: number;
+				cost?: ModelsDevModel["cost"] & {
+					cacheRead?: number;
+					cacheWrite?: number;
+				};
+		  }
+		| undefined,
 	thinking: string,
 	theme: Theme,
 ): string {
@@ -226,7 +239,8 @@ function renderModel(
 		out += theme.fg("muted", " · ") + renderThinkingLevel(theme, thinking, abbr);
 	}
 	if (provider && id !== "?") {
-		const dev = lookupModelsDev(provider, id);
+		// modelgrep first; registered model cost fills private / gateway gaps
+		const dev = resolveModelsDev(provider, id, model);
 		const costStr = fmtCost(dev);
 		// color the $ and numbers green, separator muted
 		out += theme.fg("muted", " · ") + theme.fg("success", costStr);

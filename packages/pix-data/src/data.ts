@@ -372,6 +372,104 @@ export function lookupModelsDev(_provider: string, id: string): ModelsDevModel |
 	return findInIndex(id, buildModelsDevIndex(modelgrep.getCached()));
 }
 
+/**
+ * Minimal fields from a registered Pi `Model` (or models.json entry). Used to
+ * fill catalog gaps for private / gateway models modelgrep never lists
+ * (e.g. digitalkode `composer-2.5`).
+ */
+export type RegisteredModelMeta = {
+	id?: string;
+	name?: string;
+	reasoning?: boolean;
+	/** Input modalities when present (`["text"]`, `["text","image"]`). */
+	input?: string[];
+	contextWindow?: number;
+	maxTokens?: number;
+	cost?: {
+		input?: number;
+		output?: number;
+		cacheRead?: number;
+		cacheWrite?: number;
+		cache_read?: number;
+		cache_write?: number;
+	};
+};
+
+/** True when cost carries at least one known rate (incl. free `0`). */
+function costKnown(cost: ModelsDevModel["cost"] | undefined): boolean {
+	if (!cost) return false;
+	return cost.input != null || cost.output != null;
+}
+
+/** Map a registered Pi model into the shared ModelsDevModel shape. */
+export function fromRegisteredModel(
+	reg: RegisteredModelMeta | undefined | null,
+): ModelsDevModel | undefined {
+	if (!reg) return undefined;
+	const hasCost = costKnown(reg.cost as ModelsDevModel["cost"]);
+	if (!reg.id && !reg.name && reg.contextWindow == null && !hasCost) return undefined;
+
+	const id = reg.id ? slugOf(reg.id) : "unknown";
+	const entry: ModelsDevModel = { id };
+	if (reg.name) entry.name = reg.name;
+	if (reg.reasoning != null) entry.reasoning = reg.reasoning;
+	if (reg.input?.length) entry.modalities = { input: reg.input };
+	if (reg.contextWindow != null || reg.maxTokens != null) {
+		entry.limit = {
+			context: reg.contextWindow,
+			output: reg.maxTokens,
+		};
+	}
+	if (hasCost) {
+		entry.cost = {
+			input: reg.cost?.input,
+			output: reg.cost?.output,
+			cache_read: reg.cost?.cacheRead ?? reg.cost?.cache_read,
+			cache_write: reg.cost?.cacheWrite ?? reg.cost?.cache_write,
+		};
+	}
+	return entry;
+}
+
+/**
+ * Prefer modelgrep catalog fields; fill missing cost/context from a registered
+ * Pi model so private gateways still show real $/1M rates in footer + picker.
+ */
+export function mergeModelsDev(
+	catalog: ModelsDevModel | undefined,
+	registered: RegisteredModelMeta | undefined | null,
+): ModelsDevModel | undefined {
+	const reg = fromRegisteredModel(registered);
+	if (!catalog) return reg;
+	if (!reg) return catalog;
+
+	const cost = costKnown(catalog.cost) ? catalog.cost : reg.cost;
+	const context = catalog.limit?.context ?? reg.limit?.context;
+	const output = catalog.limit?.output ?? reg.limit?.output;
+	const limit =
+		context != null || output != null ? { context, output } : (catalog.limit ?? reg.limit);
+
+	return {
+		...reg,
+		...catalog,
+		id: catalog.id || reg.id,
+		name: catalog.name ?? reg.name,
+		reasoning: catalog.reasoning ?? reg.reasoning,
+		modalities: catalog.modalities ?? reg.modalities,
+		limit,
+		cost,
+	};
+}
+
+/** Catalog lookup + registered-model fallback (cost/context). */
+export function resolveModelsDev(
+	provider: string,
+	id: string,
+	registered?: RegisteredModelMeta | null,
+): ModelsDevModel | undefined {
+	return mergeModelsDev(lookupModelsDev(provider, id), registered);
+}
+
 export async function fetchModelsDevIndex(): Promise<Map<string, ModelsDevModel>> {
 	return buildModelsDevIndex(await modelgrep.get());
 }

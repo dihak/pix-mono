@@ -117,6 +117,9 @@ place if your priorities differ.
 | `buildModelsDevIndex` | Build a lookup `Map` from the catalog (context/cost/modalities) |
 | `lookupInIndex` | Fuzzy-match a router model id against an index |
 | `lookupModelsDev` | Sync lookup by id from in-memory cache (joined on slug) |
+| `fromRegisteredModel` | Map a registered Pi model (`cost` / `contextWindow`) onto `ModelsDevModel` |
+| `mergeModelsDev` | Prefer modelgrep fields; fill missing cost/context from a registered model |
+| `resolveModelsDev` | `lookupModelsDev` + registered-model fallback (private / gateway models) |
 | `lookupBenchmark` | Sync lookup a model by id — returns score + rank + pricing |
 | `benchScoreColor` | Map a 0–100 score to a `success`/`warning`/`error`/`muted` token |
 | `pixConfig` | `@dihak/pix-data/pix-config` — load/access the unified `pix.json` config |

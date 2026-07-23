@@ -4,7 +4,7 @@ Pi extension — enhanced `/models` picker with coding score/rank.
 
 ## What it does
 
-Registers a `/models` slash command that replaces Pi's built-in `/model` selector with a richer TUI picker. Each row shows the model id, context window, per-million-token cost, and a coding-focused score/rank (with star bar) when available. The list is sorted by coding score (best first), then alphabetically for unscored models. Fuzzy search filters the list as you type. `Tab` and `Shift+Tab` cycle next/previous model; `Enter` selects. Selecting a model switches the active model for the session. Model metadata is sourced from `~/.cache/pi/` via `pix-data`; the coding score/rank is computed locally from the modelgrep catalog (best = #1). Requires `@dihak/pix-data` as a dependency.
+Registers a `/models` slash command that replaces Pi's built-in `/model` selector with a richer TUI picker. Each row shows the model id, context window, per-million-token cost, and a coding-focused score/rank (with star bar) when available. The list is sorted by coding score (best first), then alphabetically for unscored models. Fuzzy search filters the list as you type. `Tab` and `Shift+Tab` cycle next/previous model; `Enter` selects. Selecting a model switches the active model for the session. Model metadata is sourced from `~/.cache/pi/` via `pix-data` (modelgrep), with registered Pi model `cost`/`contextWindow` filling gaps for private or gateway models not in the catalog; the coding score/rank is computed locally from the modelgrep catalog (best = #1). Requires `@dihak/pix-data` as a dependency.
 
 ## Install
 

@@ -2,11 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
 	benchlm,
 	buildModelsDevIndex,
+	fromRegisteredModel,
 	lookupBenchmark,
 	lookupInIndex,
 	lookupModelsDev,
 	type ModelGrepModel,
+	mergeModelsDev,
 	modelgrep,
+	resolveModelsDev,
 } from "./data.ts";
 
 // Compact modelgrep-shaped fixture builder.
@@ -180,6 +183,56 @@ describe("modelgrep adapters", () => {
 
 	it("lookupModelsDev returns undefined for unknown model", () => {
 		expect(lookupModelsDev("cc", "nonexistent-xyz")).toBeUndefined();
+	});
+
+	it("fromRegisteredModel maps Pi cost + contextWindow", () => {
+		const m = fromRegisteredModel({
+			id: "composer-2.5",
+			name: "Composer 2.5",
+			contextWindow: 200000,
+			maxTokens: 131072,
+			cost: { input: 0.5, output: 2.5, cacheRead: 0, cacheWrite: 0 },
+		});
+		expect(m?.id).toBe("composer-2.5");
+		expect(m?.cost?.input).toBe(0.5);
+		expect(m?.cost?.output).toBe(2.5);
+		expect(m?.cost?.cache_read).toBe(0);
+		expect(m?.limit?.context).toBe(200000);
+		expect(m?.limit?.output).toBe(131072);
+	});
+
+	it("mergeModelsDev fills missing catalog cost from registered model", () => {
+		const merged = mergeModelsDev(undefined, {
+			id: "composer-2.5",
+			cost: { input: 0.5, output: 2.5 },
+			contextWindow: 200000,
+		});
+		expect(merged?.cost?.input).toBe(0.5);
+		expect(merged?.cost?.output).toBe(2.5);
+		expect(merged?.limit?.context).toBe(200000);
+	});
+
+	it("mergeModelsDev keeps catalog cost over registered", () => {
+		const catalog = lookupModelsDev("cc", "claude-haiku-4-5-20251001");
+		const merged = mergeModelsDev(catalog, {
+			id: "claude-haiku-4-5-20251001",
+			cost: { input: 99, output: 99 },
+			contextWindow: 1,
+		});
+		expect(merged?.cost?.input).toBe(1);
+		expect(merged?.cost?.output).toBe(5);
+		expect(merged?.limit?.context).toBe(200000);
+	});
+
+	it("resolveModelsDev falls back for off-catalog gateway models", () => {
+		const m = resolveModelsDev("digitalkode", "composer-2.5", {
+			id: "composer-2.5",
+			cost: { input: 0.5, output: 2.5 },
+			contextWindow: 200000,
+		});
+		expect(m?.cost?.input).toBe(0.5);
+		expect(m?.cost?.output).toBe(2.5);
+		expect(lookupModelsDev("digitalkode", "composer-2.5")).toBeUndefined();
 	});
 
 	it("lookupBenchmark falls back to fitted heuristic (no intelligence)", () => {

@@ -8,7 +8,7 @@
  * Sorted by benchlm rank when available (best first), then alphabetical.
  */
 
-import { benchScoreColor, lookupBenchmark, lookupModelsDev } from "@dihak/pix-data";
+import { benchScoreColor, lookupBenchmark, resolveModelsDev } from "@dihak/pix-data";
 import { icon } from "@dihak/pix-pretty/icon-catalog";
 import { frameLines, modalWidth } from "@dihak/pix-pretty/modal-frame";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -234,7 +234,7 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 	// Build items with benchmark data
 	type Row = {
 		m: (typeof available)[number];
-		dev: ReturnType<typeof lookupModelsDev>;
+		dev: ReturnType<typeof resolveModelsDev>;
 		bench: ReturnType<typeof lookupBenchmark>;
 		// Rank among the user's *available* models, not the global catalog.
 		localRank: number | null;
@@ -250,7 +250,8 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 				: 0; // scored → top
 		return {
 			m,
-			dev: lookupModelsDev(m.provider, m.id),
+			// modelgrep first; registered Pi model fills cost/ctx for private gateways
+			dev: resolveModelsDev(m.provider, m.id, m),
 			bench,
 			localRank: null,
 			tier,

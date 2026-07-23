@@ -17,6 +17,7 @@ export type {
 	ModelGrepModel,
 	ModelsDevApi,
 	ModelsDevModel,
+	RegisteredModelMeta,
 } from "./data.ts";
 // Public data API — single source of truth for the shared model data layer.
 // Consumers (pix-core, pix-9router, …) import these instead of duplicating
@@ -28,10 +29,13 @@ export {
 	CACHE_DIR,
 	DataSource,
 	fetchModelsDevIndex,
+	fromRegisteredModel,
 	lookupBenchmark,
 	lookupInIndex,
 	lookupModelsDev,
+	mergeModelsDev,
 	modelgrep,
+	resolveModelsDev,
 } from "./data.ts";
 
 export default function (pi: ExtensionAPI): void {
