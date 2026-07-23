@@ -36,17 +36,13 @@ Shared dependencies pulled in automatically — install directly only if you nee
 | [`@dihak/pix-models`](packages/pix-models) | `/models` — enhanced model picker with coding score/rank, context window, cost |
 | [`@dihak/pix-update`](packages/pix-update) | `/update` — self-update Pi + all extensions, detects install method |
 | [`@dihak/pix-commands`](packages/pix-commands) | `/clear` slash command (flushes `~/.cache/pi`) |
-| [`@dihak/pix-nudge`](packages/pix-nudge) | Tools nudge + capability nudge hooks to steer model toward correct tools |
 | [`@dihak/pix-diagnostics`](packages/pix-diagnostics) | Compact LSP diagnostic widget — recent files list, overrides pi-lens |
 | [`@dihak/pix-display`](packages/pix-display) | Paste chip rendering (`[paste image #1]`) + leaked `<think>` tag → native thinking blocks |
-| [`@dihak/pix-prompts`](packages/pix-prompts) | System-prompt injection — bundled `AGENT.md` baseline + repo directive files |
-| [`@dihak/pix-skills`](packages/pix-skills) | `read_skills` discovery and loader — names-only listing, description and full-instruction loading, reference reads, and safe bundled resource copies |
 
 **Behaviour**
 
 | Package | Description |
 | --- | --- |
-| [`@dihak/pix-optimizer`](packages/pix-optimizer) | Caveman mode + RTK tool rewriting + jq/TOON JSON compression + ponytail lazy-dev mode (`/optimizer` overlay) |
 | [`@dihak/pix-gate`](packages/pix-gate) | Permission gate for dangerous bash + path commands — 4 severity tiers (block/critical/dangerous/risky) + sudo redirect, configurable |
 | [`@dihak/pix-subagent`](packages/pix-subagent) | Sub-agent spawning — 3 tools (`agent`, `agent_result`, `agent_steer`), live model widget, work-splitting |
 
@@ -73,7 +69,6 @@ Not bundled by `pix-core` — install each only if you want it. These are delibe
 
 | Package | Why it's opt-in |
 | --- | --- |
-| [`@dihak/pix-9router`](packages/pix-9router) | 9Router LLM provider + `fetch`/`search`/`transcribe` tools — needs a 9Router API key, so only useful if you route through 9Router |
 | [`@dihak/pix-sudo`](packages/pix-sudo) | `sudo_run` — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode) |
 | [`@dihak/pix-toolbox`](packages/pix-toolbox) | `/toolbox` — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use |
 
@@ -168,16 +163,13 @@ Several packages here originated as forks or merges of community Pi packages:
 
 | Upstream | Disposition |
 |---|---|
-| [`npm:pi-caveman`](https://www.npmjs.com/package/pi-caveman) | starting point for the `pix-optimizer` caveman-mode rewrite |
-| `npm:pi-rtk-optimizer` | merged into `pix-optimizer` |
-| [`git:github.com/DietrichGebert/ponytail`](https://github.com/DietrichGebert/ponytail) | ruleset adapted as ponytail mode in `pix-optimizer` |
 | `npm:@heyhuynhgiabuu/pi-pretty` | replaced by `@dihak/pix-pretty` |
 | `npm:@heyhuynhgiabuu/pi-diff` | superseded (merged into `pix-core`) |
-| `npm:@juicesharp/rpiv-ask-user-question` | rewritten as the `ask-user` skill in `pix-skills` |
+| `npm:@juicesharp/rpiv-ask-user-question` | rewritten as `@dihak/pix-ask` (`ask_user` tool) |
 | [`git:github.com/tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) | spawn engine ported into `pix-subagent` |
 | [`git:github.com/nicobailon/pi-subagents`](https://github.com/nicobailon/pi-subagents) | work-splitting design adapted in `pix-subagent` |
 
-Previous standalone repos migrated into this monorepo: `pix-optimizer`, `pix-themes`, `pix-pretty`, `pix-core`, `pix-9router`, `pix-data`.
+Previous standalone repos migrated into this monorepo: `pix-themes`, `pix-pretty`, `pix-core`, `pix-data`.
 
 ## License
 

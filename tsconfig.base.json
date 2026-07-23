@@ -8,7 +8,6 @@
 			"@dihak/pix-data": ["packages/pix-data/src/index.ts"],
 			"@dihak/pix-data/collapse": ["packages/pix-data/src/collapse.ts"],
 			"@dihak/pix-data/pix-config": ["packages/pix-data/src/pix-config.ts"],
-			"@dihak/pix-skills": ["packages/pix-skills/src/index.ts"],
 			"@dihak/pix-gate/lib": ["packages/pix-gate/src/lib.ts"]
 		},
 		"lib": ["ES2022"],

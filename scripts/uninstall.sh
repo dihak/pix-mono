@@ -33,20 +33,18 @@ npm:@dihak/pix-core
 npm:@dihak/pix-welcome
 npm:@dihak/pix-footer
 npm:@dihak/pix-commands
-npm:@dihak/pix-nudge
 npm:@dihak/pix-diagnostics
 npm:@dihak/pix-display
-npm:@dihak/pix-prompts
-npm:@dihak/pix-skills
 npm:@dihak/pix-models
 npm:@dihak/pix-subagent
+npm:@dihak/pix-todo-auto
+npm:@dihak/pix-hotkeys
+npm:@dihak/pix-working
 "
 
 # EXTENSION module — standalone extension + tool packages.
 EXTENSION_PACKAGES="
 npm:@dihak/pix-themes
-npm:@dihak/pix-optimizer
-npm:@dihak/pix-9router
 npm:@dihak/pix-pretty
 npm:@dihak/pix-bash
 npm:@dihak/pix-read
@@ -60,6 +58,11 @@ npm:@dihak/pix-todo
 npm:@dihak/pix-ask
 npm:@dihak/pix-toolbox
 npm:@dihak/pix-gate
+# Legacy packages removed from the distro — still sweep so old installs clean up.
+npm:@dihak/pix-prompts
+npm:@dihak/pix-nudge
+npm:@dihak/pix-9router
+npm:@dihak/pix-skills
 "
 
 info() { printf '\033[0;34m›\033[0m %s\n' "$*"; }

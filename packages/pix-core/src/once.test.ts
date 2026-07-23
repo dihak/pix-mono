@@ -57,12 +57,12 @@ describe("once", () => {
 	it("shares the registry across calls via globalThis (same pi)", () => {
 		const pi = {};
 		let calls = 0;
-		once(pi, "pix-skills", () => {
+		once(pi, "pix-todo", () => {
 			calls++;
 		});
 		// A second loader pass (e.g. standalone install after pix-core) reuses
 		// the same globalThis registry for the same pi and must not re-run.
-		once(pi, "pix-skills", () => {
+		once(pi, "pix-todo", () => {
 			calls++;
 		});
 		expect(calls).toBe(1);

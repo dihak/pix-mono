@@ -208,9 +208,8 @@ async function showEnhancedPicker(pi: ExtensionAPI, ctx: ExtensionContext): Prom
 	// reads whatever `this.models` was last loaded into — which, depending on
 	// extension load order vs oauth/auth resolution, can omit oauth providers
 	// whose models were registered as built-ins but resolved after the last
-	// load (notably `openai-codex`). 9router survives because it's registered
-	// as a custom provider with an env-key apiKey. refresh() rebuilds the model
-	// list (resetOAuthProviders → loadModels → re-apply registered providers)
+	// load (notably `openai-codex`). refresh() rebuilds the model list
+	// (resetOAuthProviders → loadModels → re-apply registered providers)
 	// so oauth-backed codex models reappear, exactly as the built-in does.
 	//
 	// The public ExtensionContext type narrows modelRegistry to a sync

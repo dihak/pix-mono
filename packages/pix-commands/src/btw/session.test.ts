@@ -51,7 +51,7 @@ describe("makeLeanExtensions", () => {
 		const inlineHandlers = new Map<string, never[]>([["before_agent_start", []]]);
 		const base = {
 			extensions: [
-				{ path: "/extensions/pix-prompts.ts", handlers: regularHandlers },
+				{ path: "/extensions/other-ext.ts", handlers: regularHandlers },
 				{ path: "<inline:1>", handlers: inlineHandlers },
 			],
 			errors: [],

@@ -63,39 +63,6 @@ const SETTINGS: SettingRow[] = [
 		values: ["5", "10", "15", "20", "30", "60"],
 		read: (c) => String(c.collapse.delaySec),
 	},
-	// ── Optimizer ─────────────────────────────────────────────────────────────
-	{
-		section: "Optimizer",
-		label: "caveman",
-		configSection: "optimizer",
-		configKey: "caveman",
-		values: ["off", "lite", "full", "ultra", "micro"],
-		read: (c) => c.optimizer.caveman,
-	},
-	{
-		section: "Optimizer",
-		label: "rtk",
-		configSection: "optimizer",
-		configKey: "rtk",
-		values: ["off", "on"],
-		read: (c) => c.optimizer.rtk,
-	},
-	{
-		section: "Optimizer",
-		label: "toon",
-		configSection: "optimizer",
-		configKey: "toon",
-		values: ["off", "on"],
-		read: (c) => c.optimizer.toon,
-	},
-	{
-		section: "Optimizer",
-		label: "ponytail",
-		configSection: "optimizer",
-		configKey: "ponytail",
-		values: ["off", "lite", "full", "ultra"],
-		read: (c) => c.optimizer.ponytail,
-	},
 	// ── Gate ──────────────────────────────────────────────────────────────────
 	{
 		section: "Gate",

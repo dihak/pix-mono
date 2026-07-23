@@ -2,7 +2,7 @@
  * pix-data — Pi extension
  *
  * Warms the shared model data cache on session start so other extensions
- * (pix-9router, models picker, footer) can read from ~/.cache/pi/* synchronously.
+ * (models picker, footer) can read from ~/.cache/pi/* synchronously.
  *
  * Two non-blocking fetches (modelgrep catalog + BenchLM scores) — Pi session
  * starts immediately; consumers read whichever cache file they need.
@@ -20,7 +20,7 @@ export type {
 	RegisteredModelMeta,
 } from "./data.ts";
 // Public data API — single source of truth for the shared model data layer.
-// Consumers (pix-core, pix-9router, …) import these instead of duplicating
+// Consumers (pix-core, pix-models, …) import these instead of duplicating
 // the DataSource implementation and models.dev/BenchLM lookups.
 export {
 	benchlm,

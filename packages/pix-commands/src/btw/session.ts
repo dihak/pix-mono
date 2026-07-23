@@ -61,8 +61,8 @@ export function selectBtwTools(activeToolNames: string[]): string[] {
 
 /**
  * Keep extension tools and policies, but remove per-turn system-prompt mutators.
- * This preserves the deliberately lean /btw identity even when pix-prompts,
- * optimizer nudges, or project extensions normally append instructions.
+ * This preserves the deliberately lean /btw identity even when other extensions
+ * or project loaders normally append instructions.
  */
 export function makeLeanExtensions(base: LoadExtensionsResult): LoadExtensionsResult {
 	return {

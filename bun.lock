@@ -15,20 +15,6 @@
         "typescript": "^5.7.0",
       },
     },
-    "packages/pix-9router": {
-      "name": "@dihak/pix-9router",
-      "version": "0.3.6",
-      "dependencies": {
-        "@dihak/pix-data": "^0.3.0",
-        "@dihak/pix-pretty": "^1.7.21",
-        "typebox": "^1.1.38",
-      },
-      "peerDependencies": {
-        "@earendil-works/pi-ai": "*",
-        "@earendil-works/pi-coding-agent": "*",
-        "@earendil-works/pi-tui": "*",
-      },
-    },
     "packages/pix-ask": {
       "name": "@dihak/pix-ask",
       "version": "0.2.7",
@@ -64,28 +50,24 @@
     },
     "packages/pix-core": {
       "name": "@dihak/pix-core",
-      "version": "0.4.49",
+      "version": "0.5.0",
       "dependencies": {
         "@dihak/pix-ask": "^0.2.7",
         "@dihak/pix-bash": "^0.1.13",
         "@dihak/pix-commands": "^0.2.0",
-        "@dihak/pix-data": "^0.3.3",
+        "@dihak/pix-data": "^0.3.7",
         "@dihak/pix-diagnostics": "^0.1.7",
         "@dihak/pix-display": "^0.1.12",
         "@dihak/pix-edit": "^0.1.16",
         "@dihak/pix-find": "^0.1.15",
-        "@dihak/pix-footer": "^0.2.2",
+        "@dihak/pix-footer": "^0.2.3",
         "@dihak/pix-gate": "^0.1.15",
         "@dihak/pix-grep": "^0.1.15",
         "@dihak/pix-hotkeys": "^0.1.0",
         "@dihak/pix-ls": "^0.1.15",
-        "@dihak/pix-models": "^0.1.22",
-        "@dihak/pix-nudge": "^0.1.9",
-        "@dihak/pix-optimizer": "^1.1.17",
-        "@dihak/pix-pretty": "^1.7.21",
-        "@dihak/pix-prompts": "^0.3.1",
+        "@dihak/pix-models": "^0.1.23",
+        "@dihak/pix-pretty": "^1.7.23",
         "@dihak/pix-read": "^0.1.15",
-        "@dihak/pix-skills": "^0.6.4",
         "@dihak/pix-subagent": "^0.5.6",
         "@dihak/pix-todo": "^0.1.16",
         "@dihak/pix-todo-auto": "^0.1.0",
@@ -101,7 +83,7 @@
     },
     "packages/pix-data": {
       "name": "@dihak/pix-data",
-      "version": "0.3.3",
+      "version": "0.3.7",
       "peerDependencies": {
         "@earendil-works/pi-coding-agent": "*",
       },
@@ -150,9 +132,9 @@
     },
     "packages/pix-footer": {
       "name": "@dihak/pix-footer",
-      "version": "0.2.2",
+      "version": "0.2.3",
       "dependencies": {
-        "@dihak/pix-data": "^0.3.0",
+        "@dihak/pix-data": "^0.3.4",
         "@dihak/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
@@ -208,28 +190,9 @@
     },
     "packages/pix-models": {
       "name": "@dihak/pix-models",
-      "version": "0.1.22",
+      "version": "0.1.23",
       "dependencies": {
-        "@dihak/pix-data": "^0.3.0",
-        "@dihak/pix-pretty": "^1.7.9",
-      },
-      "peerDependencies": {
-        "@earendil-works/pi-coding-agent": "*",
-        "@earendil-works/pi-tui": "*",
-      },
-    },
-    "packages/pix-nudge": {
-      "name": "@dihak/pix-nudge",
-      "version": "0.1.9",
-      "peerDependencies": {
-        "@earendil-works/pi-coding-agent": "*",
-      },
-    },
-    "packages/pix-optimizer": {
-      "name": "@dihak/pix-optimizer",
-      "version": "1.1.17",
-      "dependencies": {
-        "@dihak/pix-data": "^0.3.0",
+        "@dihak/pix-data": "^0.3.4",
         "@dihak/pix-pretty": "^1.7.9",
       },
       "peerDependencies": {
@@ -239,7 +202,7 @@
     },
     "packages/pix-pretty": {
       "name": "@dihak/pix-pretty",
-      "version": "1.7.22",
+      "version": "1.7.23",
       "dependencies": {
         "@dihak/pix-data": "^0.3.0",
         "@ff-labs/fff-node": "^0.5.2",
@@ -251,31 +214,11 @@
         "@earendil-works/pi-tui": "*",
       },
     },
-    "packages/pix-prompts": {
-      "name": "@dihak/pix-prompts",
-      "version": "0.3.1",
-      "peerDependencies": {
-        "@earendil-works/pi-coding-agent": "*",
-      },
-    },
     "packages/pix-read": {
       "name": "@dihak/pix-read",
       "version": "0.1.15",
       "dependencies": {
         "@dihak/pix-data": "^0.3.0",
-        "@dihak/pix-pretty": "^1.7.20",
-      },
-      "peerDependencies": {
-        "@earendil-works/pi-coding-agent": "*",
-        "@earendil-works/pi-tui": "*",
-      },
-    },
-    "packages/pix-skills": {
-      "name": "@dihak/pix-skills",
-      "version": "0.6.4",
-      "dependencies": {
-        "@dihak/pix-data": "^0.3.2",
-        "@dihak/pix-gate": "^0.1.13",
         "@dihak/pix-pretty": "^1.7.20",
       },
       "peerDependencies": {
@@ -461,8 +404,6 @@
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.4.16", "", { "os": "win32", "cpu": "x64" }, "sha512-Kp85jgoBHa05gix6UIRjfCDiUV3w/8VIdZ247VyyO2gEjaw12WEVhdIjlxp/AMzXxqxQwbxNTDVZ3Mwd2RG5rw=="],
 
-    "@dihak/pix-9router": ["@dihak/pix-9router@workspace:packages/pix-9router"],
-
     "@dihak/pix-ask": ["@dihak/pix-ask@workspace:packages/pix-ask"],
 
     "@dihak/pix-bash": ["@dihak/pix-bash@workspace:packages/pix-bash"],
@@ -493,17 +434,9 @@
 
     "@dihak/pix-models": ["@dihak/pix-models@workspace:packages/pix-models"],
 
-    "@dihak/pix-nudge": ["@dihak/pix-nudge@workspace:packages/pix-nudge"],
-
-    "@dihak/pix-optimizer": ["@dihak/pix-optimizer@workspace:packages/pix-optimizer"],
-
     "@dihak/pix-pretty": ["@dihak/pix-pretty@workspace:packages/pix-pretty"],
 
-    "@dihak/pix-prompts": ["@dihak/pix-prompts@workspace:packages/pix-prompts"],
-
     "@dihak/pix-read": ["@dihak/pix-read@workspace:packages/pix-read"],
-
-    "@dihak/pix-skills": ["@dihak/pix-skills@workspace:packages/pix-skills"],
 
     "@dihak/pix-subagent": ["@dihak/pix-subagent@workspace:packages/pix-subagent"],
 

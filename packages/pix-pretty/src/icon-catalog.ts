@@ -71,13 +71,6 @@ const CATALOG = {
 	// ── hotkeys overlay (pix-hotkeys) ─────────────────────────────────────
 	"picker.hotkeys": { nerd: "\u{F030C}", unicode: `\u2328${VS}`, ascii: "K" },
 
-	// ── optimizer suite (pix-optimizer) ───────────────────────────────────
-	"opt.caveman": { nerd: "\u{F0710}", unicode: `\u2664${VS}`, ascii: "Cv" },
-	"opt.rtk": { nerd: "\u{F04E5}", unicode: `\u2661${VS}`, ascii: "Rk" },
-	"opt.toon": { nerd: "\u{F05C0}", unicode: `\u2662${VS}`, ascii: "Tn" },
-	"opt.ponytail": { nerd: "\u{F0190}", unicode: `\u2667${VS}`, ascii: "Pt" },
-	"opt.title": { nerd: "\u{F0DAB}", unicode: `\u25C8${VS}`, ascii: "*" },
-
 	// ── subagent widget (pix-subagent) ────────────────────────────────────
 	agent: { nerd: "\u{F0BA0}", unicode: `\u2699${VS}`, ascii: "@" },
 	turns: { nerd: "\u{F006A}", unicode: `\u21BB${VS}`, ascii: "~" },
@@ -111,8 +104,8 @@ export function getIconMode(): IconMode {
 
 /**
  * Mode-change subscribers. Most consumers resolve icon() at render time and
- * need no notification, but PUSHED-status consumers (e.g. the optimizer cell,
- * drawn once via setStatus) must repaint when the mode flips. They subscribe
+ * need no notification, but PUSHED-status consumers (drawn once via setStatus)
+ * must repaint when the mode flips. They subscribe
  * here; setIconMode fires every callback on an actual change.
  */
 type ModeListener = (mode: IconMode) => void;

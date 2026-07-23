@@ -19,11 +19,10 @@ set -eu
 #                        package.json lists every bundled member as an npm
 #                        `dependency` — the core UI/UX extensions (pix-welcome,
 #                        pix-footer, pix-models, pix-update, pix-commands
-#                        (including /btw), pix-nudge, pix-diagnostics,
-#                        pix-prompts, pix-skills),
+#                        (including /btw), pix-diagnostics),
 #                        the standard tool suite (pix-read, pix-write, pix-edit,
 #                        pix-find, pix-grep, pix-ls, pix-bash, pix-todo,
-#                        pix-ask), plus pix-optimizer and pix-gate — and pulls
+#                        pix-ask), plus pix-gate — and pulls
 #                        pix-data/pix-pretty transitively. A single
 #                        `pi install` fetches the whole tree;
 #                        pix-core/src/extension.ts imports each member's factory
@@ -55,7 +54,6 @@ npm:pi-mcp-adapter|MCP gateway — connect to MCP servers and call their tools f
 # Opt-in Pix extensions — each carries a setup cost or sensitive capability.
 # Format: "<spec>|<why it's opt-in>"
 OPTIN_PIX_PACKAGES="
-npm:@dihak/pix-9router|9Router LLM provider + fetch/search tools — needs a 9Router API key, so only useful if you route through 9Router.
 npm:@dihak/pix-sudo|sudo_run — root execution via a PAM password overlay; a privileged capability you opt into explicitly (blocked in non-interactive mode).
 npm:@dihak/pix-toolbox|/toolbox — fuzzy-search picker to enable/disable tools at runtime; a power-user utility, not needed for normal use.
 "

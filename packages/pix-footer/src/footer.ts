@@ -2,20 +2,17 @@
  * Footer extension — pure-prompt style.
  *
  * Layout:
- *   [MODE] | ~/cwd (branch *±⇡n⇣n) | ⇡in ⇣out [Rcache] [ctx%/ctxk] [$cost] | model [· thinking] [· ctxK · $in/$out] [| status…] [| N t/s]
+ *   [MODE] | ~/cwd (branch *±⇡n⇣n) | [ctx%/ctxk] | model [· thinking] [| status…] | ⇡in ⇣out [$cost] [| N t/s]
  *
  * - Branch shown with zsh-style dirty/ahead/behind markers.
  * - TPS: live during stream; decays to 0 while waiting on tools; freezes on agent_end.
- * - Model spec (ctx · cost) from modelgrep via pix-data, with registered
- *   Pi model cost/context as fallback for private / gateway models.
+ * - Session cost sits after input/output token counts (no per-model unit price/score).
  * - Extension statuses surfaced via footerData.getExtensionStatuses();
  *   "plan" is rendered as the leftmost segment, others appended after model.
  */
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { ModelsDevModel } from "@dihak/pix-data";
-import { benchScoreColor, lookupBenchmark, resolveModelsDev } from "@dihak/pix-data";
 import { icon } from "@dihak/pix-pretty/icon-catalog";
 import type { AssistantMessage, AssistantMessageEvent } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ReadonlyFooterDataProvider } from "@earendil-works/pi-coding-agent";
@@ -61,14 +58,6 @@ const shortCwd = (cwd: string): string => {
 	const base = cwd.split("/").filter(Boolean).pop();
 	return base ?? cwd;
 };
-
-function fmtCost(entry: ModelsDevModel | undefined): string {
-	const costIn = entry?.cost?.input ?? 0;
-	const costOut = entry?.cost?.output ?? 0;
-	if (costIn === 0 && costOut === 0) return "free";
-	const fmt = (n: number) => (Number.isInteger(n) ? `${n}` : n.toFixed(2).replace(/\.?0+$/, ""));
-	return `$ ${fmt(costIn)}/${fmt(costOut)}`;
-}
 
 // ────────────────────────────────────────────────────────────────────
 
@@ -204,27 +193,14 @@ function renderBranch(
 	return { branchSeg, markersSeg: markers.join(" ") };
 }
 
-/** "<modelId> [· thinking] [· ctxK · $in/$out]" */
+/** "<modelId> [· thinking]" */
 function renderModel(
-	model:
-		| {
-				id?: string;
-				provider?: string;
-				name?: string;
-				contextWindow?: number;
-				maxTokens?: number;
-				cost?: ModelsDevModel["cost"] & {
-					cacheRead?: number;
-					cacheWrite?: number;
-				};
-		  }
-		| undefined,
+	model: { id?: string } | undefined,
 	thinking: string,
 	theme: Theme,
 ): string {
 	const rawId = model?.id ?? "?";
 	const id = rawId.replace(/^[a-z]+\//i, "");
-	const provider = model?.provider ?? "";
 	let out = theme.fg("muted", `${icon("model")}  `) + theme.fg("accent", id);
 	const THINK_ABBR: Record<string, string> = {
 		minimal: "min",
@@ -237,19 +213,6 @@ function renderModel(
 	if (thinking) {
 		const abbr = THINK_ABBR[thinking] ?? thinking.slice(0, 3);
 		out += theme.fg("muted", " · ") + renderThinkingLevel(theme, thinking, abbr);
-	}
-	if (provider && id !== "?") {
-		// modelgrep first; registered model cost fills private / gateway gaps
-		const dev = resolveModelsDev(provider, id, model);
-		const costStr = fmtCost(dev);
-		// color the $ and numbers green, separator muted
-		out += theme.fg("muted", " · ") + theme.fg("success", costStr);
-	}
-	const bench = lookupBenchmark(id);
-	if (bench) {
-		const score = bench.overallScore ?? "?";
-		const scoreColor = benchScoreColor(bench.overallScore);
-		out += theme.fg("muted", " · ") + theme.fg(scoreColor, `${icon("score")}${score}`);
 	}
 	return out;
 }
@@ -611,7 +574,8 @@ export default function (pi: ExtensionAPI) {
 					const tokensPart = tokens ? sep + tokens : "";
 					const costPart = cost ? sep + cost : "";
 					const ctxPart = ctxUsage ? sep + ctxUsage : "";
-					const line = `${modePart}${loc}${markersPart}${ctxPart}${sep}${model}${otherPart}${costPart}${tokensPart}${tpsPart}`;
+					// tokens then session total cost (no per-model unit price after model)
+					const line = `${modePart}${loc}${markersPart}${ctxPart}${sep}${model}${otherPart}${tokensPart}${costPart}${tpsPart}`;
 					return [truncateToWidth(line, width)];
 				},
 			};

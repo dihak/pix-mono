@@ -25,12 +25,8 @@ import registerGrep from "@dihak/pix-grep/src/extension.ts";
 import registerHotkeys from "@dihak/pix-hotkeys/src/extension.ts";
 import registerLs from "@dihak/pix-ls/src/extension.ts";
 import registerModels from "@dihak/pix-models/src/extension.ts";
-import registerNudge from "@dihak/pix-nudge/src/extension.ts";
-import registerOptimizer from "@dihak/pix-optimizer/src/index.ts";
 import registerPretty from "@dihak/pix-pretty";
-import registerPrompts from "@dihak/pix-prompts/src/extension.ts";
 import registerRead from "@dihak/pix-read/src/extension.ts";
-import registerSkills from "@dihak/pix-skills/src/index.ts";
 import registerSubagent from "@dihak/pix-subagent/src/extension.ts";
 import registerTodo from "@dihak/pix-todo/src/index.ts";
 import registerTodoAuto from "@dihak/pix-todo-auto/src/index.ts";
@@ -50,7 +46,7 @@ const MEMBERS: Factory[] = [
 	registerData,
 	// pix-pretty seeds the global icon mode (initIconMode) and registers
 	// FFF commands. It must run before icon() consumers (footer,
-	// display, models, welcome, optimizer) so the mode is set when they paint.
+	// display, models, welcome) so the mode is set when they paint.
 	registerPretty,
 	registerWelcome,
 	registerFooter,
@@ -59,11 +55,8 @@ const MEMBERS: Factory[] = [
 	registerHotkeys,
 	registerUpdate,
 	registerCommands,
-	registerNudge,
 	registerDiagnostics,
 	registerDisplay,
-	registerPrompts,
-	registerSkills,
 	registerRead,
 	registerWrite,
 	registerEdit,
@@ -74,7 +67,6 @@ const MEMBERS: Factory[] = [
 	registerTodo,
 	registerTodoAuto,
 	registerAsk,
-	registerOptimizer,
 	registerGate,
 	registerSubagent,
 ];

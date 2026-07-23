@@ -30,7 +30,7 @@ against one global icon mode. Reskinning, or fixing a missing-glyph (“tofu”)
 problem on terminals without a Nerd Font, becomes a one-file edit here.
 
 - **`./icon-catalog`** — `icon(key)` resolves a semantic key (`"cwd"`,
-  `"model"`, `"paste.image"`, `"opt.caveman"`, …) to a glyph for the active
+  `"model"`, `"paste.image"`, …) to a glyph for the active
   mode. Modes: `nerd` (Nerd Font PUA, default), `unicode` (standard BMP glyphs,
   no patched font needed), `ascii` (plain letters). Also `iconFor(key, mode)`,
   `getIconMode()`, `setIconMode()`, `ICON_KEYS`, `ICON_MODES`.
@@ -38,7 +38,7 @@ problem on terminals without a Nerd Font, becomes a one-file edit here.
   (`pretty.icons`); `initIconMode()` applies it on load.
 - **`/pix`** (in `pix-data`) — unified settings overlay that includes the icon
   mode switch. One global knob governs every pix-* package (footer, paste
-  chips, model picker, welcome banner, optimizer cell). Seeded from
+  chips, model picker, welcome banner). Seeded from
   `PRETTY_ICONS` (`none`/`off` → `ascii`) when no choice is saved.
 
 ### Shared overlay

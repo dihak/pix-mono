@@ -30,9 +30,6 @@ classification logic can be reused without the TUI:
   `@dihak/pix-pretty/gate-overlay` component, so the gate and `sudo_run`
   dialogs share one implementation.
 
-`pix-skills` imports `./lib` to gate skill `` !`cmd` `` directives with the same
-rules as the bash tool (auto-deny on match, no prompt).
-
 ## Configuration
 
 Gate rules are read from the **`gate` section of `~/.pi/agent/pix.json`** (the unified config file). The legacy `~/.pi/agent/pix-gate.json` file is no longer used.

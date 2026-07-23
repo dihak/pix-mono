@@ -76,21 +76,17 @@ packages/
   pix-models/      # /models — model picker (score, context, cost)
   pix-update/      # /update — self-update Pi + extensions
   pix-commands/    # /clear cache + /btw isolated concurrent side questions
-  pix-nudge/       # Tools + capability nudge
   pix-diagnostics/ # Compact session-files widget
   pix-display/     # Paste chip rendering + leaked <think> cleanup
-  pix-prompts/     # System-prompt injection (AGENT.md + repo directive scan)
-  pix-skills/      # Skill loader (read_skills tool + bundled skills)
   # ── Behaviour (bundled by pix-core) ────────────────────────────────
-  pix-optimizer/   # Caveman + RTK + TOON + ponytail (/optimizer)
   pix-gate/        # Permission gate for dangerous commands
   pix-subagent/    # Sub-agent spawning (agent / agent_result / agent_steer)
   # ── Tool suite (bundled by pix-core — Pi built-in replacements) ───
   pix-bash/  pix-read/  pix-write/  pix-edit/
   pix-find/  pix-grep/  pix-ls/    pix-ask/
   pix-todo/        # Durable execution checklist (survives context compaction)
+  pix-todo-auto/   # Auto-continue while todos remain unfinished
   # ── Standalone (opt-in, NOT bundled) ───────────────────────────────
-  pix-9router/     # 9Router LLM provider + fetch/search/transcribe (needs API key)
   pix-sudo/        # sudo_run with PAM password prompt
   pix-toolbox/     # Gated tool toggle UI (/toolbox)
 scripts/
@@ -198,7 +194,6 @@ Auto-created with defaults on first session. Sections:
 |---|---|
 | `collapse` | pix-bash, pix-read, pix-grep, pix-edit, pix-write, pix-find, pix-ls, pix-todo |
 | `pretty` | pix-pretty (theme, icons, preview, diff colors) |
-| `optimizer` | pix-optimizer (caveman/rtk/toon/ponytail state) |
 | `gate` | pix-gate (rules, auto-approve patterns) |
 
 Loader: `@dihak/pix-data/pix-config` · Collapse: `@dihak/pix-data/collapse`. Full schema in `packages/pix-data/README.md`.

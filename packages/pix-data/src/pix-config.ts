@@ -55,13 +55,6 @@ export interface PrettyConfig {
 	diff: DiffColors;
 }
 
-export interface OptimizerConfig {
-	caveman: string;
-	rtk: string;
-	toon: string;
-	ponytail: string;
-}
-
 export interface GateRuleConfig {
 	pattern: string;
 	flags?: string;
@@ -78,7 +71,6 @@ export interface GateConfig {
 export interface PixConfig {
 	collapse: CollapseConfig;
 	pretty: PrettyConfig;
-	optimizer: OptimizerConfig;
 	gate: GateConfig;
 }
 
@@ -113,13 +105,6 @@ const DEFAULT_PRETTY: PrettyConfig = {
 	diff: { ...DEFAULT_DIFF },
 };
 
-const DEFAULT_OPTIMIZER: OptimizerConfig = {
-	caveman: "off",
-	rtk: "off",
-	toon: "off",
-	ponytail: "off",
-};
-
 const DEFAULT_GATE: GateConfig = {
 	disableDefaults: false,
 	autoApprove: [],
@@ -130,7 +115,6 @@ const DEFAULT_GATE: GateConfig = {
 export const DEFAULT_CONFIG: PixConfig = {
 	collapse: { ...DEFAULT_COLLAPSE },
 	pretty: { ...DEFAULT_PRETTY },
-	optimizer: { ...DEFAULT_OPTIMIZER },
 	gate: { ...DEFAULT_GATE },
 };
 
@@ -242,16 +226,6 @@ function mergePretty(raw: unknown): PrettyConfig {
 	};
 }
 
-function mergeOptimizer(raw: unknown): OptimizerConfig {
-	if (!isObj(raw)) return { ...DEFAULT_OPTIMIZER };
-	return {
-		caveman: str(raw.caveman, DEFAULT_OPTIMIZER.caveman),
-		rtk: str(raw.rtk, DEFAULT_OPTIMIZER.rtk),
-		toon: str(raw.toon, DEFAULT_OPTIMIZER.toon),
-		ponytail: str(raw.ponytail, DEFAULT_OPTIMIZER.ponytail),
-	};
-}
-
 function mergeGateRules(raw: unknown): GateRuleConfig[] {
 	if (!Array.isArray(raw)) return [];
 	return raw.filter(
@@ -273,7 +247,6 @@ function buildConfig(raw: Record<string, unknown>): PixConfig {
 	return {
 		collapse: mergeCollapse(raw.collapse),
 		pretty: mergePretty(raw.pretty),
-		optimizer: mergeOptimizer(raw.optimizer),
 		gate: mergeGate(raw.gate),
 	};
 }

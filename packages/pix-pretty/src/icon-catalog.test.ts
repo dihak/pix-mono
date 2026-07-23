@@ -27,7 +27,7 @@ describe("icon-catalog", () => {
 
 	it("iconFor resolves without touching the active mode", () => {
 		setIconMode("nerd");
-		expect(iconFor("opt.caveman", "ascii")).toBe("Cv");
+		expect(iconFor("cwd", "ascii")).toBe("~");
 		expect(getIconMode()).toBe("nerd"); // unchanged
 	});
 

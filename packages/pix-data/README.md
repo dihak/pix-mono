@@ -168,14 +168,6 @@ pix-data hosts the **single shared config file** consumed by every `pix-*` packa
     "diffColors": true        // colored diff output
   },
 
-  // Optimizer initial state (pix-optimizer)
-  "optimizer": {
-    "caveman": "off",         // off | lite | full | ultra | micro
-    "rtk":     false,
-    "toon":    false,
-    "ponytail": "off"         // off | lite | full | ultra
-  },
-
   // Gate rules (pix-gate)
   "gate": {
     "disableDefaults": false,
