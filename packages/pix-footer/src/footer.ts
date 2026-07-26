@@ -194,11 +194,7 @@ function renderBranch(
 }
 
 /** "<modelId> [· thinking]" */
-function renderModel(
-	model: { id?: string } | undefined,
-	thinking: string,
-	theme: Theme,
-): string {
+function renderModel(model: { id?: string } | undefined, thinking: string, theme: Theme): string {
 	const rawId = model?.id ?? "?";
 	const id = rawId.replace(/^[a-z]+\//i, "");
 	let out = theme.fg("muted", `${icon("model")}  `) + theme.fg("accent", id);
