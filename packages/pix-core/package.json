@@ -1,6 +1,6 @@
 {
 	"name": "@dihak/pix-core",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"description": "Pi extension bundle — installs and activates all core pix-* extensions",
 	"type": "module",
 	"main": "src/extension.ts",
@@ -60,7 +60,7 @@
 		"@dihak/pix-todo-auto": "^0.1.0",
 		"@dihak/pix-ask": "^0.2.7",
 		"@dihak/pix-gate": "^0.1.15",
-		"@dihak/pix-subagent": "^0.5.6"
+		"@dihak/pix-subagent": "^0.5.7"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*",

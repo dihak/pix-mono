@@ -120,6 +120,7 @@ export default function registerPixSubagent(pi: ExtensionAPI): void {
 				maxTurns: record.maxTurns,
 				contextUsage,
 				outputTokens: record.lifetimeUsage.output,
+				cost: record.lifetimeUsage.cost,
 				streamingMs: record.streamingMs,
 				durationMs: record.completedAt ? record.completedAt - record.startedAt : 0,
 				error: record.error,

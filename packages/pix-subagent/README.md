@@ -31,10 +31,15 @@ Gives the parent agent (planner) four tools to delegate work to isolated child s
 
 ```
 ● Agents
-├─ ⠹ Explore [haiku]  scout auth flow  · ↻2 · 3 tool uses · 12.4k · 1.2s
+├─ ⠹ Explore [haiku]  scout auth flow  · ↻2 · 3 tool uses · 12.4k · $0.004 · 1.2s
 │     ⎿  grep "middleware" src/
-└─ ✓ Plan [sonnet]  design refactor  · ↻5 · 2.1s
+└─ ✓ Plan [sonnet]  design refactor  · ↻5 · $0.031 · 2.1s
 ```
+
+Session cost (`$0.004`) accumulates per agent from each turn's actual provider
+usage (`usage.cost.total`) and is shown alongside tokens/duration in the
+widget, the foreground terminal line, and the background completion
+notification — never hidden behind expansion.
 
 ## Tools
 

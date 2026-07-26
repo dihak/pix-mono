@@ -11,6 +11,8 @@ export type LifetimeUsage = {
 	input: number;
 	output: number;
 	cacheWrite: number;
+	/** Cumulative dollar cost across all turns (from each message's `usage.cost.total`). */
+	cost: number;
 };
 
 /** Sum of lifetime usage components, or 0 if undefined. */
@@ -23,6 +25,13 @@ export function addUsage(into: LifetimeUsage, delta: LifetimeUsage): void {
 	into.input += delta.input;
 	into.output += delta.output;
 	into.cacheWrite += delta.cacheWrite;
+	into.cost += delta.cost;
+}
+
+/** Format a dollar cost for compact display, e.g. "$0.003". "" when <= 0. */
+export function formatCost(cost: number): string {
+	if (!(cost > 0)) return "";
+	return `$${cost.toFixed(3)}`;
 }
 
 /** Minimal shape we read from upstream `getSessionStats()`. */

@@ -24,7 +24,12 @@ import {
 	SPINNER,
 } from "../tools.ts";
 import type { AgentInvocation, SubagentType } from "../types.ts";
-import { type ContextUsageLike, getSessionContextUsage, type SessionLike } from "../usage.ts";
+import {
+	type ContextUsageLike,
+	formatCost,
+	getSessionContextUsage,
+	type SessionLike,
+} from "../usage.ts";
 
 export type { AgentActivity, AgentDetails, Theme };
 export {
@@ -174,7 +179,7 @@ export class AgentWidget {
 			completedAt?: number;
 			error?: string;
 			invocation?: AgentInvocation;
-			lifetimeUsage?: { input: number; output: number; cacheWrite: number };
+			lifetimeUsage?: { input: number; output: number; cacheWrite: number; cost: number };
 			session?: unknown;
 			compactionCount?: number;
 			turnCount?: number;
@@ -226,6 +231,8 @@ export class AgentWidget {
 		if (ctxText) parts.push(ctxText);
 		const speed = formatSpeed(a.lifetimeUsage?.output ?? 0, a.streamingMs ?? durationMs);
 		if (speed) parts.push(speed);
+		const cost = formatCost(a.lifetimeUsage?.cost ?? 0);
+		if (cost) parts.push(theme.fg("success", cost));
 		parts.push(duration);
 
 		return `${icon} ${theme.fg("dim", name)}${modelLabel}${modeTag} ${theme.fg("dim", "·")} ${theme.fg("dim", a.description)} ${theme.fg("dim", "·")} ${theme.fg("dim", parts.join(" · "))}${statusText}`;
@@ -285,6 +292,8 @@ export class AgentWidget {
 			if (ctxText) parts.push(ctxText);
 			const liveSpeed = formatSpeed(bg?.lifetimeUsage.output ?? 0, bg?.streamingMs ?? 0);
 			if (liveSpeed) parts.push(liveSpeed);
+			const liveCost = formatCost(bg?.lifetimeUsage.cost ?? 0);
+			if (liveCost) parts.push(theme.fg("success", liveCost));
 			parts.push(elapsed);
 			const statsText = parts.join(" · ");
 

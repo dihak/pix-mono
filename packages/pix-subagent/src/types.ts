@@ -155,6 +155,8 @@ export interface NotificationDetails {
 	} | null;
 	/** Raw output tokens (for t/s). */
 	outputTokens?: number;
+	/** Cumulative dollar cost across all turns. */
+	cost?: number;
 	/** Cumulative streaming-only milliseconds (for accurate t/s). */
 	streamingMs?: number;
 	durationMs: number;

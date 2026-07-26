@@ -31,6 +31,7 @@ function details(status: NotificationDetails["status"]): NotificationDetails {
 		maxTurns: 8,
 		contextUsage: { tokens: 12_400, contextWindow: 100_000, percent: 12.4 },
 		outputTokens: 550,
+		cost: 0.0234,
 		streamingMs: 10_000,
 		durationMs: 12_000,
 		error: status === "error" ? "provider unavailable" : undefined,
@@ -54,6 +55,16 @@ describe("terminal subagent notifications", () => {
 		expect(output.split("\n")).toHaveLength(1);
 		expect(output).toContain("Explore");
 		expect(output).toContain("55 t/s");
+	});
+
+	test("completed notification shows session cost", () => {
+		const output = renderNotification(details("completed"), false);
+		expect(output).toContain("$0.023");
+	});
+
+	test("notification omits cost segment when cost is zero", () => {
+		const output = renderNotification({ ...details("completed"), cost: 0 }, false);
+		expect(output).not.toContain("$0.000");
 	});
 
 	test("expanded notification shows the stored bounded preview", () => {

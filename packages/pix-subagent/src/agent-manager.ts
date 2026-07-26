@@ -110,7 +110,12 @@ interface SpawnOptions {
 	/** Called at the end of each agentic turn with the cumulative count. */
 	onTurnEnd?: (turnCount: number) => void;
 	/** Called once per assistant message_end with that message's usage delta. */
-	onAssistantUsage?: (usage: { input: number; output: number; cacheWrite: number }) => void;
+	onAssistantUsage?: (usage: {
+		input: number;
+		output: number;
+		cacheWrite: number;
+		cost: number;
+	}) => void;
 	/** Called when the session successfully compacts. */
 	onCompaction?: (info: CompactionInfo) => void;
 	/** Caller-supplied tool-name subset — intersected (never widens). Omit → type default. */
@@ -194,7 +199,7 @@ export class AgentManager {
 			toolUses: 0,
 			startedAt: Date.now(),
 			abortController,
-			lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
+			lifetimeUsage: { input: 0, output: 0, cacheWrite: 0, cost: 0 },
 			compactionCount: 0,
 			turnCount: 0,
 			streamingMs: 0,

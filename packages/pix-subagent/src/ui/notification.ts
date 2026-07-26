@@ -9,6 +9,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { formatContext, formatMs, formatSpeed, formatToolUses, formatTurns } from "../tools.ts";
 import type { NotificationDetails } from "../types.ts";
+import { formatCost } from "../usage.ts";
 
 type NotificationTheme = {
 	fg(color: string, text: string): string;
@@ -49,6 +50,8 @@ export function formatNotificationLine(d: NotificationDetails, theme: Notificati
 	if (context) parts.push(theme.fg("dim", context));
 	const speed = formatSpeed(d.outputTokens ?? 0, d.streamingMs ?? d.durationMs);
 	if (speed) parts.push(theme.fg("dim", speed));
+	const cost = formatCost(d.cost ?? 0);
+	if (cost) parts.push(theme.fg("success", cost));
 	if (d.durationMs > 0) parts.push(theme.fg("dim", formatMs(d.durationMs)));
 
 	let line = `${marker} ${theme.bold(d.description)}`;

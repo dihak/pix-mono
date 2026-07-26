@@ -768,6 +768,7 @@ describe("AgentManager", () => {
 			input: 0,
 			output: 0,
 			cacheWrite: 0,
+			cost: 0,
 		});
 	});
 

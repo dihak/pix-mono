@@ -45,7 +45,12 @@ import type {
 	AgentUtilityResultDetails,
 	LifetimeUsage,
 } from "./types.ts";
-import { type ContextUsageLike, getSessionContextUsage, type SessionLike } from "./usage.ts";
+import {
+	type ContextUsageLike,
+	formatCost,
+	getSessionContextUsage,
+	type SessionLike,
+} from "./usage.ts";
 
 // ── Types shared with ui/widget.ts (widget imports from here to avoid circular) ─
 
@@ -75,6 +80,8 @@ export interface AgentDetails {
 	context: string;
 	/** Raw output tokens — for t/s = outputTokens / streamingMs. */
 	outputTokens?: number;
+	/** Cumulative dollar cost across all turns. */
+	cost?: number;
 	durationMs: number;
 	/** Cumulative streaming-only milliseconds (for accurate t/s). */
 	streamingMs?: number;
@@ -386,6 +393,8 @@ export function formatAgentFinishedLine(d: AgentDetails, theme: Theme): string {
 	if (stats) parts.push(stats);
 	const speed = formatSpeed(d.outputTokens ?? 0, d.streamingMs ?? d.durationMs);
 	if (speed) parts.push(theme.fg("dim", speed));
+	const cost = formatCost(d.cost ?? 0);
+	if (cost) parts.push(theme.fg("success", cost));
 	parts.push(theme.fg("dim", formatMs(d.durationMs)));
 	parts.push(theme.fg(d.status === "error" ? "error" : "dim", status));
 
@@ -853,6 +862,7 @@ export function createAgentTool(
 								toolUses: act?.toolUses ?? 0,
 								context: formatContext(contextUsage),
 								outputTokens: act?.lifetimeUsage.output,
+								cost: act?.lifetimeUsage.cost,
 								streamingMs: act?.streamingMs,
 								durationMs: Date.now() - fgStartedAt,
 								status: "running" as const,
@@ -938,7 +948,7 @@ export function createAgentTool(
 						toolUses: 0,
 						startedAt: Date.now(),
 						status: "error",
-						lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
+						lifetimeUsage: { input: 0, output: 0, cacheWrite: 0, cost: 0 },
 					},
 					fgState,
 				),
@@ -1198,7 +1208,7 @@ function createActivityTracker(maxTurns?: number, onStreamUpdate?: () => void) {
 		maxTurns,
 		responseText: "",
 		session: undefined,
-		lifetimeUsage: { input: 0, output: 0, cacheWrite: 0 },
+		lifetimeUsage: { input: 0, output: 0, cacheWrite: 0, cost: 0 },
 		streamingMs: 0,
 		durationMs: 0,
 		warnings: [],
@@ -1238,7 +1248,12 @@ function createActivityTracker(maxTurns?: number, onStreamUpdate?: () => void) {
 		onSessionCreated: (session: unknown) => {
 			state.session = session as AgentActivity["session"];
 		},
-		onAssistantUsage: (usage: { input: number; output: number; cacheWrite: number }) => {
+		onAssistantUsage: (usage: {
+			input: number;
+			output: number;
+			cacheWrite: number;
+			cost: number;
+		}) => {
 			// Finalize the streaming window for this turn.
 			if (streamStart !== null) {
 				state.streamingMs += Date.now() - streamStart;
@@ -1247,6 +1262,7 @@ function createActivityTracker(maxTurns?: number, onStreamUpdate?: () => void) {
 			state.lifetimeUsage.input += usage.input;
 			state.lifetimeUsage.output += usage.output;
 			state.lifetimeUsage.cacheWrite += usage.cacheWrite;
+			state.lifetimeUsage.cost += usage.cost;
 			onStreamUpdate?.();
 		},
 	};
@@ -1263,7 +1279,7 @@ function buildDetails(
 		status: string;
 		error?: string;
 		id?: string;
-		lifetimeUsage: { input: number; output: number; cacheWrite: number };
+		lifetimeUsage: { input: number; output: number; cacheWrite: number; cost: number };
 	},
 	activity?: AgentActivity & { durationMs?: number },
 ): AgentDetails {
@@ -1275,6 +1291,7 @@ function buildDetails(
 		toolUses: record.toolUses,
 		context: formatContext(contextUsage),
 		outputTokens: record.lifetimeUsage.output,
+		cost: record.lifetimeUsage.cost,
 		streamingMs: activity?.streamingMs,
 		turnCount: activity?.turnCount,
 		maxTurns: activity?.maxTurns,

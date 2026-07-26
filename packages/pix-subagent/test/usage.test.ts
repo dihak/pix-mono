@@ -1,13 +1,14 @@
 import { expect, test } from "bun:test";
 import {
 	addUsage,
+	formatCost,
 	getLifetimeTotal,
 	getSessionContextPercent,
 	getSessionContextUsage,
 } from "../src/usage.ts";
 
 test("getLifetimeTotal sums all three fields", () => {
-	expect(getLifetimeTotal({ input: 100, output: 200, cacheWrite: 50 })).toBe(350);
+	expect(getLifetimeTotal({ input: 100, output: 200, cacheWrite: 50, cost: 0.01 })).toBe(350);
 });
 
 test("getLifetimeTotal returns 0 for undefined", () => {
@@ -15,9 +16,18 @@ test("getLifetimeTotal returns 0 for undefined", () => {
 });
 
 test("addUsage mutates target correctly", () => {
-	const acc = { input: 10, output: 20, cacheWrite: 5 };
-	addUsage(acc, { input: 5, output: 10, cacheWrite: 2 });
-	expect(acc).toEqual({ input: 15, output: 30, cacheWrite: 7 });
+	const acc = { input: 10, output: 20, cacheWrite: 5, cost: 0.001 };
+	addUsage(acc, { input: 5, output: 10, cacheWrite: 2, cost: 0.002 });
+	expect(acc).toEqual({ input: 15, output: 30, cacheWrite: 7, cost: 0.003 });
+});
+
+test("formatCost formats positive cost to 3 decimals", () => {
+	expect(formatCost(0.0034)).toBe("$0.003");
+});
+
+test("formatCost returns empty string for zero or negative cost", () => {
+	expect(formatCost(0)).toBe("");
+	expect(formatCost(-1)).toBe("");
 });
 
 // getSessionContextPercent still works, reimplemented via getSessionContextUsage
