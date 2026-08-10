@@ -99,13 +99,12 @@ export default function register(pi: ExtensionAPI): void {
 			}
 
 			lastSig = sig;
-			const list = decision.remaining.map((t) => `- ${t.id}: ${t.text} (${t.status})`).join("\n");
+			// Compact nudge: the tool's own promptGuidelines already document the
+			// update contract, so repeating it here is duplicated per-settle tokens.
+			const list = decision.remaining.map((t) => `#${t.id} ${t.text}`).join("; ");
+			const next = decision.remaining[0];
 			pi.sendUserMessage(
-				"You stopped with unfinished todos:\n" +
-					`${list}\n\n` +
-					"Continue with the next pending item. Update statuses with `todo(action:'update', id, status)` as you go. " +
-					"Mark an item done only after its work is verified. When all items are done, stop. " +
-					"If you cannot proceed, mark the item blocked with `todo(action:'update', id, status:'blocked')`.",
+				`Unfinished todos: ${list}. Continue with #${next?.id}; batch status changes via \`todo(action:'update', updates:'id:status,…')\`.`,
 			);
 		},
 	);

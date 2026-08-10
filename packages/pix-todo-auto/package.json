@@ -1,6 +1,6 @@
 {
 	"name": "@dihak/pix-todo-auto",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Pi extension — auto-continue the agent while pix-todo items remain unfinished",
 	"type": "module",
 	"main": "src/index.ts",
@@ -35,7 +35,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@dihak/pix-todo": "^0.1.16"
+		"@dihak/pix-todo": "^0.1.17"
 	},
 	"peerDependencies": {
 		"@earendil-works/pi-coding-agent": "*"

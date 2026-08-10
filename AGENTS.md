@@ -21,6 +21,17 @@ Pix is a **transparent, token-efficient, model-flexible** Pi distro. These are p
 - Measure token savings where possible. Do not make unverified efficiency claims.
 - Avoid always-on advisors, reviewers, background loops, verbose orchestration transcripts, and giant all-purpose tool schemas.
 
+#### Fewer tool calls, fewer tokens — mandatory for every tool
+
+Every round-trip costs a full request; every echoed byte costs context for the rest of the session. Apply these to any tool you write or touch:
+
+- **Support batching.** If an action can plausibly be invoked N times in a row, accept N inputs in one call (`updates: "3:done,4:in_progress"`, multi-path reads, multi-pattern greps). Per-item call loops are a design bug.
+- **Return deltas, not full state.** After a mutation, echo only what changed plus a short pointer to the next step. The model already holds the prior state; re-sending it is pure waste. Full state belongs in `details` for the TUI renderer, which costs the model nothing.
+- **Budget the static surface.** `description` + `promptSnippet` + `promptGuidelines` + `parameters` ship on *every* request for the whole session. Keep the total under ~350 tokens. Two sharp guidelines beat five redundant ones.
+- **Never statically document what the tool says at runtime.** If the tool emits a warning or hint when the situation arises, do not also pay for it in `promptGuidelines`.
+- **Keep injected prompts incremental.** Recurring `before_agent_start` / auto-continue messages must inject a pointer ("next #4 <text>"), never a re-dump of state already in the transcript.
+- **Do not duplicate guidance across packages.** A companion extension nudging the model should reference the tool's contract, not restate it.
+
 ### 2. Preserve strong model flexibility
 
 - The user or calling agent chooses the model for each task.
