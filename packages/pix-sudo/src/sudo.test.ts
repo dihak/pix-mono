@@ -696,6 +696,70 @@ describe("sudo_run tool execute()", () => {
 		expect(expandedResult).not.toContain("do-not-render-me");
 	});
 
+	test("expanded long one-line commands wrap fully without ellipsis", () => {
+		const host = makeHost();
+		const command =
+			'set -e; printf "LINE_ONE\\n"; printf "LINE_TWO\\n"; printf "LINE_THREE\\n"; true && echo done';
+		const state = { collapsed: true };
+		const compactCall = rendered(
+			host.renderCall({ command, reason: "long one-liner" }, stubTheme, {
+				expanded: false,
+				state: {},
+				invalidate: () => {},
+			}),
+		);
+		const expandedCall = rendered(
+			host.renderCall({ command, reason: "long one-liner" }, stubTheme, {
+				expanded: true,
+				state,
+				invalidate: () => {},
+			}),
+		);
+
+		expect(compactCall.split("\n")).toHaveLength(1);
+		expect(expandedCall).toContain("LINE_ONE");
+		expect(expandedCall).toContain("LINE_TWO");
+		expect(expandedCall).toContain("LINE_THREE");
+		expect(expandedCall).toContain("echo done");
+		expect(expandedCall).not.toMatch(/…/);
+	});
+
+	test("expanded multi-line commands restore every input line on the call row", () => {
+		const host = makeHost();
+		const command = "set -e\napt update\napt upgrade -y";
+		const state = { collapsed: true };
+		const collapsedCall = rendered(
+			host.renderCall({ command, reason: "upgrade packages" }, stubTheme, {
+				expanded: false,
+				state,
+				invalidate: () => {},
+			}),
+		);
+		const expandedCall = rendered(
+			host.renderCall({ command, reason: "upgrade packages" }, stubTheme, {
+				expanded: true,
+				state,
+				invalidate: () => {},
+			}),
+		);
+		const compactCall = rendered(
+			host.renderCall({ command, reason: "upgrade packages" }, stubTheme, {
+				expanded: false,
+				state: {},
+				invalidate: () => {},
+			}),
+		);
+
+		expect(collapsedCall).toBe("");
+		expect(compactCall).toContain("+2 lines");
+		expect(compactCall.split("\n")).toHaveLength(1);
+		expect(expandedCall).toContain("set -e");
+		expect(expandedCall).toContain("apt update");
+		expect(expandedCall).toContain("apt upgrade -y");
+		expect(expandedCall).not.toContain("+2 lines");
+		expect(expandedCall.split("\n").length).toBeGreaterThanOrEqual(3);
+	});
+
 	test("publishes only awaiting-approval and running updates before completion", async () => {
 		validationMock = async () => ({ stdout: "", stderr: "", code: 0 });
 		sudoMock = async () => ({ stdout: "done", stderr: "", code: 0 });

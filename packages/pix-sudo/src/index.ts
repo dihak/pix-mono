@@ -38,7 +38,7 @@ import {
 	termW,
 } from "@dihak/pix-pretty/utils";
 import type { AgentToolUpdateCallback, ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
+import { Text, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
 	detectAuthFailure,
@@ -85,6 +85,16 @@ function safeOneLine(value: string): string {
 		.replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ")
 		.replace(/\s+/g, " ")
 		.trim();
+}
+
+/** Strip control chars but keep newlines so expanded call rows can show scripts. */
+function sanitizeCommandLines(value: string): string[] {
+	return value
+		.replace(/[\u0000-\u0009\u000b\u000c\u000e-\u001f\u007f-\u009f]+/g, " ")
+		.replace(/\r\n/g, "\n")
+		.replace(/\r/g, "\n")
+		.split("\n")
+		.map((line) => line.replace(/[ \t]+$/g, ""));
 }
 
 function makeDetails(
@@ -414,12 +424,43 @@ export default function (pi: ExtensionAPI): void {
 			)
 				return text;
 
-			const command = safeOneLine(args.command) || "(empty command)";
-			text.setText(
-				fillToolBackground(
-					`${theme.fg("toolTitle", theme.bold("sudo"))} ${theme.fg("accent", command)}`,
-				),
+			const label = theme.fg("toolTitle", theme.bold("sudo"));
+			const prefix = `${label} `;
+			const prefixWidth = visibleWidth(prefix);
+			const availableWidth = Math.max(1, termW() - 1);
+			const cmdLines = sanitizeCommandLines(args.command ?? "").filter(
+				(line, i, all) => line.length > 0 || (i > 0 && i < all.length - 1),
 			);
+			const lines = cmdLines.length > 0 ? cmdLines : ["(empty command)"];
+
+			// Expanded: wrap full command (long one-liners + multi-line). Never truncate.
+			if (renderCtx.expanded) {
+				const bodyWidth = Math.max(1, availableWidth - prefixWidth);
+				const indent = " ".repeat(prefixWidth);
+				const out: string[] = [];
+				for (let i = 0; i < lines.length; i++) {
+					const painted = theme.fg("accent", lines[i] ?? "");
+					const wrapped = wrapTextWithAnsi(painted, bodyWidth);
+					const rows = wrapped.length > 0 ? wrapped : [""];
+					for (let j = 0; j < rows.length; j++) {
+						const row = rows[j] ?? "";
+						out.push(i === 0 && j === 0 ? `${prefix}${row}` : `${indent}${row}`);
+					}
+				}
+				text.setText(fillToolBackground(out.join("\n")));
+				return text;
+			}
+
+			const compact =
+				lines.length > 1
+					? `${lines[0]} ${theme.fg("muted", `… (+${lines.length - 1} lines)`)}`
+					: (lines[0] ?? "(empty command)");
+			const body = truncateToWidth(
+				theme.fg("accent", compact),
+				Math.max(1, availableWidth - prefixWidth),
+				"…",
+			);
+			text.setText(fillToolBackground(`${prefix}${body}`));
 			return text;
 		}) as never,
 

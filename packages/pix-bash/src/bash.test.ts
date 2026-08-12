@@ -7,7 +7,12 @@ import type {
 	ThemeLike,
 } from "@dihak/pix-pretty/types";
 import { visibleWidth } from "@earendil-works/pi-tui";
-import { formatBashDuration, registerBashTool, summarizeBashCommand } from "./bash";
+import {
+	formatBashDuration,
+	formatExpandedBashCall,
+	registerBashTool,
+	summarizeBashCommand,
+} from "./bash";
 
 class MockTextComponent {
 	private text: string;
@@ -181,6 +186,144 @@ describe("registerBashTool", () => {
 		expect(result?.getText()).toContain("✓ bash <muted>bun test · +2 steps</muted>");
 		expect(result?.getText()).toContain("2 lines · 2.5s");
 		expect(result?.getText()).not.toContain("git diff --check");
+	});
+
+	it("wraps a long one-line command fully when expanded (no ellipsis)", () => {
+		const registered: {
+			renderCall?: (...args: unknown[]) => MockTextComponent;
+		} = {};
+		const origColumns = process.env.COLUMNS;
+		process.env.COLUMNS = "40";
+		process.stdout.emit("resize");
+		process.stdin.emit("resize");
+
+		try {
+			const mockPi: PiPrettyApi = {
+				registerTool(tool: unknown) {
+					Object.assign(registered, tool);
+				},
+				registerCommand() {},
+				on() {},
+			};
+			registerBashTool(
+				mockPi,
+				() => ({
+					execute: async () => ({
+						content: [{ type: "text", text: "ok" }],
+						details: undefined,
+					}),
+				}),
+				{
+					cwd: process.cwd(),
+					sp: (p: string) => p,
+					TextComponent: MockTextComponent as unknown as TextComponentCtor,
+					fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+					cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+				},
+			);
+			const theme: ThemeLike = {
+				fg: (_key: string, value: string) => value,
+				bold: (value: string) => value,
+			};
+			// Long single-line script (same shape as the screenshot case).
+			const command = 'set -e; printf "LINE_ONE\\n"; printf "LINE_TWO\\n"; printf "LINE_THREE\\n"';
+			const compact = registered.renderCall?.({ command }, theme, {
+				expanded: false,
+				isError: false,
+				invalidate: () => {},
+				state: {},
+			} as unknown as RenderContextLike);
+			const expanded = registered.renderCall?.({ command }, theme, {
+				expanded: true,
+				isError: false,
+				invalidate: () => {},
+				state: { collapsed: true },
+			} as unknown as RenderContextLike);
+
+			const compactText = compact?.getText() ?? "";
+			const expandedText = expanded?.getText() ?? "";
+			// Compact still ellipsizes to one row.
+			expect(compactText).toContain("…");
+			expect(compactText.split("\n")).toHaveLength(1);
+			// Expanded keeps the full command, wrapped across rows — no ellipsis cut-off.
+			expect(expandedText).toContain("LINE_ONE");
+			expect(expandedText).toContain("LINE_TWO");
+			expect(expandedText).toContain("LINE_THREE");
+			expect(expandedText).not.toContain("…");
+			expect(expandedText.split("\n").length).toBeGreaterThan(1);
+			for (const line of expandedText.split("\n")) {
+				expect(visibleWidth(line)).toBeLessThanOrEqual(40);
+			}
+		} finally {
+			if (origColumns === undefined) delete process.env.COLUMNS;
+			else process.env.COLUMNS = origColumns;
+			process.stdout.emit("resize");
+			process.stdin.emit("resize");
+		}
+	});
+
+	it("formatExpandedBashCall wraps under the label indent", () => {
+		const theme = { fg: (_k: string, v: string) => v };
+		const out = formatExpandedBashCall("bash", "aaaa bbbb cccc dddd eeee ffff", theme, {
+			width: 16,
+		});
+		expect(out.startsWith("bash ")).toBe(true);
+		expect(out).toContain("aaaa");
+		expect(out).toContain("ffff");
+		expect(out).not.toContain("…");
+		expect(out.split("\n").length).toBeGreaterThan(1);
+	});
+
+	it("restores full multi-line command when an elapsed card is expanded", () => {
+		const registered: {
+			renderCall?: (...args: unknown[]) => MockTextComponent;
+		} = {};
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerBashTool(
+			mockPi,
+			() => ({
+				execute: async () => ({ content: [{ type: "text", text: "ok" }], details: undefined }),
+			}),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+		);
+		const theme: ThemeLike = {
+			fg: (_key: string, value: string) => value,
+			bold: (value: string) => value,
+		};
+		const command = "set -e\nbun test\nbun run check";
+		const state = { collapsed: true };
+		const collapsed = registered.renderCall?.(command ? { command } : {}, theme, {
+			expanded: false,
+			isError: false,
+			invalidate: () => {},
+			state,
+		} as unknown as RenderContextLike);
+		const expanded = registered.renderCall?.({ command }, theme, {
+			expanded: true,
+			isError: false,
+			invalidate: () => {},
+			state,
+		} as unknown as RenderContextLike);
+
+		expect(collapsed?.getText()).toBe("");
+		const expandedText = expanded?.getText() ?? "";
+		expect(expandedText).toContain("set -e");
+		expect(expandedText).toContain("bun test");
+		expect(expandedText).toContain("bun run check");
+		expect(expandedText).not.toContain("+2 lines");
+		expect(expandedText.split("\n").length).toBeGreaterThanOrEqual(3);
 	});
 
 	it("restores full output when an elapsed card is expanded", () => {

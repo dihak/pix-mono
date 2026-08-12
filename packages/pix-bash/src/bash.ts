@@ -28,7 +28,7 @@ import type {
 	BashToolInput,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import { truncateToWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 
 export function summarizeBashCommand(command: string): string {
 	const lines = command
@@ -54,6 +54,48 @@ export function formatBashDuration(durationMs: number): string {
 	if (durationMs < 1_000) return `${durationMs}ms`;
 	if (durationMs < 10_000) return `${(durationMs / 1_000).toFixed(1)}s`;
 	return `${Math.round(durationMs / 1_000)}s`;
+}
+
+/**
+ * Expanded call body: wrap the full command (single- or multi-line) under the
+ * tool label. Compact mode still truncates; expanded never ellipsizes away input.
+ */
+export function formatExpandedBashCall(
+	label: string,
+	command: string,
+	theme: { fg: (key: string, text: string) => string },
+	opts: { timeoutSuffix?: string; width: number },
+): string {
+	const prefix = `${label} `;
+	const prefixWidth = visibleWidth(prefix);
+	const timeout = opts.timeoutSuffix ?? "";
+	const width = Math.max(1, opts.width);
+	const indent = " ".repeat(prefixWidth);
+	const bodyWidth = Math.max(1, width - prefixWidth);
+	const cmdLines = command.length > 0 ? command.split("\n") : [""];
+	const out: string[] = [];
+
+	for (let i = 0; i < cmdLines.length; i++) {
+		const painted = theme.fg("accent", cmdLines[i] ?? "");
+		const wrapped = wrapTextWithAnsi(painted, bodyWidth);
+		const rows = wrapped.length > 0 ? wrapped : [""];
+		for (let j = 0; j < rows.length; j++) {
+			const row = rows[j] ?? "";
+			if (i === 0 && j === 0) {
+				// Timeout rides on the first visual row when it fits; otherwise its own muted row.
+				if (timeout && visibleWidth(prefix) + visibleWidth(row) + visibleWidth(timeout) <= width) {
+					out.push(`${prefix}${row}${timeout}`);
+				} else {
+					out.push(`${prefix}${row}`);
+					if (timeout) out.push(`${indent}${timeout.trimStart()}`);
+				}
+			} else {
+				out.push(`${indent}${row}`);
+			}
+		}
+	}
+
+	return out.join("\n");
 }
 
 export function registerBashTool(
@@ -111,19 +153,33 @@ export function registerBashTool(
 			if (hideCollapsedToolCall(collapseState, renderCtx.expanded, (value) => text.setText(value)))
 				return text;
 			const timeout = args.timeout ? ` ${theme.fg("muted", `(${args.timeout}s timeout)`)}` : "";
+			const availableWidth = Math.max(1, termW() - 1);
+
+			// Expanded: wrap full command (long one-liners + multi-line). Never truncate.
+			if (renderCtx.expanded) {
+				text.setText(
+					fillToolBackground(
+						formatExpandedBashCall(label, displayCmdRaw, theme, {
+							timeoutSuffix: timeout,
+							width: availableWidth,
+						}),
+					),
+				);
+				return text;
+			}
+
 			const cmdLines = displayCmdRaw.split("\n");
+			const prefix = `${label} `;
+			const prefixWidth = visibleWidth(prefix);
 			const firstLine = cmdLines[0] ?? "";
 			const compactCmd =
 				cmdLines.length > 1
 					? `${firstLine} ${theme.fg("muted", `… (+${cmdLines.length - 1} lines)`)}`
 					: firstLine;
-			const baseCmd = renderCtx.expanded ? displayCmdRaw : compactCmd;
-			const availableWidth = Math.max(1, termW() - 1);
-			const prefix = `${label} `;
 			const reserve = Math.max(0, availableWidth - timeout.length);
 			const displayCmd = truncateToWidth(
-				theme.fg("accent", baseCmd),
-				Math.max(1, reserve - prefix.length),
+				theme.fg("accent", compactCmd),
+				Math.max(1, reserve - prefixWidth),
 				"…",
 			);
 			text.setText(fillToolBackground(`${prefix}${displayCmd}${timeout}`));
