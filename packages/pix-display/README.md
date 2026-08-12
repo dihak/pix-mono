@@ -2,11 +2,13 @@
 
 # pix-display
 
-Pi core extension — paste chips, autocomplete Tab cycle, thinking blocks, and polished code snippets.
+Pi core extension — paste chips, fuzzy file complete, autocomplete Tab cycle, thinking blocks, and polished code snippets.
 
 ## What it does
 
-Four features, always on when installed:
+Five features, always on when installed:
+
+**Fuzzy file complete.** Project-wide path finder stacked on Pi's editor autocomplete. Type `@name`, a path fragment, or a bare word and press `Tab` to search the whole tree (gitignore-aware). Matching is separator-tolerant (`myappconfig` → `my-app-config…`). Prefers FFF when `pix-grep` has indexed the repo (frecency-ranked); otherwise lists with `fd` and ranks via `fzf --filter` when available, else a local fuzzy scorer. Slash commands (`/model`, …) stay on the built-in completer. Works with the Tab-cycle list below (`Tab`/`Shift+Tab` browse, `Enter` accept).
 
 **Autocomplete Tab cycle.** With the suggestion list open, `Tab` moves to the next item and `Shift+Tab` to the previous. `Enter` accepts (Pi default). `Tab` with the menu closed still opens completion. Composes with paste chips via editor-factory wrap.
 

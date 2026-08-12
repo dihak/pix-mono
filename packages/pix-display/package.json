@@ -1,7 +1,7 @@
 {
 	"name": "@dihak/pix-display",
-	"version": "0.1.12",
-	"description": "Pi core extension \u2014 paste chips, thinking blocks, and framed code rendering",
+	"version": "0.1.13",
+	"description": "Pi core extension \u2014 paste chips, fuzzy file complete, thinking blocks, and framed code rendering",
 	"type": "module",
 	"main": "src/index.ts",
 	"scripts": {
