@@ -6,6 +6,7 @@ import {
 	buildFileCompletionValue,
 	createFuzzyFileAutocompleteProvider,
 	extractPathToken,
+	type FileHit,
 	fuzzyFindFiles,
 	fuzzySubsequenceMatch,
 	hitsToAutocompleteItems,
@@ -15,7 +16,6 @@ import {
 	resolveLocalBin,
 	scoreHit,
 	shouldFuzzyFileComplete,
-	type FileHit,
 } from "../src/fuzzy-file-autocomplete.js";
 
 describe("extractPathToken", () => {
@@ -96,16 +96,16 @@ describe("buildFileCompletionValue / hitsToAutocompleteItems", () => {
 		expect(buildFileCompletionValue("my file.ts", { isAt: true, isQuoted: false })).toBe(
 			'@"my file.ts"',
 		);
-		expect(buildFileCompletionValue("src/a.ts", { isAt: false, isQuoted: false })).toBe(
-			"src/a.ts",
-		);
+		expect(buildFileCompletionValue("src/a.ts", { isAt: false, isQuoted: false })).toBe("src/a.ts");
 	});
 
 	it("maps hits to items", () => {
-		const items = hitsToAutocompleteItems(
-			[{ relativePath: "src/a.ts", fileName: "a.ts" }],
-			{ prefix: "@a", rawQuery: "a", isAt: true, isQuoted: false },
-		);
+		const items = hitsToAutocompleteItems([{ relativePath: "src/a.ts", fileName: "a.ts" }], {
+			prefix: "@a",
+			rawQuery: "a",
+			isAt: true,
+			isQuoted: false,
+		});
 		expect(items[0]).toEqual({
 			value: "@src/a.ts",
 			label: "a.ts",
@@ -233,7 +233,7 @@ describe("createFuzzyFileAutocompleteProvider", () => {
 				items: [{ value: "gpt", label: "gpt" }],
 			};
 		},
-		applyCompletion(lines, cursorLine, cursorCol, item, prefix) {
+		applyCompletion(_lines, cursorLine, _cursorCol, item, prefix) {
 			return {
 				lines: [`${prefix}${item.value}`],
 				cursorLine,

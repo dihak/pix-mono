@@ -678,15 +678,11 @@ export function resolveLocalBin(names: string[]): string | null {
 	return null;
 }
 
-async function resolveBin(
-	pi: ExtensionAPI,
-	cwd: string,
-	names: string[],
-): Promise<string | null> {
+async function resolveBin(pi: ExtensionAPI, cwd: string, names: string[]): Promise<string | null> {
 	const local = resolveLocalBin(names);
 	if (local) return local;
 	try {
-		const script = names.map((n) => `command -v ${n}`).join(" || ") + " || true";
+		const script = `${names.map((n) => `command -v ${n}`).join(" || ")} || true`;
 		const which = await pi.exec("bash", ["-lc", script], {
 			cwd,
 			timeout: 3_000,
@@ -723,14 +719,14 @@ function registerProvider(pi: ExtensionAPI, ctx: SessionCtx, event: unknown): vo
 			: resolveBin(pi, ctx.cwd, ["fd", "fdfind"]).then((path) => {
 					fdPath = path;
 					return path;
-			  });
+				});
 	const fzfPromise =
 		fzfPath != null
 			? Promise.resolve(fzfPath)
 			: resolveBin(pi, ctx.cwd, ["fzf"]).then((path) => {
 					fzfPath = path;
 					return path;
-			  });
+				});
 
 	const getCwd = () => {
 		const fromEvent =
