@@ -11,7 +11,7 @@
 
 import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
 import { formatCollapsedToolRow } from "@dihak/pix-pretty/utils";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 
@@ -53,6 +53,36 @@ export type TodoTheme = {
 	fg: (color: string, text: string) => string;
 	bold: (text: string) => string;
 };
+
+/** Footer status key — pix-footer surfaces this via getExtensionStatuses(). */
+export const TODO_FOOTER_KEY = "todo";
+
+/** Compact sticky footer segment: `◐ 1/3` / `● 3/3` / `⊘ 0/2 !2`. Hidden when empty. */
+export function renderTodoFooterStatus(items: TodoItem[], theme?: TodoTheme): string | undefined {
+	if (!items.length) return undefined;
+	const done = items.filter((t) => t.status === "done").length;
+	const blocked = items.filter((t) => t.status === "blocked").length;
+	const active = items.some((t) => t.status === "in_progress");
+	const glyph = active
+		? TODO_GLYPH.in_progress
+		: blocked > 0 && done + blocked === items.length
+			? TODO_GLYPH.blocked
+			: done === items.length
+				? TODO_GLYPH.done
+				: TODO_GLYPH.pending;
+	const color = active
+		? "accent"
+		: blocked > 0 && done + blocked === items.length
+			? "error"
+			: done === items.length
+				? "success"
+				: "muted";
+	const text =
+		blocked > 0
+			? `${glyph} ${done}/${items.length} !${blocked}`
+			: `${glyph} ${done}/${items.length}`;
+	return theme ? theme.fg(color, text) : text;
+}
 
 /** One-line shared summary used once a card has collapsed. */
 export function renderTodoSummaryLine(items: TodoItem[], theme: TodoTheme): string {
@@ -145,9 +175,18 @@ export default function registerTodo(pi: ExtensionAPI): void {
 	once(pi, "pix-todo", () => {
 		let todos: TodoItem[] = [];
 		let nextTodoId = 1;
+		let lastUi: ExtensionContext["ui"] | undefined;
 
 		function persistTodos() {
 			pi.appendEntry("todo-state", { todos, nextTodoId });
+			publishFooter();
+		}
+
+		/** Sticky footer segment via ctx.ui.setStatus — survives scroll; hidden when empty. */
+		function publishFooter(ui?: ExtensionContext["ui"]) {
+			if (ui) lastUi = ui;
+			if (!lastUi?.setStatus) return;
+			lastUi.setStatus(TODO_FOOTER_KEY, renderTodoFooterStatus(todos, lastUi.theme as TodoTheme));
 		}
 
 		/** Compact next-step hint: what the model should work on now. */
@@ -235,7 +274,8 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				return new Text(render(details.snapshot, theme as TodoTheme), 0, 0);
 			},
 
-			async execute(_id, params) {
+			async execute(_id, params, _signal, _onUpdate, ctx) {
+				if (ctx?.ui) lastUi = ctx.ui;
 				const action = params.action as TodoAction;
 				const details = (outcome: TodoResultDetails["outcome"]): TodoResultDetails => ({
 					_type: "todoResult",
@@ -396,6 +436,7 @@ export default function registerTodo(pi: ExtensionAPI): void {
 				todos = lastTodo.data.todos;
 				nextTodoId = lastTodo.data.nextTodoId ?? todos.reduce((m, t) => Math.max(m, t.id + 1), 1);
 			}
+			publishFooter(ctx.ui);
 		});
 	});
 }

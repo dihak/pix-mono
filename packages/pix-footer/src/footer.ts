@@ -2,13 +2,13 @@
  * Footer extension — pure-prompt style.
  *
  * Layout:
- *   [MODE] | ~/cwd (branch *±⇡n⇣n) | [ctx%/ctxk] | model [· thinking] [| status…] | ⇡in ⇣out [$cost] [| N t/s]
+ *   [MODE] | ~/cwd (branch *±⇡n⇣n) | [todo] | [ctx%/ctxk] | model [· thinking] [| status…] | ⇡in ⇣out [$cost] [| N t/s]
  *
  * - Branch shown with zsh-style dirty/ahead/behind markers.
  * - TPS: live during stream; decays to 0 while waiting on tools; freezes on agent_end.
  * - Session cost sits after input/output token counts (no per-model unit price/score).
  * - Extension statuses surfaced via footerData.getExtensionStatuses();
- *   "plan" is rendered as the leftmost segment, others appended after model.
+ *   "plan" is leftmost; "todo" sits before ctx; others append after model.
  */
 
 import { execFile } from "node:child_process";
@@ -252,15 +252,16 @@ export function compactStatus(key: string, value: string, theme: Theme): string 
 	}
 }
 
-/** Pull mode out of extension statuses; return (modePart, otherParts joined). */
+/** Pull mode/todo out of extension statuses; return (modePart, todoPart, otherParts). */
 function renderStatuses(
 	statuses: ReadonlyMap<string, string>,
 	sep: string,
 	theme: Theme,
-): { modePart: string; otherPart: string } {
+): { modePart: string; todoPart: string; otherPart: string } {
 	const mode = statuses.get("plan") ?? statuses.get("phase");
+	const todo = statuses.get("todo");
 	const ORDER = ["mcp", "pi-lens-lsp", "caveman"];
-	const seen = new Set<string>(["plan", "phase"]);
+	const seen = new Set<string>(["plan", "phase", "todo"]);
 	const others: string[] = [];
 	for (const k of ORDER) {
 		const v = statuses.get(k);
@@ -274,6 +275,7 @@ function renderStatuses(
 	}
 	return {
 		modePart: mode ? `${mode}${sep}` : "",
+		todoPart: todo ? sep + compactStatus("todo", todo, theme) : "",
 		otherPart: others.length ? sep + others.join(sep) : "",
 	};
 }
@@ -554,7 +556,7 @@ export default function (pi: ExtensionAPI) {
 						gitStatus,
 						theme,
 					);
-					const { modePart, otherPart } = renderStatuses(
+					const { modePart, todoPart, otherPart } = renderStatuses(
 						footerData.getExtensionStatuses(),
 						sep,
 						theme,
@@ -571,7 +573,7 @@ export default function (pi: ExtensionAPI) {
 					const costPart = cost ? sep + cost : "";
 					const ctxPart = ctxUsage ? sep + ctxUsage : "";
 					// tokens then session total cost (no per-model unit price after model)
-					const line = `${modePart}${loc}${markersPart}${ctxPart}${sep}${model}${otherPart}${tokensPart}${costPart}${tpsPart}`;
+					const line = `${modePart}${loc}${markersPart}${todoPart}${ctxPart}${sep}${model}${otherPart}${tokensPart}${costPart}${tpsPart}`;
 					return [truncateToWidth(line, width)];
 				},
 			};

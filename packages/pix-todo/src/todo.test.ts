@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import registerTodo, { renderTodoLines, renderTodoSummaryLine, type TodoItem } from "./todo.ts";
+import registerTodo, {
+	renderTodoFooterStatus,
+	renderTodoLines,
+	renderTodoSummaryLine,
+	TODO_FOOTER_KEY,
+	type TodoItem,
+} from "./todo.ts";
 
 // registerTodo wraps its body in once(pi, "pix-todo") — a per-instance
 // WeakMap guard that dedupes activation across pix-core + a standalone install.
@@ -39,6 +45,13 @@ function makeHost(
 		  }>)
 		| null = null;
 	const appendCalls: Array<{ type: string; data: unknown }> = [];
+	const statusCalls: Array<[string, string | undefined]> = [];
+	const ui = {
+		theme: tagTheme,
+		setStatus(key: string, text: string | undefined) {
+			statusCalls.push([key, text]);
+		},
+	};
 	const handlers: Record<string, Array<(event: unknown, ctx?: unknown) => unknown>> = {};
 
 	let capturedRender:
@@ -75,14 +88,6 @@ function makeHost(
 			if (!handlers[ev]) handlers[ev] = [];
 			handlers[ev].push(fn);
 		},
-		async emit(ev: string, event?: unknown, ctx?: unknown): Promise<unknown> {
-			let last: unknown;
-			for (const fn of handlers[ev] ?? []) {
-				const result = await fn(event, ctx);
-				if (result !== undefined) last = result;
-			}
-			return last;
-		},
 	} as never;
 
 	const sessionManager = {
@@ -114,10 +119,14 @@ function makeHost(
 			return capturedRender;
 		},
 		appendCalls,
+		statusCalls,
+		ui,
 		async emit(ev: string, event?: unknown, ctx?: unknown): Promise<unknown> {
+			const nextCtx =
+				ctx && typeof ctx === "object" ? { ui, ...(ctx as Record<string, unknown>) } : ctx;
 			let last: unknown;
 			for (const fn of handlers[ev] ?? []) {
-				const result = await fn(event, ctx);
+				const result = await fn(event, nextCtx);
 				if (result !== undefined) last = result;
 			}
 			return last;
@@ -977,5 +986,93 @@ describe("renderTodoSummaryLine (collapsed one-liner)", () => {
 		expect(renderTodoSummaryLine(items, tagTheme)).toBe(
 			"[success]✓[/] [toolTitle]<b>todo</b>[/] [muted]#2 b[/] [dim]·[/] [dim]1/2 done[/]",
 		);
+	});
+});
+
+describe("renderTodoFooterStatus", () => {
+	test("hides when the list is empty", () => {
+		expect(renderTodoFooterStatus([])).toBeUndefined();
+	});
+
+	test("shows pending progress", () => {
+		expect(
+			renderTodoFooterStatus([
+				{ id: 1, text: "a", status: "pending" },
+				{ id: 2, text: "b", status: "pending" },
+			]),
+		).toBe("○ 0/2");
+	});
+
+	test("highlights in-progress work", () => {
+		expect(
+			renderTodoFooterStatus(
+				[
+					{ id: 1, text: "a", status: "done" },
+					{ id: 2, text: "b", status: "in_progress" },
+				],
+				tagTheme,
+			),
+		).toBe("[accent]◐ 1/2[/]");
+	});
+
+	test("marks a completed list", () => {
+		expect(renderTodoFooterStatus([{ id: 1, text: "a", status: "done" }], tagTheme)).toBe(
+			"[success]● 1/1[/]",
+		);
+	});
+
+	test("appends blocked count", () => {
+		expect(
+			renderTodoFooterStatus([
+				{ id: 1, text: "a", status: "done" },
+				{ id: 2, text: "b", status: "blocked" },
+			]),
+		).toBe("⊘ 1/2 !1");
+	});
+});
+
+describe("sticky footer status", () => {
+	test("publishes compact progress after set and update", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		expect(host.statusCalls.at(-1)).toEqual([TODO_FOOTER_KEY, undefined]);
+
+		await run(host.execute, { action: "set", items: "alpha\nbravo" });
+		expect(host.statusCalls.at(-1)).toEqual([TODO_FOOTER_KEY, "[muted]○ 0/2[/]"]);
+
+		await run(host.execute, { action: "update", id: 1, status: "in_progress" });
+		expect(host.statusCalls.at(-1)).toEqual([TODO_FOOTER_KEY, "[accent]◐ 0/2[/]"]);
+
+		await run(host.execute, { action: "update", updates: "1:done,2:done" });
+		expect(host.statusCalls.at(-1)).toEqual([TODO_FOOTER_KEY, "[success]● 2/2[/]"]);
+	});
+
+	test("clears the footer on clear", async () => {
+		const host = makeHost();
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		await run(host.execute, { action: "set", items: "alpha" });
+		await run(host.execute, { action: "clear" });
+		expect(host.statusCalls.at(-1)).toEqual([TODO_FOOTER_KEY, undefined]);
+	});
+
+	test("restores footer status from session state", async () => {
+		const host = makeHost([
+			{
+				type: "custom",
+				customType: "todo-state",
+				data: {
+					todos: [
+						{ id: 1, text: "a", status: "done" },
+						{ id: 2, text: "b", status: "in_progress" },
+					],
+					nextTodoId: 3,
+				},
+			},
+		]);
+		registerTodo(host.pi);
+		await host.emit("session_start", {}, { sessionManager: host.sessionManager });
+		expect(host.statusCalls.at(-1)).toEqual([TODO_FOOTER_KEY, "[accent]◐ 1/2[/]"]);
 	});
 });
