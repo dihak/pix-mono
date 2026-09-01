@@ -26,6 +26,11 @@ const INTERCEPT = `            if (text === "/hotkeys") {
             }
 `;
 
+const BUNDLED =
+	'var BUILTIN_SLASH_COMMANDS=[{name:"settings",description:"Open settings menu"},{name:"changelog",description:"Show changelog entries"},{name:"hotkeys",description:"Show all keyboard shortcuts"},{name:"fork",description:"Create a new fork"}];';
+
+const BUNDLED_INTERCEPT = `if(text==="/changelog"){this.handleChangelogCommand(),this.editor.setText("");return}if(text==="/hotkeys"){this.handleHotkeysCommand(),this.editor.setText("");return}if(text==="/fork"){this.showUserMessageSelector(),this.editor.setText("");return}`;
+
 describe("patch-builtin /hotkeys removal", () => {
 	it("removes the built-in /hotkeys line and keeps neighbors", () => {
 		const out = stripBuiltinHotkeysCommand(UNPATCHED);
@@ -74,5 +79,29 @@ describe("patch-builtin /hotkeys intercept redirect", () => {
 	it("leaves source without the intercept untouched", () => {
 		const src = `if (text === "/other") { this.foo(); }`;
 		expect(redirectHotkeysIntercept(src)).toBe(src);
+	});
+});
+
+describe("patch-builtin minified bundle (live pi bin)", () => {
+	it('strips {name:"hotkeys"} from a var BUILTIN_SLASH_COMMANDS array', () => {
+		const out = stripBuiltinHotkeysCommand(BUNDLED);
+		expect(out).not.toContain('name:"hotkeys"');
+		expect(out).toContain('name:"changelog"');
+		expect(out).toContain('name:"fork"');
+		expect(out).toContain('{name:"changelog",description:"Show changelog entries"},{name:"fork"');
+	});
+
+	it("redirects this.handleHotkeysCommand() without a trailing semicolon", () => {
+		const out = redirectHotkeysIntercept(BUNDLED_INTERCEPT);
+		expect(out).not.toContain("this.handleHotkeysCommand()");
+		expect(out).toContain(`globalThis.${HOTKEYS_STASH_KEY}`);
+		expect(out).toContain('this.session.prompt("/hotkeys")');
+		expect(out).toContain("this.handleChangelogCommand()");
+		expect(out).toContain("this.showUserMessageSelector()");
+	});
+
+	it("does not rewrite the handleHotkeysCommand method definition", () => {
+		const def = `handleHotkeysCommand(){let cursorUp=this.getEditorKeyDisplay("tui.editor.cursorUp")}`;
+		expect(redirectHotkeysIntercept(def)).toBe(def);
 	});
 });

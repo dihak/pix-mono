@@ -7,92 +7,146 @@
  * host files directly. Done on every load: idempotent and self-healing across
  * Pi upgrades, so no manual repatch is ever needed.
  *
- * Two edits (mirrors pix-models):
- *   1. Strip the `{ name: "hotkeys" }` entry from BUILTIN_SLASH_COMMANDS
- *      (slash-commands.js) so our extension command owns the name — no
- *      autocomplete duplicate, no host conflict diagnostic.
- *   2. Redirect the hardcoded `if (text === "/hotkeys")` submit intercept
- *      (interactive-mode.js) to (a) stash the host's extensionRunner +
- *      keybindings on globalThis so our overlay can read key displays and
- *      extension shortcuts, then (b) dispatch our `/hotkeys` command.
+ * Two edits:
+ *   1. Strip the `{ name: "hotkeys" }` entry from BUILTIN_SLASH_COMMANDS so
+ *      our extension command owns the name — no autocomplete duplicate, no
+ *      host conflict diagnostic.
+ *   2. Redirect the hardcoded `this.handleHotkeysCommand()` submit intercept
+ *      to (a) stash the host's extensionRunner + keybindings on globalThis so
+ *      our overlay can read key displays and extension shortcuts, then (b)
+ *      dispatch our `/hotkeys` command.
+ *
+ * Live `pi` (v0.84+) is `dist/bundle/cli.js`, not the unbundled
+ * `dist/cli.js` / `dist/core/slash-commands.js` tree. We patch both: the
+ * unbundled files (older installs / source checkouts) and every
+ * `dist/bundle/chunks/*.js` file (the process that actually runs). Transforms
+ * accept pretty and minified host output.
  *
  * Resolution strategy (in order):
- *   1. Locate the `pi` binary via PATH → infer package root from its realpath.
- *      The binary is always at <pkg>/dist/cli.js so ../../ is the package root.
+ *   1. Locate the `pi` binary via PATH → walk up from its realpath to `dist/`.
  *   2. Probe well-known global install locations (bun, npm).
  *   3. Fall back to createRequire against the extension's own node_modules
  *      (works when pi and the extension share the same install tree).
  */
 
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 // Global key the host stash lands on; the overlay reads it back at command time.
 export const HOTKEYS_STASH_KEY = "__pixHotkeys";
 
-// Pi has added fields to this object over time. Match the command entry by its
-// stable `name`, rather than an exact serialized line, while limiting the match
-// to a single non-nested object.
-const BUILTIN_COMMANDS_ARRAY = /export\s+const\s+BUILTIN_SLASH_COMMANDS[^=]*=\s*\[/;
-const BUILTIN_HOTKEYS_COMMAND =
-	/^[ \t]*\{(?=[^{}]*\bname\s*:\s*["']hotkeys["'])[^{}]*\},?[ \t]*(?:\r?\n|$)/gm;
+// Pretty (`export const BUILTIN_SLASH_COMMANDS = [`) and bundled
+// (`var BUILTIN_SLASH_COMMANDS=[`).
+const BUILTIN_COMMANDS_ARRAY =
+	/(?:export\s+const|var|const|let)\s+BUILTIN_SLASH_COMMANDS[^=]*=\s*\[/;
 
-// The host intercepts `/hotkeys` in the editor onSubmit handler with a hardcoded
-// `this.handleHotkeysCommand()` call. We rewrite just that call to stash the
-// host internals our overlay needs and dispatch our registered `/hotkeys`
-// command. session.prompt("/hotkeys") runs the extension command directly
-// (getCommand → handler), it does NOT re-enter this intercept, so no recursion.
-const HOTKEYS_INTERCEPT_CALL = /this\.handleHotkeysCommand\(\);/;
-const HOTKEYS_INTERCEPT_REPLACEMENT = `(globalThis.${HOTKEYS_STASH_KEY}={extensionRunner:this.session.extensionRunner,keybindings:this.keybindings},void this.session.prompt("/hotkeys"));`;
+// Flat command object, pretty or minified. `name` is the stable field; extra
+// properties (argumentHint, wrapping) are tolerated. No start-of-line anchor
+// so `{name:"hotkeys",...},` in a single-line bundle still matches.
+const BUILTIN_HOTKEYS_COMMAND = /\{(?=[^{}]*\bname\s*:\s*["']hotkeys["'])[^{}]*\},?/g;
+
+// The host intercepts `/hotkeys` in the editor onSubmit handler with a
+// hardcoded `this.handleHotkeysCommand()` call. Pretty source has a trailing
+// semicolon; the bundle uses the comma operator and omits it. Do not require
+// `;`, and do not match the method definition (`handleHotkeysCommand(){`).
+// session.prompt("/hotkeys") runs the extension command directly (getCommand →
+// handler) and does NOT re-enter this intercept, so no recursion.
+const HOTKEYS_INTERCEPT_CALL = /this\.handleHotkeysCommand\(\);?/;
+const HOTKEYS_INTERCEPT_REPLACEMENT = `(globalThis.${HOTKEYS_STASH_KEY}={extensionRunner:this.session.extensionRunner,keybindings:this.keybindings},void this.session.prompt("/hotkeys"))`;
+
+const UNBUNDLED_RELS = ["core/slash-commands.js", "modes/interactive/interactive-mode.js"];
 
 /**
- * Candidate paths for a host dist file, most-specific first.
- * `rel` is relative to the host's `dist/` dir, e.g. "core/slash-commands.js".
+ * `pi` bin is `dist/bundle/cli.js` (current) or `dist/cli.js` (older).
+ * Always return the package `dist/` directory.
  */
-function candidatePaths(rel: string): string[] {
-	const segs = rel.split("/");
-	const paths: string[] = [];
+function distDirFromPiBin(piReal: string): string {
+	let dir = dirname(piReal);
+	if (basename(dir) === "bundle") dir = dirname(dir);
+	return dir;
+}
 
-	// 1. Resolve via the running `pi` binary → its realpath gives the dist dir.
+/** Candidate package `dist/` roots, most-specific first. */
+function hostDistRoots(): string[] {
+	const roots: string[] = [];
+	const seen = new Set<string>();
+	const add = (p: string) => {
+		if (!p || seen.has(p) || !existsSync(p)) return;
+		seen.add(p);
+		roots.push(p);
+	};
+
 	try {
 		const piReal = execSync("realpath $(which pi)", {
 			encoding: "utf8",
 			stdio: ["pipe", "pipe", "pipe"],
 		}).trim();
-		if (piReal) {
-			// piReal = /.../pi-coding-agent/dist/cli.js → dist/
-			const dist = dirname(piReal);
-			paths.push(join(dist, ...segs));
-		}
+		if (piReal) add(distDirFromPiBin(piReal));
 	} catch {
 		// `pi` not on PATH or `which`/`realpath` unavailable — skip
 	}
 
-	// 2. Well-known global install locations.
 	const home = homedir();
-	const globalRoots = [
+	for (const root of [
 		join(home, ".bun", "install", "global", "node_modules"),
 		join(home, ".npm-global", "lib", "node_modules"),
 		"/usr/local/lib/node_modules",
 		"/usr/lib/node_modules",
-	];
-	for (const root of globalRoots) {
-		paths.push(join(root, "@earendil-works", "pi-coding-agent", "dist", ...segs));
+	]) {
+		add(join(root, "@earendil-works", "pi-coding-agent", "dist"));
 	}
 
-	// 3. Fallback: createRequire from this file (works when extension is co-installed).
 	try {
 		const require = createRequire(import.meta.url);
 		const entry = require.resolve("@earendil-works/pi-coding-agent");
-		paths.push(resolve(dirname(entry), ...segs));
+		add(dirname(entry));
 	} catch {
 		// local resolution failed — skip
 	}
 
-	return paths;
+	return roots;
+}
+
+/**
+ * Every compiled host file we may need to edit: unbundled modules plus the
+ * live bundle chunks. Chunk hashes change per Pi release, so we scan
+ * `bundle/chunks/*.js` rather than hardcoding a filename.
+ */
+function collectHostFiles(): string[] {
+	const files: string[] = [];
+	const seen = new Set<string>();
+	const add = (p: string) => {
+		if (seen.has(p) || !existsSync(p)) return;
+		seen.add(p);
+		files.push(p);
+	};
+
+	for (const dist of hostDistRoots()) {
+		for (const rel of UNBUNDLED_RELS) add(join(dist, rel));
+		add(join(dist, "bundle", "cli.js"));
+		const chunksDir = join(dist, "bundle", "chunks");
+		if (!existsSync(chunksDir)) continue;
+		let names: string[] = [];
+		try {
+			names = readdirSync(chunksDir);
+		} catch {
+			continue;
+		}
+		for (const name of names) {
+			if (!name.endsWith(".js")) continue;
+			add(join(chunksDir, name));
+		}
+	}
+
+	return files;
+}
+
+/** Candidate paths for a host dist file, most-specific first. */
+function candidatePaths(rel: string): string[] {
+	return hostDistRoots().map((dist) => join(dist, ...rel.split("/")));
 }
 
 /** Locate a host dist file by its dist-relative path, or null if not found. */
@@ -103,18 +157,23 @@ function findHostFile(rel: string): string | null {
 	return null;
 }
 
-/** Apply an idempotent transform to a host dist file. No-op if unchanged. */
-function patchHostFile(rel: string, transform: (src: string) => string): void {
-	const file = findHostFile(rel);
-	if (!file) return;
+function fileLooksRelevant(source: string): boolean {
+	return source.includes("BUILTIN_SLASH_COMMANDS") || source.includes("handleHotkeysCommand");
+}
+
+/** Apply an idempotent transform to one file. No-op if unchanged or unreadable. */
+function patchFile(file: string, transform: (src: string) => string): void {
 	let source: string;
 	try {
+		// Skip tiny provider/helper chunks without reading them fully.
+		if (statSync(file).size < 64) return;
 		source = readFileSync(file, "utf8");
 	} catch {
 		return;
 	}
+	if (!fileLooksRelevant(source)) return;
 	const patched = transform(source);
-	if (patched === source) return; // already patched, or host format is unknown
+	if (patched === source) return;
 	try {
 		writeFileSync(file, patched, "utf8");
 	} catch {
@@ -124,14 +183,14 @@ function patchHostFile(rel: string, transform: (src: string) => string): void {
 
 /**
  * Patch Pi's compiled host so the enhanced overlay fully replaces the built-in:
- *   1. Remove the `/hotkeys` slash command (slash-commands.js).
- *   2. Redirect the `/hotkeys` submit intercept (interactive-mode.js) to stash
- *      host internals and run our `/hotkeys` command instead.
+ *   1. Remove the `/hotkeys` slash command from BUILTIN_SLASH_COMMANDS.
+ *   2. Redirect the `/hotkeys` submit intercept to stash host internals and
+ *      run our `/hotkeys` command instead.
  * Idempotent and self-healing: safe to run on every load.
  */
 export function patchOutBuiltinHotkeysCommand(): void {
-	patchHostFile("core/slash-commands.js", stripBuiltinHotkeysCommand);
-	patchHostFile("modes/interactive/interactive-mode.js", redirectHotkeysIntercept);
+	const transform = (src: string) => redirectHotkeysIntercept(stripBuiltinHotkeysCommand(src));
+	for (const file of collectHostFiles()) patchFile(file, transform);
 }
 
 /**
@@ -148,7 +207,7 @@ export function redirectHotkeysIntercept(source: string): string {
  * Remove Pi's built-in `/hotkeys` entry from compiled slash-command source.
  *
  * The command objects are static, flat literals. Matching the entry's `name`
- * tolerates added properties and line wrapping without touching neighbors.
+ * tolerates added properties, line wrapping, and minified `{name:"hotkeys"}`.
  */
 export function stripBuiltinHotkeysCommand(source: string): string {
 	const array = BUILTIN_COMMANDS_ARRAY.exec(source);
@@ -166,4 +225,4 @@ export function stripBuiltinHotkeysCommand(source: string): string {
 }
 
 // Export for tests
-export { candidatePaths, findHostFile };
+export { candidatePaths, collectHostFiles, distDirFromPiBin, findHostFile };

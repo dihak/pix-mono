@@ -2,7 +2,11 @@ import { describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { redirectModelSelectAction, stripBuiltinModelCommand } from "./patch-builtin.ts";
+import {
+	redirectModelCommandIntercept,
+	redirectModelSelectAction,
+	stripBuiltinModelCommand,
+} from "./patch-builtin.ts";
 
 const MODEL_ACTION = `        this.defaultEditor.onAction("app.model.select", () => this.showModelSelector());
         this.defaultEditor.onAction("app.tools.expand", () => this.toggleToolOutputExpansion());
@@ -110,5 +114,58 @@ describe("patch-builtin app.model.select redirect", () => {
 	it("is a no-op when the action is absent", () => {
 		const clean = `        this.defaultEditor.onAction("app.tools.expand", () => this.x());\n`;
 		expect(redirectModelSelectAction(clean)).toBe(clean);
+	});
+});
+
+const BUNDLED =
+	'var BUILTIN_SLASH_COMMANDS=[{name:"settings",description:"Open settings menu"},{name:"model",description:"Select model (opens selector UI)",argumentHint:"<provider/model>"},{name:"scoped-models",description:"Enable/disable models for Ctrl+P cycling"},{name:"tree",description:"Navigate session tree"}];';
+
+const BUNDLED_ACTION =
+	'this.defaultEditor.onAction("app.model.select",()=>this.showModelSelector()),this.defaultEditor.onAction("app.tools.expand",()=>this.toggleToolOutputExpansion())';
+
+const BUNDLED_INTERCEPT =
+	'if(text==="/model"||text.startsWith("/model ")){let searchTerm=text.startsWith("/model ")?text.slice(7).trim():void 0;this.editor.setText(""),await this.handleModelCommand(searchTerm);return}';
+
+const PRETTY_INTERCEPT = `            if (text === "/model" || text.startsWith("/model ")) {
+                const searchTerm = text.startsWith("/model ") ? text.slice(7).trim() : undefined;
+                this.editor.setText("");
+                await this.handleModelCommand(searchTerm);
+                return;
+            }
+`;
+
+describe("patch-builtin minified bundle (live pi bin)", () => {
+	it('strips {name:"model"} without touching scoped-models', () => {
+		const out = stripBuiltinModelCommand(BUNDLED);
+		expect(out).not.toContain('name:"model"');
+		expect(out).toContain('name:"scoped-models"');
+		expect(out).toContain('name:"settings"');
+		expect(out).toContain('name:"tree"');
+	});
+
+	it("redirects minified app.model.select without requiring a semicolon", () => {
+		const out = redirectModelSelectAction(BUNDLED_ACTION);
+		expect(out).toContain('this.session.prompt("/models")');
+		expect(out).not.toContain("showModelSelector()");
+		expect(out).toContain("toggleToolOutputExpansion()");
+	});
+
+	it("redirects the /model submit intercept to /models", () => {
+		const out = redirectModelCommandIntercept(BUNDLED_INTERCEPT);
+		expect(out).not.toContain("this.handleModelCommand(searchTerm)");
+		expect(out).toContain('this.session.prompt("/models")');
+		expect(out).toContain('text==="/model"');
+	});
+
+	it("redirects the pretty /model intercept", () => {
+		const out = redirectModelCommandIntercept(PRETTY_INTERCEPT);
+		expect(out).not.toContain("this.handleModelCommand(searchTerm)");
+		expect(out).toContain('this.session.prompt("/models")');
+		expect(out).toContain("this.editor.setText");
+	});
+
+	it("does not rewrite the handleModelCommand method definition", () => {
+		const def = `async handleModelCommand(searchTerm){if(!searchTerm){this.showModelSelector();return}`;
+		expect(redirectModelCommandIntercept(def)).toBe(def);
 	});
 });

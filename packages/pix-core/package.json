@@ -1,6 +1,6 @@
 {
 	"name": "@dihak/pix-core",
-	"version": "0.5.6",
+	"version": "0.5.7",
 	"description": "Pi extension bundle — installs and activates all core pix-* extensions",
 	"type": "module",
 	"main": "src/extension.ts",
@@ -45,8 +45,8 @@
 		"@dihak/pix-working": "^0.1.2",
 		"@dihak/pix-diagnostics": "^0.1.7",
 		"@dihak/pix-display": "^0.1.13",
-		"@dihak/pix-models": "^0.1.24",
-		"@dihak/pix-hotkeys": "^0.1.0",
+		"@dihak/pix-models": "^0.1.25",
+		"@dihak/pix-hotkeys": "^0.1.1",
 		"@dihak/pix-update": "^0.1.13",
 		"@dihak/pix-commands": "^0.2.1",
 		"@dihak/pix-read": "^0.1.15",
