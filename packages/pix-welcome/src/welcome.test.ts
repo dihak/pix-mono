@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { visibleWidth } from "@earendil-works/pi-tui";
 import {
 	type CheckResult,
 	countSkillsInDirs,
@@ -9,6 +10,7 @@ import {
 	LOGO_ROWS,
 	PI_IGNORE_RULES,
 	renderCheck,
+	renderWelcome,
 	shortCwd,
 	statusIcon,
 	summariseSkills,
@@ -186,5 +188,44 @@ describe("countSkillsInDirs", () => {
 describe("PI_IGNORE_RULES", () => {
 	it("includes both rules", () => {
 		expect(PI_IGNORE_RULES).toEqual([".pi/", ".pi-lens/"]);
+	});
+});
+
+describe("renderWelcome", () => {
+	const checks: CheckResult[] = [
+		{ label: "PI", status: "ok", detail: "0.84.4" },
+		{ label: "Auth", status: "ok", detail: "connected" },
+		{ label: "Models", status: "ok", detail: "36 loaded" },
+	];
+
+	it("truncates every line to terminal width (narrow pane crash)", () => {
+		const width = 39;
+		const lines = renderWelcome(theme, "grok-4.6", "~/Projects/semrush-auto", checks, width);
+		expect(lines.length).toBeGreaterThan(0);
+		for (const line of lines) {
+			expect(visibleWidth(line)).toBeLessThanOrEqual(width);
+		}
+	});
+
+	it("keeps the cwd path when the terminal is wide enough", () => {
+		const lines = renderWelcome(theme, "grok-4.6", "~/Projects/semrush-auto", [], 80);
+		expect(lines.some((line) => line.includes("~/Projects/semrush-auto"))).toBe(true);
+	});
+
+	it("ellipsizes a long cwd instead of overflowing", () => {
+		const cwd = "~/Projects/very/deep/nested/path/that-will-not-fit";
+		const width = 39;
+		const lines = renderWelcome(theme, "grok-4.6", cwd, [], width);
+		const cwdLine = lines.find((line) => line.includes("…") || line.includes(cwd));
+		expect(cwdLine).toBeDefined();
+		expect(visibleWidth(cwdLine ?? "")).toBeLessThanOrEqual(width);
+		expect(cwdLine?.includes(cwd)).toBe(false);
+	});
+
+	it("returns empty strings when width is 0", () => {
+		const lines = renderWelcome(theme, "m", "~/x", checks, 0);
+		for (const line of lines) {
+			expect(visibleWidth(line)).toBe(0);
+		}
 	});
 });

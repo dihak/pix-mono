@@ -5,6 +5,7 @@ export {
 	LOGO_ROWS,
 	PI_IGNORE_RULES,
 	renderCheck,
+	renderWelcome,
 	shortCwd,
 	statusIcon,
 	summariseTools,

@@ -36,6 +36,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { icon } from "@dihak/pix-pretty/icon-catalog";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { truncateToWidth } from "@earendil-works/pi-tui";
 
 // ─── Theme shim (same pattern as footer.ts) ───────────────────────────────────
 
@@ -359,6 +360,23 @@ function buildCheckLines(theme: Theme, checks: CheckResult[]): string[] {
 	return lines;
 }
 
+function fitLine(line: string, width: number): string {
+	if (!line) return line;
+	return truncateToWidth(line, Math.max(0, width), "…");
+}
+
+/** Full banner. Every line is clamped to `width` so Pi TUI never crashes. */
+export function renderWelcome(
+	theme: Theme,
+	model: string,
+	cwd: string,
+	checks: CheckResult[],
+	width: number,
+): string[] {
+	const lines = [...buildLogoLines(theme, model, cwd), ...buildCheckLines(theme, checks), ""];
+	return lines.map((line) => fitLine(line, width));
+}
+
 // ─── Extension ────────────────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
@@ -403,11 +421,10 @@ export default function (pi: ExtensionAPI) {
 				requestRender = () => tui.requestRender();
 
 				return {
-					render: () => {
+					render: (width: number) => {
 						const t = theme as unknown as Theme;
 						// Re-read modelId each render so /model changes show live
-						const logoLines = buildLogoLines(t, modelId, cwd);
-						return [...logoLines, ...buildCheckLines(t, CHECKS), ""];
+						return renderWelcome(t, modelId, cwd, CHECKS, width);
 					},
 					dispose() {
 						requestRender = null;
