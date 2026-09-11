@@ -1,6 +1,6 @@
 {
 	"name": "@dihak/pix-grep",
-	"version": "0.1.15",
+	"version": "0.1.16",
 	"description": "Pi tool — pattern search in files",
 	"type": "module",
 	"main": "src/index.ts",
@@ -34,7 +34,7 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@dihak/pix-pretty": "^1.7.20",
+		"@dihak/pix-pretty": "^1.7.24",
 		"@dihak/pix-data": "^0.3.0"
 	},
 	"peerDependencies": {

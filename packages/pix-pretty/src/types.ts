@@ -121,7 +121,10 @@ export type OptionalFffModule = { FileFinder: typeof FileFinder };
 
 export type FffBackedFinder = FileFinder;
 
-export type ReadParams = ReadToolInput;
+export type ReadParams = Omit<ReadToolInput, "path"> & {
+	path?: string;
+	paths?: string[];
+};
 
 export type BashParams = BashToolInput;
 
@@ -159,11 +162,17 @@ export type UpstreamWriteToolInput = WriteToolInput;
 // the single oldText/newText shape and the batched `edits[]` shape).
 export type EditOperation = { oldText: string; newText: string };
 
-export type LsParams = LsToolInput;
+export type LsParams = LsToolInput & { paths?: string[] };
 
-export type FindParams = FindToolInput;
+export type FindParams = Omit<FindToolInput, "pattern"> & {
+	pattern?: string;
+	patterns?: string[];
+};
 
-export type GrepParams = GrepToolInput;
+export type GrepParams = Omit<GrepToolInput, "pattern"> & {
+	pattern?: string;
+	patterns?: string[];
+};
 
 export type EditRenderState = {
 	_pk?: string;
@@ -187,6 +196,7 @@ export type FindResultDetails = {
 	pattern: string;
 	path?: string;
 	matchCount: number;
+	patterns?: string[];
 };
 
 export type GrepResultDetails = {
@@ -195,17 +205,49 @@ export type GrepResultDetails = {
 	pattern: string;
 	path?: string;
 	matchCount: number;
+	patterns?: string[];
+};
+
+export type ReadFileDetails = {
+	_type: "readFile";
+	filePath: string;
+	content: string;
+	offset: number;
+	lineCount: number;
+};
+
+export type ReadImageDetails = {
+	_type: "readImage";
+	filePath: string;
+	data: string;
+	mimeType: string;
+};
+
+export type ReadErrorDetails = {
+	_type: "readError";
+	filePath: string;
+	message: string;
+};
+
+export type ReadBatchDetails = {
+	_type: "readBatch";
+	items: Array<ReadFileDetails | ReadImageDetails | ReadErrorDetails>;
+	index: string;
+};
+
+export type LsBatchDetails = {
+	_type: "lsBatch";
+	text: string;
+	paths: string[];
+	entryCount: number;
+	index: string;
 };
 
 export type RenderDetails =
-	| { _type: "readImage"; filePath: string; data: string; mimeType: string }
-	| {
-			_type: "readFile";
-			filePath: string;
-			content: string;
-			offset: number;
-			lineCount: number;
-	  }
+	| ReadImageDetails
+	| ReadFileDetails
+	| ReadErrorDetails
+	| ReadBatchDetails
 	| {
 			_type: "bashResult";
 			text: string;
@@ -213,6 +255,7 @@ export type RenderDetails =
 			command: string;
 	  }
 	| { _type: "lsResult"; text: string; path: string; entryCount: number }
+	| LsBatchDetails
 	| FindResultDetails
 	| GrepResultDetails
 	| EditInfoDetails

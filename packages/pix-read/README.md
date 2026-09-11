@@ -4,7 +4,7 @@ Pi tool — file read with syntax highlighting.
 
 ## What it does
 
-Replaces Pi's default `read` tool with an enhanced version backed by `pix-pretty`. File content is syntax-highlighted using `cli-highlight` (highlight.js-backed) with language auto-detection. The call label shows the shortened file path, with optional `from line N` and `(N lines)` hints. Images are displayed with mime type and byte size and a type icon. Long files are shown with a line count and truncation notice; expanded mode reveals the full content. Depends on `@dihak/pix-pretty`, installed automatically as a dependency.
+Replaces Pi's default `read` tool with an enhanced version backed by `pix-pretty`. File content is syntax-highlighted using `cli-highlight` (highlight.js-backed) with language auto-detection. Pass `paths` to read several known files in one call (shared line/byte cap). The call label shows the shortened file path, with optional `from line N` and `(N lines)` hints. Images are displayed with mime type and byte size and a type icon. Long files are shown with a line count and truncation notice; expanded mode reveals the full content. Depends on `@dihak/pix-pretty`, installed automatically as a dependency.
 
 ## Auto-collapse
 

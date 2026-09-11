@@ -1,8 +1,20 @@
 import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
 import { FG_DIM, RST } from "@dihak/pix-pretty/ansi";
+import {
+	BATCH_MAX_BYTES,
+	type BatchSection,
+	capSections,
+	formatBatchIndex,
+	formatCallTargets,
+	joinSectionBodies,
+	resolveBatchStrings,
+	sliceBatchTargets,
+	withOptionalStringArray,
+} from "@dihak/pix-pretty/batch";
 import type { ToolContext } from "@dihak/pix-pretty/context";
 import { renderTree } from "@dihak/pix-pretty/renderers";
 import type {
+	LsBatchDetails,
 	LsParams,
 	PiPrettyApi,
 	RenderContextLike,
@@ -12,9 +24,12 @@ import type {
 } from "@dihak/pix-pretty/types";
 import {
 	fillToolBackground,
+	getErrorMessage,
 	getTextContent,
 	hideCollapsedToolCall,
+	makeTextResult,
 	renderCollapsedToolRow,
+	renderDimPreview,
 	renderToolError,
 	setResultDetails,
 } from "@dihak/pix-pretty/utils";
@@ -25,6 +40,8 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 export const DEFAULT_LS_LIMIT = 200;
+
+const ENTRY_NOUNS = ["entry", "entries"] as const;
 
 export function applyLsDefaults(params: LsParams): LsParams {
 	return params.limit === undefined ? { ...params, limit: DEFAULT_LS_LIMIT } : params;
@@ -42,7 +59,12 @@ export function registerLsTool(
 		...origLs,
 		name: "ls",
 		description:
-			"List a directory, including dotfiles. Defaults to 200 sorted entries; use limit to request more. Output remains capped by Pi's 50KB hard limit.",
+			"List a directory, including dotfiles. Defaults to 200 sorted entries; use limit to request more. Output remains capped by Pi's 50KB hard limit. Pass paths to list several known directories in one call.",
+		parameters: withOptionalStringArray(
+			origLs.parameters,
+			"paths",
+			"Known directories in one call.",
+		),
 		renderShell: "self",
 
 		async execute(
@@ -52,30 +74,78 @@ export function registerLsTool(
 			upd: AgentToolUpdateCallback<unknown> | undefined,
 			toolCtx: ExtensionContext,
 		) {
-			const effectiveParams = applyLsDefaults(params);
-			const result = (await origLs.execute(
-				tid,
-				effectiveParams,
-				sig,
-				upd,
-				toolCtx,
-			)) as ToolResultLike;
-			const textContent = getTextContent(result);
-			const fp = effectiveParams.path ?? cwd;
-			const entryCount = textContent ? textContent.trim().split("\n").filter(Boolean).length : 0;
+			const { targets, omitted } = sliceBatchTargets(
+				resolveBatchStrings(params.path, params.paths),
+			);
+			const run = async (path: string | undefined, callId: string) => {
+				const { paths: _paths, ...rest } = params;
+				const effectiveParams = applyLsDefaults({ ...rest, path });
+				const result = (await origLs.execute(
+					callId,
+					effectiveParams,
+					sig,
+					upd,
+					toolCtx,
+				)) as ToolResultLike;
+				const textContent = getTextContent(result);
+				const fp = effectiveParams.path ?? cwd;
+				const entryCount = textContent ? textContent.trim().split("\n").filter(Boolean).length : 0;
+				setResultDetails(result, {
+					_type: "lsResult",
+					text: textContent ?? "",
+					path: fp,
+					entryCount,
+				});
+				return result;
+			};
 
-			setResultDetails(result, {
-				_type: "lsResult",
-				text: textContent ?? "",
-				path: fp,
-				entryCount,
+			if (targets.length <= 1 && omitted === 0) {
+				return run(targets[0], tid);
+			}
+
+			const settled = await Promise.all(
+				targets.map(async (path, i) => {
+					try {
+						return { path, result: await run(path, `${tid}:${i}`) };
+					} catch (error) {
+						return { path, error: getErrorMessage(error) };
+					}
+				}),
+			);
+
+			const sections: BatchSection[] = settled.map((entry) => {
+				if ("error" in entry) {
+					return { id: entry.path, body: "", units: 0, nouns: ENTRY_NOUNS, error: entry.error };
+				}
+				const d = entry.result.details as { text?: string; entryCount?: number } | undefined;
+				const body = d?.text ?? getTextContent(entry.result);
+				const units = d?.entryCount ?? body.trim().split("\n").filter(Boolean).length;
+				return { id: entry.path, body, units, nouns: ENTRY_NOUNS };
 			});
 
-			return result;
+			const { text, sections: capped } = capSections(
+				sections,
+				BATCH_MAX_BYTES,
+				params.limit ?? DEFAULT_LS_LIMIT,
+				omitted,
+			);
+			const entryCount = capped.reduce(
+				(sum, section) => sum + (section.error ? 0 : section.units),
+				0,
+			);
+			const index = formatBatchIndex(sections, omitted);
+			return makeTextResult<LsBatchDetails>(text, {
+				_type: "lsBatch",
+				text: [index, joinSectionBodies(sections)].filter(Boolean).join("\n\n"),
+				paths: targets,
+				entryCount,
+				index,
+			});
 		},
 
 		renderCall(args: LsParams, theme: ThemeLike, renderCtx: RenderContextLike) {
-			const fp = args.path ?? ".";
+			const targets = resolveBatchStrings(args.path, args.paths);
+			const fp = formatCallTargets(targets.map(sp), 3, "dirs") || (args.path ? sp(args.path) : ".");
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 			if (
 				hideCollapsedToolCall(renderCtx.state as CollapseState, renderCtx.expanded, (value) =>
@@ -84,9 +154,7 @@ export function registerLsTool(
 			)
 				return text;
 			text.setText(
-				fillToolBackground(
-					`${theme.fg("toolTitle", theme.bold("ls"))} ${theme.fg("accent", sp(fp))}`,
-				),
+				fillToolBackground(`${theme.fg("toolTitle", theme.bold("ls"))} ${theme.fg("accent", fp)}`),
 			);
 			return text;
 		},
@@ -100,16 +168,29 @@ export function registerLsTool(
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 			const d = result.details as Record<string, unknown> | undefined;
 			const isPartial = (_opt as { isPartial?: boolean } | undefined)?.isPartial === true;
-			const structuredError = renderCtx.isError && d?._type === "lsResult";
+			const structuredError =
+				renderCtx.isError && (d?._type === "lsResult" || d?._type === "lsBatch");
 
 			if (renderCtx.isError && (!structuredError || isPartial)) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 
-			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
 			if (!isPartial && tickCollapse("ls", cs, renderCtx.invalidate, renderCtx.expanded)) {
+				if (d?._type === "lsBatch") {
+					const batch = d as unknown as LsBatchDetails;
+					text.setText(
+						renderCollapsedToolRow(
+							theme,
+							"ls",
+							formatCallTargets(batch.paths.map(sp), 3, "dirs"),
+							renderCtx.isError ? "failed" : `${batch.entryCount} entries`,
+							renderCtx.isError ? "error" : "success",
+						),
+					);
+					return text;
+				}
 				const summary = d?._type === "lsResult" ? `${d.entryCount} entries` : "listed";
 				const target = d?._type === "lsResult" ? sp(String(d.path ?? ".")) : ".";
 				text.setText(
@@ -126,6 +207,15 @@ export function registerLsTool(
 
 			if (renderCtx.isError) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
+				return text;
+			}
+			if (d?._type === "lsBatch") {
+				const batch = d as unknown as LsBatchDetails;
+				text.setText(
+					renderDimPreview(batch.text || batch.index, theme, {
+						header: `${batch.entryCount} entries`,
+					}),
+				);
 				return text;
 			}
 			if (d?._type === "lsResult" && d.text) {

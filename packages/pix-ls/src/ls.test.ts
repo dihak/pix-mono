@@ -138,4 +138,50 @@ describe("registerLsTool", () => {
 		expect(render({ collapsed: true })).toContain("✗ ls missing-dir · failed");
 		expect(render({ collapsed: true }, true)).toContain(diagnostic);
 	});
+
+	it("batches paths into one execute and one result", async () => {
+		const registered: {
+			parameters?: { properties?: Record<string, unknown> };
+			execute?: (...args: unknown[]) => Promise<{
+				content: Array<{ type: string; text?: string }>;
+				details?: { _type?: string; entryCount?: number; paths?: string[] };
+			}>;
+		} = {};
+		const seen: Array<string | undefined> = [];
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerLsTool(
+			mockPi,
+			() => ({
+				parameters: { type: "object", properties: { path: { type: "string" } } },
+				execute: async (_id, params: { path?: string }) => {
+					seen.push(params.path);
+					return {
+						content: [{ type: "text", text: `${params.path}/a.ts\n${params.path}/b.ts` }],
+						details: undefined,
+					};
+				},
+			}),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+		);
+
+		expect(registered.parameters?.properties?.paths).toBeDefined();
+		const result = await registered.execute?.("t", { paths: ["src", "lib"] });
+		expect(seen).toEqual(["src", "lib"]);
+		const text = result?.content.find((c) => c.type === "text")?.text ?? "";
+		expect(text).toContain("src 2 entries · lib 2 entries");
+		expect(result?.details?._type).toBe("lsBatch");
+		expect(result?.details?.entryCount).toBe(4);
+	});
 });

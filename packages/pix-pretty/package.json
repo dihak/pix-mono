@@ -1,6 +1,6 @@
 {
 	"name": "@dihak/pix-pretty",
-	"version": "1.7.23",
+	"version": "1.7.24",
 	"description": "Enhanced tool output rendering with syntax highlighting, file icons, tree views, diff rendering, and FFF search",
 	"type": "module",
 	"main": "src/index.ts",
@@ -21,6 +21,7 @@
 		"./fff": "./src/fff.ts",
 		"./types": "./src/types.ts",
 		"./utils": "./src/utils.ts",
+		"./batch": "./src/batch.ts",
 		"./resize": "./src/resize.ts",
 		"./context": "./src/tools/context.ts",
 		"./gate-overlay": "./src/gate-overlay.ts",

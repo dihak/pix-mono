@@ -4,7 +4,7 @@ Pi tool — pattern search in files with FFF acceleration.
 
 ## What it does
 
-Replaces Pi's default `grep` tool with an enhanced version backed by `pix-pretty`. Owns the FFF (frecency-ranked, SIMD-accelerated file index) session lifecycle — initializes the finder on `session_start` and tears it down on `session_shutdown`. Constrained searches (`path` or `glob` set) skip FFF and use the SDK's ripgrep directly to avoid a known FFF 0.5.2 abort on Unicode filenames. Falls back to standard ripgrep if `@ff-labs/fff-node` is not installed. Results are rendered with a match-count header, the matched pattern highlighted, file paths and line numbers, and a dim inline preview. Call labels show the pattern, search path, and glob. Depends on `@dihak/pix-pretty`, installed automatically as a dependency.
+Replaces Pi's default `grep` tool with an enhanced version backed by `pix-pretty`. Owns the FFF (frecency-ranked, SIMD-accelerated file index) session lifecycle — initializes the finder on `session_start` and tears it down on `session_shutdown`. Constrained searches (`path` or `glob` set) skip FFF and use the SDK's ripgrep directly to avoid a known FFF 0.5.2 abort on Unicode filenames. Falls back to standard ripgrep if `@ff-labs/fff-node` is not installed. Pass `patterns` to search several known patterns in one call (shared match/byte cap). Results are rendered with a match-count header, the matched pattern highlighted, file paths and line numbers, and a dim inline preview. Call labels show the pattern, search path, and glob. Depends on `@dihak/pix-pretty`, installed automatically as a dependency.
 
 ## Auto-collapse
 

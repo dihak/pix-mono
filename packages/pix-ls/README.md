@@ -4,7 +4,7 @@ Pi tool — enhanced directory listing.
 
 ## What it does
 
-Replaces Pi's default `ls` tool with an enhanced version backed by `pix-pretty`. Output is rendered with file/directory icons and a total entry-count header. Call labels show the target path inline. Depends on `@dihak/pix-pretty`, installed automatically as a dependency.
+Replaces Pi's default `ls` tool with an enhanced version backed by `pix-pretty`. Pass `paths` to list several known directories in one call (shared entry/byte cap). Output is rendered with file/directory icons and a total entry-count header. Call labels show the target path inline. Depends on `@dihak/pix-pretty`, installed automatically as a dependency.
 
 ## Display style
 

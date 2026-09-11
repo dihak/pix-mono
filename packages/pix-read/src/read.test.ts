@@ -8,6 +8,15 @@ import type {
 } from "@dihak/pix-pretty/types";
 import { applyReadDefaults, DEFAULT_READ_LIMIT, registerReadTool } from "./read";
 
+type Registered = {
+	parameters?: { properties?: Record<string, unknown>; required?: string[] };
+	execute?: (...args: unknown[]) => Promise<{
+		content: Array<{ type: string; text?: string }>;
+		details?: unknown;
+	}>;
+	renderResult?: (...args: unknown[]) => MockTextComponent;
+};
+
 class MockTextComponent {
 	private text = "";
 	setText(v: string) {
@@ -161,5 +170,80 @@ describe("registerReadTool", () => {
 		expect(render({ timer: 1 })).toContain(diagnostic);
 		expect(render({ collapsed: true })).toContain("✗ read missing.ts · failed");
 		expect(render({ collapsed: true }, true)).toContain(diagnostic);
+	});
+
+	it("batches paths into one execute and one result", async () => {
+		const registered: Registered = {};
+		const seen: string[] = [];
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerReadTool(
+			mockPi,
+			() => ({
+				parameters: {
+					type: "object",
+					required: ["path"],
+					properties: { path: { type: "string" } },
+				},
+				execute: async (_id, params: { path: string }) => {
+					seen.push(params.path);
+					return { content: [{ type: "text", text: `${params.path}-body` }], details: undefined };
+				},
+			}),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+		);
+
+		expect(registered.parameters?.required).toBeUndefined();
+		expect(registered.parameters?.properties?.paths).toBeDefined();
+
+		const result = await registered.execute?.("t", { paths: ["a.ts", "b.ts"] });
+		expect(seen).toEqual(["a.ts", "b.ts"]);
+		const text = result?.content.find((c) => c.type === "text")?.text ?? "";
+		expect(text).toContain("a.ts 1 line · b.ts 1 line");
+		expect(text).toContain("===== a.ts =====");
+		expect(text).toContain("a.ts-body");
+		expect((result?.details as { _type?: string })._type).toBe("readBatch");
+	});
+
+	it("keeps a single path on the original result shape", async () => {
+		const registered: Registered = {};
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerReadTool(
+			mockPi,
+			() => ({
+				execute: async () => ({
+					content: [{ type: "text", text: "hello" }],
+					details: undefined,
+				}),
+			}),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+		);
+		const result = await registered.execute?.("t", { path: "solo.ts" });
+		expect((result?.details as { _type?: string; filePath?: string })._type).toBe("readFile");
+		expect((result?.details as { filePath?: string }).filePath).toBe("solo.ts");
+		expect(result?.content.find((c) => c.type === "text")?.text).toBe("hello");
 	});
 });

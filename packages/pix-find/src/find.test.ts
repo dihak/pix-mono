@@ -162,4 +162,54 @@ describe("registerFindTool", () => {
 		expect(render({ collapsed: true })).toContain("✗ find [ in src · failed");
 		expect(render({ collapsed: true }, true)).toContain(diagnostic);
 	});
+
+	it("batches patterns into one execute and one result", async () => {
+		const registered: {
+			parameters?: { properties?: Record<string, unknown> };
+			execute?: (...args: unknown[]) => Promise<{
+				content: Array<{ type: string; text?: string }>;
+				details?: { matchCount?: number; patterns?: string[] };
+			}>;
+		} = {};
+		const seen: string[] = [];
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerFindTool(
+			mockPi,
+			() => ({
+				parameters: {
+					type: "object",
+					required: ["pattern"],
+					properties: { pattern: { type: "string" } },
+				},
+				execute: async (_id, params: { pattern: string }) => {
+					seen.push(params.pattern);
+					return {
+						content: [{ type: "text", text: `${params.pattern}.ts` }],
+						details: undefined,
+					};
+				},
+			}),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+		);
+
+		expect(registered.parameters?.properties?.patterns).toBeDefined();
+		const result = await registered.execute?.("t", { patterns: ["**/*.test.ts", "**/SKILL.md"] });
+		expect(seen).toEqual(["**/*.test.ts", "**/SKILL.md"]);
+		const text = result?.content.find((c) => c.type === "text")?.text ?? "";
+		expect(text).toContain("**/*.test.ts 1 file");
+		expect(text).toContain("**/SKILL.md 1 file");
+		expect(result?.details?.matchCount).toBe(2);
+	});
 });
