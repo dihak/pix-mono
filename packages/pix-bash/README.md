@@ -4,7 +4,7 @@ Pi tool — bash shell execution with pretty output.
 
 ## What it does
 
-Replaces Pi's default `bash` tool with an enhanced version backed by `pix-pretty`. Output is rendered in a full-width framed block showing an exit-code summary, line count, and truncation notice. Call labels display the command inline; multi-line commands collapse to the first line with `… (+N lines)` until expanded. In expanded mode the full output is shown; collapsed mode caps the preview to a configurable line limit. Depends on `@dihak/pix-pretty`, which is installed automatically as a dependency.
+Replaces Pi's default `bash` tool with an enhanced version backed by `pix-pretty`. While a command is running, stdout/stderr stream into a framed live tail (`⚡ running`) so progress is visible instead of a frozen first-chunk stub. After exit, output is rendered in a full-width framed block showing an exit-code summary, line count, and truncation notice. Call labels display the command inline; multi-line commands collapse to the first line with `… (+N lines)` until expanded. In expanded mode the full output is shown; collapsed mode caps the preview to a configurable line limit. Depends on `@dihak/pix-pretty`, which is installed automatically as a dependency.
 
 ## Auto-collapse
 

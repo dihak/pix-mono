@@ -1,5 +1,5 @@
 import { type CollapseState, tickCollapse } from "@dihak/pix-data/collapse";
-import { FG_DIM, RST } from "@dihak/pix-pretty/ansi";
+import { FG_DIM, FG_YELLOW, RST } from "@dihak/pix-pretty/ansi";
 import { MAX_PREVIEW_LINES } from "@dihak/pix-pretty/config";
 import type { ToolContext } from "@dihak/pix-pretty/context";
 import { renderBashOutput } from "@dihak/pix-pretty/renderers";
@@ -16,7 +16,6 @@ import {
 	getTextContent,
 	hideCollapsedToolCall,
 	isTextContent,
-	normalizeLineEndings,
 	renderCollapsedToolRow,
 	renderToolError,
 	rule,
@@ -95,6 +94,60 @@ export function formatExpandedBashCall(
 		}
 	}
 
+	return out.join("\n");
+}
+
+/** Drop cursor/erase CSI (keep SGR colors) so progress-bar control codes don't leak into the TUI. */
+function stripNonSgrCsi(text: string): string {
+	return text
+		.replace(/\x1b\][\s\S]*?(?:\x07|\x1b\\)/g, "")
+		.replace(/\x1b\[[?][0-9;]*[A-Za-z]/g, "")
+		.replace(/\x1b\[[0-9;]*[A-HJKSTfhl]/g, "");
+}
+
+/**
+ * Progress bars rewrite one line with CR (and often ESC[K). Treat each CR as
+ * "overwrite this line", not a newline — otherwise every tick dumps a new row
+ * and the card scrolls instead of updating in place.
+ *
+ * Split on LF first: `.` does not match CR, so a `/^.*$/gm` replace would miss
+ * CR-only progress streams entirely.
+ */
+export function collapseProgressFrames(text: string): string {
+	return text
+		.replace(/\r\n/g, "\n")
+		.split("\n")
+		.map((line) => {
+			const cr = line.lastIndexOf("\r");
+			return stripNonSgrCsi(cr >= 0 ? line.slice(cr + 1) : line);
+		})
+		.join("\n");
+}
+
+function normalizeBashText(text: string): string {
+	return collapseProgressFrames(text)
+		.replace(/\n{3,}/g, "\n\n")
+		.replace(/^\n+|\n+$/g, "");
+}
+
+/** Live card: framed tail so streaming output moves instead of freezing on the first 120 chars. */
+export function formatLiveBashOutput(text: string, expanded: boolean): string {
+	const normalized = normalizeBashText(text);
+	const lines = normalized ? normalized.split("\n") : [];
+	const lineCount = lines.length;
+	const header = `  ${FG_YELLOW}⚡ running${RST}${
+		lineCount > 0 ? `  ${FG_DIM}(${lineCount} ${lineCount === 1 ? "line" : "lines"})${RST}` : ""
+	}`;
+	if (!normalized) return header;
+
+	const maxShow = expanded ? lineCount : MAX_PREVIEW_LINES;
+	const hidden = Math.max(0, lineCount - maxShow);
+	const show = hidden > 0 ? lines.slice(lineCount - maxShow) : lines;
+	const tw = termW();
+	const out: string[] = [header, rule(tw)];
+	if (hidden > 0) out.push(`${FG_DIM}  … ${hidden} earlier lines${RST}`);
+	for (const line of show) out.push(`  ${line}`);
+	out.push(rule(tw));
 	return out.join("\n");
 }
 
@@ -195,20 +248,27 @@ export function registerBashTool(
 			const text = renderCtx.lastComponent ?? new TextComponent("", 0, 0);
 			const d = result.details as Record<string, unknown> | undefined;
 			const isPartial = (_opt as { isPartial?: boolean } | undefined)?.isPartial === true;
+
+			// Streaming: framed tail of live stdout/stderr. Do not slice(0, 120) — that froze
+			// the card on the first chunk until execute() returned.
+			if (isPartial) {
+				const raw = d?._type === "bashResult" ? String(d.text ?? "") : getTextContent(result);
+				text.setText(fillToolBackground(formatLiveBashOutput(raw, renderCtx.expanded)));
+				return text;
+			}
+
 			const structuredError = renderCtx.isError && d?._type === "bashResult";
 
-			if (renderCtx.isError && (!structuredError || isPartial)) {
+			if (renderCtx.isError && !structuredError) {
 				text.setText(renderToolError(getTextContent(result) || "Error", theme));
 				return text;
 			}
 
 			// Auto-collapse: show summary line after delay
 			const cs = renderCtx.state as CollapseState;
-			if (!isPartial && tickCollapse("bash", cs, renderCtx.invalidate, renderCtx.expanded)) {
+			if (tickCollapse("bash", cs, renderCtx.invalidate, renderCtx.expanded)) {
 				if (d?._type === "bashResult") {
-					const normalizedText = normalizeLineEndings(d.text as string)
-						.replace(/\n{3,}/g, "\n\n")
-						.replace(/^\n+|\n+$/g, "");
+					const normalizedText = normalizeBashText(d.text as string);
 					const lc = normalizedText ? normalizedText.split("\n").length : 0;
 					const durationMs = Number(d.durationMs ?? 0);
 					const exitCode = d.exitCode as number | null;
@@ -239,9 +299,7 @@ export function registerBashTool(
 			}
 
 			if (d?._type === "bashResult") {
-				const normalizedText = normalizeLineEndings(d.text as string)
-					.replace(/\n{3,}/g, "\n\n")
-					.replace(/^\n+|\n+$/g, "");
+				const normalizedText = normalizeBashText(d.text as string);
 				const { summary } = renderBashOutput(normalizedText, d.exitCode as number | null);
 				const lines = normalizedText ? normalizedText.split("\n") : [];
 				const lineCount = lines.length;

@@ -1,1 +1,8 @@
-export { registerBashTool } from "./bash.js";
+export {
+	collapseProgressFrames,
+	formatBashDuration,
+	formatExpandedBashCall,
+	formatLiveBashOutput,
+	registerBashTool,
+	summarizeBashCommand,
+} from "./bash.js";

@@ -8,8 +8,10 @@ import type {
 } from "@dihak/pix-pretty/types";
 import { visibleWidth } from "@earendil-works/pi-tui";
 import {
+	collapseProgressFrames,
 	formatBashDuration,
 	formatExpandedBashCall,
+	formatLiveBashOutput,
 	registerBashTool,
 	summarizeBashCommand,
 } from "./bash";
@@ -44,6 +46,50 @@ describe("bash summaries", () => {
 		expect(formatBashDuration(420)).toBe("420ms");
 		expect(formatBashDuration(2_450)).toBe("2.5s");
 		expect(formatBashDuration(12_400)).toBe("12s");
+	});
+});
+
+describe("formatLiveBashOutput", () => {
+	it("shows a running header and the latest lines", () => {
+		const out = formatLiveBashOutput("jobs=35 model=grok-4.6\n→ baseline / jwt-expiry", false);
+		expect(out).toContain("⚡ running");
+		expect(out).toContain("(2 lines)");
+		expect(out).toContain("jobs=35 model=grok-4.6");
+		expect(out).toContain("→ baseline / jwt-expiry");
+	});
+
+	it("keeps the tail when output exceeds the preview cap", () => {
+		const lines = Array.from({ length: 90 }, (_, i) => `line-${i + 1}`);
+		const out = formatLiveBashOutput(lines.join("\n"), false);
+		expect(out).toContain("earlier lines");
+		expect(out).toContain("line-90");
+		expect(out).not.toContain("line-1\n");
+		expect(out).not.toContain("line-1 ");
+	});
+
+	it("collapses CR progress-bar frames to the current line", () => {
+		const raw = "Downloading 10%\rDownloading 50%\rDownloading 100%";
+		const out = formatLiveBashOutput(raw, false);
+		expect(out).toContain("Downloading 100%");
+		expect(out).not.toContain("Downloading 10%");
+		expect(out).not.toContain("Downloading 50%");
+		expect(out).toContain("(1 line)");
+	});
+
+	it("keeps real newlines around a CR-updated bar", () => {
+		const out = formatLiveBashOutput("start\nfoo\rbar\nend", false);
+		expect(out).toContain("start");
+		expect(out).toContain("bar");
+		expect(out).toContain("end");
+		expect(out).not.toContain("foo");
+		expect(out).toContain("(3 lines)");
+	});
+});
+
+describe("collapseProgressFrames", () => {
+	it("strips erase-line CSI left by progress bars", () => {
+		const raw = `\r\x1b[KDownloading 10%\r\x1b[KDownloading 100%`;
+		expect(collapseProgressFrames(raw)).toBe("Downloading 100%");
 	});
 });
 
@@ -426,5 +472,56 @@ describe("registerBashTool", () => {
 		expect(render({ timer: 1 })).toContain(diagnostic);
 		expect(render({ collapsed: true })).toContain("✗ bash bun test · exit 1");
 		expect(render({ collapsed: true }, true)).toContain(diagnostic);
+	});
+
+	it("renders a live framed tail while the command is still running", () => {
+		const registered: { renderResult?: (...args: unknown[]) => MockTextComponent } = {};
+		const mockPi: PiPrettyApi = {
+			registerTool(tool: unknown) {
+				Object.assign(registered, tool);
+			},
+			registerCommand() {},
+			on() {},
+		};
+		registerBashTool(
+			mockPi,
+			() => ({
+				execute: async () => ({ content: [{ type: "text", text: "ok" }], details: undefined }),
+			}),
+			{
+				cwd: process.cwd(),
+				sp: (p: string) => p,
+				TextComponent: MockTextComponent as unknown as TextComponentCtor,
+				fffState: { module: null, finder: null, partialIndex: false, dbDir: null },
+				cursorStore: { store: () => "", get: () => undefined } as unknown as CursorStore,
+			},
+		);
+		const theme: ThemeLike = {
+			fg: (_key: string, value: string) => value,
+			bold: (value: string) => value,
+		};
+		const live =
+			"jobs=35 model=grok-4.6 effort=low max_tokens=1024\n" +
+			"→ baseline / react-rerender (sys 0 tok)\n" +
+			"→ baseline / jwt-expiry (sys 0 tok)";
+		const rendered =
+			registered
+				.renderResult?.(
+					{ content: [{ type: "text", text: live }], details: undefined },
+					{ isPartial: true },
+					theme,
+					{
+						expanded: false,
+						isError: false,
+						invalidate: () => {},
+						state: {},
+					} as unknown as RenderContextLike,
+				)
+				?.getText() ?? "";
+
+		expect(rendered).toContain("⚡ running");
+		expect(rendered).toContain("jobs=35 model=grok-4.6 effort=low max_tokens=1024");
+		expect(rendered).toContain("→ baseline / jwt-expiry (sys 0 tok)");
+		expect(rendered).not.toContain("✓ bash");
 	});
 });
