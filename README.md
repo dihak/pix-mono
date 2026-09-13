@@ -2,6 +2,8 @@
 
 Monorepo of Pix, a distro of [Pi Coding Agent](https://github.com/badlogic/pi-mono).
 
+Fork of [xynogen/pix-mono](https://github.com/xynogen/pix-mono), published under the `@dihak` npm scope. Original MIT copyright is retained.
+
 > **⚠ Expect breaking changes.** This project is under active development. Packages are regularly split, merged, renamed, or removed. The recommended upgrade path is to **uninstall then reinstall** the distro rather than incrementally updating individual packages. When in doubt, run the uninstall script first.
 
 > **🐧 Linux and macOS tested.** This project has been tested on Linux and used successfully on macOS. Some tools are designed around Linux/Unix utilities and may be less efficient on macOS. Windows is **not tested** and may not work correctly.
@@ -169,8 +171,10 @@ Several packages here originated as forks or merges of community Pi packages:
 | [`git:github.com/tintinweb/pi-subagents`](https://github.com/tintinweb/pi-subagents) | spawn engine ported into `pix-subagent` |
 | [`git:github.com/nicobailon/pi-subagents`](https://github.com/nicobailon/pi-subagents) | work-splitting design adapted in `pix-subagent` |
 
-Previous standalone repos migrated into this monorepo: `pix-themes`, `pix-pretty`, `pix-core`, `pix-data`.
+This repository is a fork of [`xynogen/pix-mono`](https://github.com/xynogen/pix-mono). Previous standalone repos migrated into that monorepo (and inherited here): `pix-themes`, `pix-pretty`, `pix-core`, `pix-data`.
 
 ## License
 
-MIT
+[MIT](LICENSE). Copyright (c) 2026 xynogen. Copyright (c) 2026 dihak.
+
+The original copyright notice and license text from [xynogen/pix-mono](https://github.com/xynogen/pix-mono) are retained as required by the MIT License. Subsequent modifications in this fork are copyright dihak. Packages original to this fork (`pix-hotkeys`, `pix-working`, `pix-todo-auto`) are copyright dihak only.
